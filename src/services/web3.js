@@ -1,6 +1,7 @@
 import Web3 from "web3";
 
 import { CONFIG } from "../config/config";
+import { modal } from "../config/appkit.js";
 import { USDT_ABI } from "../abi/usdtAbi";
 import { PRESALE_ABI } from "../abi/presaleAbi";
 import { VESTING_ABI } from "../abi/vestingAbi";
@@ -65,8 +66,8 @@ export async function approveUsdt(account) {
 }
 
 export function getEthereum() {
-  // WalletConnect takes priority when connected
-  if (_wcProvider && _wcProvider.connected) return _wcProvider;
+  // AppKit / WalletConnect provider takes priority when connected
+  if (_wcProvider) return _wcProvider;
 
   if (typeof window === "undefined") return null;
   if (!window.ethereum) return null;
@@ -82,50 +83,42 @@ export function getEthereum() {
 }
 
 export async function connectWithWalletConnect() {
-  const { EthereumProvider } = await import("@walletconnect/ethereum-provider");
+  // Open the AppKit modal — user picks their wallet (desktop extension or mobile QR)
+  await modal.open();
 
-  // Reuse an already-connected provider to avoid double-modal flicker
-  if (_wcProvider && _wcProvider.connected) {
-    const accounts = _wcProvider.accounts;
-    if (accounts && accounts.length > 0) return accounts[0];
-  }
-
-  _wcProvider = await EthereumProvider.init({
-    projectId: CONFIG.walletConnectProjectId,
-    chains: [1],                                    // required: Ethereum mainnet (universally supported by all wallets)
-    optionalChains: [CONFIG.chainId, 56],           // optional: BSC Testnet 97, BSC Mainnet 56
-    showQrModal: true,
-    rpcMap: {
-      1:                "https://cloudflare-eth.com",
-      56:               "https://bsc-dataseed.binance.org/",
-      [CONFIG.chainId]: "https://data-seed-prebsc-1-s1.binance.org:8545/",
-    },
+  // Wait until the user is connected (or closes the modal)
+  return new Promise((resolve, reject) => {
+    const unsub = modal.subscribeState((state) => {
+      if (state.open) return; // modal still open — keep waiting
+      unsub();
+      const provider = modal.getWalletProvider();
+      if (!provider) {
+        reject(new Error("Connection cancelled."));
+        return;
+      }
+      provider.request({ method: "eth_accounts" }).then((accounts) => {
+        if (!accounts || accounts.length === 0) {
+          reject(new Error("No account found."));
+        } else {
+          _wcProvider = provider;
+          resolve(accounts[0]);
+        }
+      }).catch(reject);
+    });
   });
-
-  // Clear stale provider on disconnect (prevents flicker on reconnect)
-  _wcProvider.on("disconnect", () => { _wcProvider = null; });
-
-  await _wcProvider.connect();
-
-  const accounts = _wcProvider.accounts;
-  if (!accounts || accounts.length === 0) {
-    throw new Error("No account connected via WalletConnect.");
-  }
-
-  return accounts[0];
 }
 
 export async function disconnectWalletConnect() {
-  if (_wcProvider) {
-    await _wcProvider.disconnect();
-    _wcProvider = null;
-  }
+  try {
+    await modal.disconnect();
+  } catch { /* ignore */ }
+  _wcProvider = null;
 }
 
 export function getWeb3() {
   const ethereum = getEthereum();
   if (!ethereum) {
-    throw new Error("MetaMask is not installed.");
+    throw new Error("No wallet provider found.");
   }
 
   return new Web3(ethereum);
@@ -134,7 +127,7 @@ export function getWeb3() {
 export async function connectWallet() {
   const ethereum = getEthereum();
   if (!ethereum) {
-    throw new Error("MetaMask is not installed.");
+    throw new Error("No wallet provider found.");
   }
 
   const accounts = await ethereum.request({
@@ -181,7 +174,7 @@ export async function getCurrentChainId() {
 export async function switchNetwork() {
   const ethereum = getEthereum();
   if (!ethereum) {
-    throw new Error("MetaMask is not installed.");
+    throw new Error("No wallet provider found.");
   }
 
   try {

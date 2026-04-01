@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { usePageTransition } from "../App";
 import MessageModal from "../components/MessageModal";
 import { CONFIG } from "../config/config";
 import { useLanguage } from "../hooks/useLanguage";
 import { SUPPORTED_LANGS } from "../i18n/translations";
-import { fetchBnbQuote, getUserTransactions, savePurchase } from "../services/api";
+import { destroySession, fetchBnbQuote, getUserTransactions, savePurchase, validateSession } from "../services/api";
 import { formatDate, formatNumber, formatUnits } from "../services/format";
 import {
     approveUsdt,
     buyWithBnb,
     buyWithUsdt,
     claimTokens,
+    disconnectWalletConnect,
     getCurrentAccount, getCurrentChainId,
     getPresaleStats,
     getTokenAmount,
@@ -27,7 +28,7 @@ function PresalePage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSwitchingNetwork, setIsSwitchingNetwork] = useState(false);
     const [switchNetworkMessage, setSwitchNetworkMessage] = useState("");
-    const navigate = useNavigate();
+    const { exiting, transitionTo: navigate } = usePageTransition();
 
     // Buy form
     const [usdtAmount, setUsdtAmount] = useState("");
@@ -256,6 +257,12 @@ function PresalePage() {
         }
     }
 
+    async function handleDisconnect() {
+        await destroySession();
+        await disconnectWalletConnect();
+        navigate("/", { state: { fromDashboard: true } });
+    }
+
     async function checkApprovalStatus(walletAddress) {
         try {
             const allowance = await getUsdtAllowance(walletAddress);
@@ -291,6 +298,10 @@ function PresalePage() {
     useEffect(() => {
         async function init() {
             try {
+                // Enforce 24-hour server session — redirect if missing or expired
+                const sessionValid = await validateSession();
+                if (!sessionValid) { navigate("/"); return; }
+
                 const currentAccount = await getCurrentAccount();
                 if (!currentAccount) { navigate("/"); return; }
                 setAccount(currentAccount);
@@ -341,7 +352,7 @@ function PresalePage() {
                 ethereum.removeListener("chainChanged", handleChainChanged);
             };
         }
-    }, [navigate, loadChainData, loadTxHistory]);
+    }, [loadChainData, loadTxHistory]);
 
     useEffect(() => {
         if (!account) { setBnbQuote(null); setBnbQuoteMessage(""); return; }
@@ -430,14 +441,12 @@ function PresalePage() {
     }
 
     return (
-        <div style={{ minHeight: "100vh", fontFamily: "'DM Sans', sans-serif", color: "#F0F0FF" }}>
-
-            {/* ── Space background ── */}
+        <div style={{ minHeight: "100vh", fontFamily: "'DM Sans', sans-serif", color: "#F0F0FF" }} className={exiting ? "page-exit" : ""}>
             <div className="space-bg" />
             <div className="nebula" />
-            <div className="shooting-star" />
-            <div className="shooting-star" style={{ top: "28%", animationDelay: "3.5s", width: "120px" }} />
-            <div className="shooting-star" style={{ top: "55%", animationDelay: "6s", width: "90px" }} />
+            {[{ top: "12%", w: "160px", delay: "0s" }, { top: "28%", w: "120px", delay: "3.5s" }, { top: "55%", w: "90px", delay: "6s" }].map((s, i) => (
+                <div key={i} style={{ position: "fixed", top: s.top, left: "-5%", width: s.w, height: "1.5px", background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)", transform: "rotate(-20deg)", animation: `shoot 8s linear ${s.delay} infinite`, zIndex: -1, opacity: 0 }} />
+            ))}
 
             {/* ── Header ── */}
             <header style={{
@@ -491,13 +500,20 @@ function PresalePage() {
                             {shortAddr}
                         </div>
                     )}
-                    <button style={{
+                    <button onClick={() => navigate("/", { state: { fromDashboard: true } })} style={{
                         display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px",
-                        background: "linear-gradient(135deg, #FFD84D, #FF9F1C)",
-                        color: "#06060F", border: "none", borderRadius: "100px",
+                        background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)",
+                        color: "rgba(240,240,255,0.7)", borderRadius: "100px",
+                        fontFamily: "'Outfit', sans-serif", fontWeight: 600, fontSize: "13px",
+                        cursor: "pointer", transition: "all 0.2s",
+                    }}>← Back</button>
+                    <button onClick={handleDisconnect} style={{
+                        display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px",
+                        background: "rgba(255,60,60,0.12)", border: "1px solid rgba(255,60,60,0.4)",
+                        color: "#ff6b6b", borderRadius: "100px",
                         fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "13px",
-                        cursor: "default", boxShadow: "0 0 20px rgba(255,216,77,0.3)",
-                    }}>🔗 {t("connected")}</button>
+                        cursor: "pointer", transition: "all 0.2s",
+                    }}>⏻ Disconnect</button>
                 </div>
             </header>
 

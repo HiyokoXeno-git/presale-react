@@ -36,6 +36,23 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
 
+/* ── Page transitions ── */
+@keyframes pageEnter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes pageExit {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+.page-enter {
+  animation: pageEnter 0.45s ease both;
+}
+.page-exit {
+  animation: pageExit 0.3s ease both;
+  pointer-events: none;
+}
+
 /* ── Animations ── */
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 @keyframes twinkle { 0%,100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } }
@@ -426,6 +443,33 @@ nav a:hover { color: var(--yellow); }
   align-items: center;
   gap: 6px;
 }
+/* Hero WalletConnect — yellow, larger badge */
+.btn-flow.hero-wc {
+  background: rgba(255,216,77,0.07);
+  border-color: rgba(255,216,77,0.35);
+}
+.btn-flow.hero-wc:hover {
+  border-color: var(--yellow);
+  box-shadow: 0 0 24px rgba(255,216,77,0.25);
+}
+.btn-flow.hero-wc .btn-flow-buy {
+  color: var(--yellow);
+  font-size: 15px;
+  padding: 15px 20px;
+}
+.btn-flow.hero-wc .btn-flow-arrow {
+  padding: 15px 10px;
+  font-size: 18px;
+}
+.btn-flow.hero-wc .btn-flow-wallet {
+  background: var(--yellow);
+  color: #06060F;
+  font-size: 15px;
+  padding: 13px 24px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
 .btn-how {
   padding: 13px 22px;
   background: transparent;
@@ -439,7 +483,10 @@ nav a:hover { color: var(--yellow); }
   transition: all 0.25s;
   text-align: center;
   text-decoration: none;
-  display: block;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .btn-how:hover { border-color: var(--cyan); color: var(--cyan); }
 .hero-right {

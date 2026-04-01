@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { usePageTransition } from "../App";
 import { useLanguage } from "../hooks/useLanguage";
 import { SUPPORTED_LANGS } from "../i18n/translations";
-import { connectWallet, connectWithWalletConnect, getCurrentAccount, switchNetwork } from "../services/web3";
+import { connectWithWalletConnect, getCurrentAccount, switchNetwork } from "../services/web3";
+import { createSession, getPresaleStats, validateSession } from "../services/api";
 
 // ── Donut chart data ──────────────────────────────────────
 const DONUT_SEGMENTS = [
@@ -49,7 +51,7 @@ function DonutChart() {
 
 
 function OnePage() {
-  const navigate = useNavigate();
+  const { exiting, transitionTo } = usePageTransition();
   const location = useLocation();
   const { lang, setLang, t } = useLanguage();
 
@@ -69,19 +71,30 @@ function OnePage() {
 
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectError, setConnectError] = useState("");
+  const [walletConnected, setWalletConnected] = useState(false);
   const [countdown, setCountdown] = useState({ d: "--", h: "--", m: "--", s: "--" });
   const [openFaq, setOpenFaq] = useState(0);
   const [copiedAddr, setCopiedAddr] = useState(null);
-  const [presaleProgress] = useState(28); // 28% sold
+  const PRESALE_GOAL = 1500000;
+  const [presaleStats, setPresaleStats] = useState(null);
+  const presaleRaised = presaleStats?.totalUsdt ?? 0;
+  const presaleProgress = Math.min((presaleRaised / PRESALE_GOAL) * 100, 100);
+  const presalePurchases = presaleStats?.totalPurchases ?? 0;
 
-  // Auto-redirect to dashboard if wallet already connected,
-  // but skip if user explicitly navigated back from the dashboard.
   useEffect(() => {
-    if (location.state?.fromDashboard) return;
-    getCurrentAccount().then((acc) => {
-      if (acc) navigate("/presale");
-    }).catch(() => { });
-  }, [navigate, location.state]);
+    getPresaleStats().then((data) => { if (data) setPresaleStats(data); }).catch(() => { });
+  }, []);
+
+  // Check if wallet is connected AND server session is still valid (< 24 h)
+  useEffect(() => {
+    async function checkSession() {
+      const valid = await validateSession();
+      if (!valid) return;
+      const acc = await getCurrentAccount().catch(() => null);
+      if (acc) setWalletConnected(true);
+    }
+    checkSession();
+  }, [location.state]);
 
   // countdown timer
   useEffect(() => {
@@ -107,22 +120,6 @@ function OnePage() {
     return () => clearTimeout(t);
   }, [presaleProgress]);
 
-  async function handleConnect() {
-    if (isConnecting) return;
-    try {
-      setIsConnecting(true);
-      setConnectError("");
-      await connectWallet();
-      navigate("/presale");
-    } catch (err) {
-      if (err?.code === -32002) setConnectError("Pending request in MetaMask. Please check.");
-      else if (err?.code === 4001) setConnectError("Connection rejected.");
-      else setConnectError(err?.message || "Connection failed.");
-    } finally {
-      setIsConnecting(false);
-    }
-  }
-
   async function handleConnectWC() {
     if (isConnecting) return;
     try {
@@ -131,10 +128,13 @@ function OnePage() {
       await connectWithWalletConnect();
       // Auto-switch to BSC Testnet — silently ignore if wallet rejects (PresalePage will prompt)
       try { await switchNetwork(); } catch { /* handled in PresalePage */ }
-      navigate("/presale");
+      const acc = await getCurrentAccount();
+      await createSession(acc);
+      transitionTo("/presale");
     } catch (err) {
-      if (err?.code === 4001 || err?.message?.includes("User rejected")) setConnectError("Connection rejected.");
-      else setConnectError(err?.message || "WalletConnect failed.");
+      if (err?.code === -32002) setConnectError("Pending request in MetaMask. Please check the extension.");
+      else if (err?.code === 4001 || err?.message?.includes("User rejected")) setConnectError("Connection rejected.");
+      else setConnectError(err?.message || "Connection failed.");
     } finally {
       setIsConnecting(false);
     }
@@ -162,13 +162,15 @@ function OnePage() {
 
   const WC_SVG = <svg width="13" height="13" viewBox="0 0 300 185" fill="currentColor"><path d="M61.4 36.3C104.8-5.4 175.2-5.4 218.6 36.3l7.1 6.9c2.1 2 2.1 5.2 0 7.2l-24.3 23.7c-1 1-2.7 1-3.7 0l-9.8-9.5c-30.5-29.7-80-29.7-110.4 0l-10.5 10.2c-1 1-2.7 1-3.7 0L39.1 51.1c-2.1-2-2.1-5.2 0-7.2l22.3-7.6zm185.3 34.5 21.6 21.1c2.1 2 2.1 5.2 0 7.2L165.4 199.6c-2.1 2-5.4 2-7.4 0l-72.1-70.3c-.5-.5-1.3-.5-1.8 0l-72.1 70.3c-2.1 2-5.4 2-7.4 0L1.7 99.1c-2.1-2-2.1-5.2 0-7.2l21.6-21.1c2.1-2 5.4-2 7.4 0l72.1 70.3c.5.5 1.3.5 1.8 0l72.1-70.3c2.1-2 5.4-2 7.4 0l72.1 70.3c.5.5 1.3.5 1.8 0l72.1-70.3c2-2 5.4-2 7.4 0z" /></svg>;
 
+  const SS_BASE = { position: "fixed", height: "1.5px", background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)", transform: "rotate(-20deg)", animation: "shoot 8s linear infinite", zIndex: -1, opacity: 0 };
+
   return (
-    <div style={{ minHeight: "100vh", overflowX: "hidden" }}>
+    <div style={{ minHeight: "100vh", overflowX: "hidden" }} className={exiting ? "page-exit" : ""}>
       <div className="space-bg" />
       <div className="nebula" />
-      <div className="shooting-star" />
-      <div className="shooting-star" style={{ top: "28%", animationDelay: "3.5s", width: "120px" }} />
-      <div className="shooting-star" style={{ top: "55%", animationDelay: "6s", width: "90px" }} />
+      <div style={{ ...SS_BASE, top: "12%", left: "-5%", width: "160px" }} />
+      <div style={{ ...SS_BASE, top: "28%", left: "-5%", width: "120px", animationDelay: "3.5s" }} />
+      <div style={{ ...SS_BASE, top: "55%", left: "-5%", width: "90px", animationDelay: "6s" }} />
 
       {/* ── HEADER ── */}
       <header>
@@ -198,19 +200,29 @@ function OnePage() {
           ))}
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
-          <button onClick={handleConnect} disabled={isConnecting} className="connect-btn" style={{ opacity: isConnecting ? 0.7 : 1, cursor: isConnecting ? "not-allowed" : "pointer" }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z" /><circle cx="17" cy="14" r="1.5" fill="currentColor" /></svg>
-            {isConnecting ? t("connectingBtn") : t("connectWalletBtn")}
-          </button>
-          <button onClick={handleConnectWC} disabled={isConnecting} style={{
-            display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px",
-            background: "rgba(0,100,255,0.15)", border: "1px solid rgba(0,100,255,0.4)",
-            color: "#6aa3ff", borderRadius: "100px", fontFamily: "'Outfit', sans-serif",
-            fontWeight: 700, fontSize: "13px", cursor: isConnecting ? "not-allowed" : "pointer",
-            opacity: isConnecting ? 0.7 : 1, transition: "all 0.2s",
-          }}>
-            {WC_SVG} WalletConnect
-          </button>
+          {walletConnected ? (
+            <button onClick={() => transitionTo("/presale")} style={{
+              display: "flex", alignItems: "center", gap: "8px", padding: "11px 24px",
+              background: "linear-gradient(135deg, #FFD84D, #FF9F1C)",
+              color: "#06060F", border: "none", borderRadius: "100px",
+              fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "15px",
+              cursor: "pointer", transition: "all 0.2s",
+              boxShadow: "0 0 20px rgba(255,216,77,0.35)",
+            }}>
+              🐣 Go to Dashboard
+            </button>
+          ) : (
+            <button onClick={handleConnectWC} disabled={isConnecting} style={{
+              display: "flex", alignItems: "center", gap: "8px", padding: "11px 24px",
+              background: "rgba(255,216,77,0.12)", border: "1px solid rgba(255,216,77,0.45)",
+              color: "#FFD84D", borderRadius: "100px", fontFamily: "'Outfit', sans-serif",
+              fontWeight: 700, fontSize: "15px", cursor: isConnecting ? "not-allowed" : "pointer",
+              opacity: isConnecting ? 0.7 : 1, transition: "all 0.2s",
+              boxShadow: "0 0 16px rgba(255,216,77,0.12)",
+            }}>
+              {WC_SVG} {isConnecting ? t("connectingBtn") : t("connectWalletBtn")}
+            </button>
+          )}
         </div>
       </header>
 
@@ -235,8 +247,8 @@ function OnePage() {
               <span className="price-unit">USDT / HYK</span>
             </div>
             <div className="prog-labels">
-              <span>{t("heroRaised")}: <b>$420,000</b></span>
-              <span>{t("heroGoal")}: $1,500,000 &nbsp;<strong style={{ color: "#00E5FF" }}>28%</strong></span>
+              <span>{t("heroRaised")}: <b>${presaleRaised.toLocaleString()}</b></span>
+              <span>{t("heroGoal")}: $1,500,000 &nbsp;<strong style={{ color: "#00E5FF" }}>{presaleProgress.toFixed(1)}%</strong></span>
             </div>
             <div className="prog-bar">
               <div className="prog-fill" style={{ width: `${progWidth}%` }} />
@@ -251,18 +263,13 @@ function OnePage() {
             </div>
             <div className="cta-area">
               <div className="btn-row">
-                <div className="btn-flow" onClick={handleConnect} style={{ opacity: isConnecting ? 0.7 : 1, cursor: isConnecting ? "not-allowed" : "pointer" }}>
-                  <span className="btn-flow-buy">{isConnecting ? t("connectingBtn") : t("heroBuyNow")}</span>
-                  <span className="btn-flow-arrow">→</span>
-                  <span className="btn-flow-wallet">MetaMask</span>
-                </div>
-                <div className="btn-flow wc" onClick={handleConnectWC} style={{ opacity: isConnecting ? 0.7 : 1, cursor: isConnecting ? "not-allowed" : "pointer" }}>
+                <div className="btn-flow wc hero-wc" onClick={handleConnectWC} style={{ opacity: isConnecting ? 0.7 : 1, cursor: isConnecting ? "not-allowed" : "pointer" }}>
                   <span className="btn-flow-buy">{isConnecting ? t("connectingBtn") : t("heroBuyNow")}</span>
                   <span className="btn-flow-arrow">→</span>
                   <span className="btn-flow-wallet">{WC_SVG} WalletConnect</span>
                 </div>
+                <a className="btn-how" href="#" onClick={(e) => { e.preventDefault(); scrollTo("faq"); }}>{t("heroHowToBuy")}</a>
               </div>
-              <a className="btn-how" href="#" onClick={(e) => { e.preventDefault(); scrollTo("faq"); }}>{t("heroHowToBuy")}</a>
             </div>
             {connectError && <div style={{ marginTop: "10px", fontSize: "12px", color: "#ff6060", textAlign: "center" }}>{connectError}</div>}
           </div>
@@ -273,7 +280,7 @@ function OnePage() {
           <div className="hero-glow-inner" />
           <img className="hero-chick" src="/HiyokoHero.png" alt="HIYOKO" onError={(e) => { e.target.src = "/HiyokoHero.png"; }} />
           <div className="stats-row">
-            {[["54M+", "Global Users"], ["36K+", "Pre-orders"], ["1B", "Total Supply"]].map(([num, lbl]) => (
+            {[["54M+", "Global Users"], [presalePurchases.toLocaleString(), "Pre-orders"], ["1B", "Total Supply"]].map(([num, lbl]) => (
               <div key={lbl} className="stat-box">
                 <div className="stat-num">{num}</div>
                 <div className="stat-lbl">{lbl}</div>
@@ -386,11 +393,6 @@ function OnePage() {
           </h2>
           <p style={{ fontSize: "15px", color: "#6666AA", maxWidth: "520px", margin: "0 auto 36px", lineHeight: 1.75 }}>{t("ctaSubtitle")}</p>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px", flexWrap: "wrap" }}>
-            <div className="btn-flow" onClick={handleConnect} style={{ maxWidth: "380px", opacity: isConnecting ? 0.7 : 1, cursor: isConnecting ? "not-allowed" : "pointer", fontSize: "15px" }}>
-              <span className="btn-flow-buy" style={{ padding: "15px 22px" }}>{isConnecting ? t("connectingBtn") : t("heroBuyNow")}</span>
-              <span className="btn-flow-arrow" style={{ padding: "15px 12px", fontSize: "18px" }}>→</span>
-              <span className="btn-flow-wallet" style={{ padding: "15px 24px", fontSize: "15px" }}>MetaMask</span>
-            </div>
             <div className="btn-flow wc" onClick={handleConnectWC} style={{ maxWidth: "420px", opacity: isConnecting ? 0.7 : 1, cursor: isConnecting ? "not-allowed" : "pointer", fontSize: "15px" }}>
               <span className="btn-flow-buy" style={{ padding: "15px 22px" }}>{isConnecting ? t("connectingBtn") : t("heroBuyNow")}</span>
               <span className="btn-flow-arrow" style={{ padding: "15px 12px", fontSize: "18px" }}>→</span>

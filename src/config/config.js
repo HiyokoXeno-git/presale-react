@@ -11,8 +11,8 @@ export const CONFIG = {
   tokenAddress: "0xC171c790aBc13e368775f7112A1554708D52CD03",
   usdtAddress: "0xf6d414B01309c281413F8FB469a945C0e6A2a477",
 
-  presaleApiBaseUrl: "http://3.27.156.241/presale/api",
-  adminApiBaseUrl: "http://3.27.156.241/admin/api",
+  presaleApiBaseUrl: "http://52.65.232.128/presale/api",
+  adminApiBaseUrl: "http://52.65.232.128/admin/api",
 
   usdtDecimals: 6,
   tokenDecimals: 18
