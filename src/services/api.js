@@ -98,6 +98,20 @@ export async function getUserTransactions(walletAddress) {
   }
 }
 
+export async function getAnnouncements() {
+  try {
+    const res = await fetch(`${CONFIG.presaleApiBaseUrl}/getAnnouncements.php`);
+    const text = await res.text();
+    if (!text) return [];
+    const data = JSON.parse(text);
+    if (Array.isArray(data)) return data;
+    if (data?.success && Array.isArray(data.data)) return data.data;
+    return [];
+  } catch {
+    return [];
+  }
+}
+
 export async function savePurchase(payload) {
   const safePayload = JSON.parse(
     JSON.stringify(payload, (_, value) =>

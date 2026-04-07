@@ -4,7 +4,7 @@ import MessageModal from "../components/MessageModal";
 import { CONFIG } from "../config/config";
 import { useLanguage } from "../hooks/useLanguage";
 import { SUPPORTED_LANGS } from "../i18n/translations";
-import { destroySession, fetchBnbQuote, getUserTransactions, savePurchase, validateSession } from "../services/api";
+import { destroySession, fetchBnbQuote, getAnnouncements, getUserTransactions, savePurchase, validateSession } from "../services/api";
 import { formatDate, formatNumber, formatUnits } from "../services/format";
 import {
     approveUsdt,
@@ -58,6 +58,9 @@ function PresalePage() {
     const [txHistory, setTxHistory] = useState([]);
     const [isLoadingTx, setIsLoadingTx] = useState(false);
     const [txTab, setTxTab] = useState("my"); // "my" | "all"
+
+    // Announcements from API
+    const [announcements, setAnnouncements] = useState([]);
 
     // Lang dropdown
     const [langDropdownOpen, setLangDropdownOpen] = useState(false);
@@ -415,6 +418,10 @@ function PresalePage() {
         const timer = setTimeout(() => handleFetchBnbQuote(trimmedAmount), 300);
         return () => clearTimeout(timer);
     }, [account, bnbAmount]);
+
+    useEffect(() => {
+        getAnnouncements().then(data => { if (data.length > 0) setAnnouncements(data); });
+    }, []);
 
     useEffect(() => {
         function handleClickOutside(e) {
@@ -1343,31 +1350,52 @@ function PresalePage() {
                             }}>
                                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "16px", fontWeight: 800, color: "#F0F0FF", display: "flex", alignItems: "center", gap: "8px" }}>
                                     📢 {t("announcements")}
-                                    <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#FF9F1C", color: "#06060F", fontSize: "10px", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>4</div>
+                                    {announcements.length > 0 && (
+                                        <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#FF9F1C", color: "#06060F", fontSize: "10px", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                            {announcements.length}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div>
-                                {[
-                                    { icon: "🚀", iconBg: "rgba(255,159,28,0.12)", title: t("ann1title"), body: t("ann1body"), time: t("ann1time") },
-                                    { icon: "🏥", iconBg: "rgba(255,216,77,0.1)", title: t("ann2title"), body: t("ann2body"), time: t("ann2time") },
-                                    { icon: "🚗", iconBg: "rgba(0,229,255,0.08)", title: t("ann3title"), body: t("ann3body"), time: t("ann3time") },
-                                    { icon: "📅", iconBg: "rgba(106,198,69,0.1)", title: t("ann4title"), body: t("ann4body"), time: t("ann4time") },
-                                ].map((item, i) => (
-                                    <div key={i} className="a-item" style={{
-                                        display: "flex", alignItems: "flex-start", gap: "12px",
-                                        padding: "13px 20px", borderBottom: i < 3 ? "1px solid rgba(255,255,255,0.07)" : "none",
-                                        cursor: "pointer",
-                                    }}>
-                                        <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: item.iconBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", flexShrink: 0, marginTop: "2px" }}>
-                                            {item.icon}
+                                {(() => {
+                                    // Use API data if available, fallback to hardcoded
+                                    const items = announcements.length > 0
+                                        ? announcements
+                                        : [
+                                            { icon: "🚀", title: t("ann1title"), body: t("ann1body"), time_label: t("ann1time") },
+                                            { icon: "🏥", title: t("ann2title"), body: t("ann2body"), time_label: t("ann2time") },
+                                            { icon: "🚗", title: t("ann3title"), body: t("ann3body"), time_label: t("ann3time") },
+                                            { icon: "📅", title: t("ann4title"), body: t("ann4body"), time_label: t("ann4time") },
+                                        ];
+                                    const iconBgs = [
+                                        "rgba(255,159,28,0.12)", "rgba(255,216,77,0.1)",
+                                        "rgba(0,229,255,0.08)", "rgba(106,198,69,0.1)",
+                                        "rgba(170,85,255,0.1)", "rgba(255,102,136,0.1)",
+                                    ];
+                                    return items.map((item, i) => (
+                                        <div key={item.id || i} className="a-item" style={{
+                                            display: "flex", alignItems: "flex-start", gap: "12px",
+                                            padding: "13px 20px",
+                                            borderBottom: i < items.length - 1 ? "1px solid rgba(255,255,255,0.07)" : "none",
+                                            cursor: "pointer",
+                                        }}>
+                                            <div style={{
+                                                width: "32px", height: "32px", borderRadius: "8px",
+                                                background: iconBgs[i % iconBgs.length],
+                                                display: "flex", alignItems: "center", justifyContent: "center",
+                                                fontSize: "14px", flexShrink: 0, marginTop: "2px",
+                                            }}>
+                                                {item.icon}
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: "13px", fontWeight: 600, color: "#F0F0FF", lineHeight: 1.4, marginBottom: "3px" }}>{item.title}</div>
+                                                <div style={{ fontSize: "12px", color: "#6666AA", lineHeight: 1.5 }}>{item.body}</div>
+                                                <div style={{ fontSize: "11px", color: "rgba(102,102,170,0.6)", marginTop: "4px" }}>{item.time_label}</div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <div style={{ fontSize: "13px", fontWeight: 600, color: "#F0F0FF", lineHeight: 1.4, marginBottom: "3px" }}>{item.title}</div>
-                                            <div style={{ fontSize: "12px", color: "#6666AA", lineHeight: 1.5 }}>{item.body}</div>
-                                            <div style={{ fontSize: "11px", color: "rgba(102,102,170,0.6)", marginTop: "4px" }}>{item.time}</div>
-                                        </div>
-                                    </div>
-                                ))}
+                                    ));
+                                })()}
                             </div>
                         </div>
                     </>
