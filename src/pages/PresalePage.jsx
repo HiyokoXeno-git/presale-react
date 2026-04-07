@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePageTransition } from "../App";
 import MessageModal from "../components/MessageModal";
 import { CONFIG } from "../config/config";
@@ -32,12 +32,13 @@ function PresalePage() {
 
     // Buy form
     const [usdtAmount, setUsdtAmount] = useState("");
-    const [isApproving, setIsApproving] = useState(false);
-    const [approveMessage, setApproveMessage] = useState("");
-    const [isApproved, setIsApproved] = useState(false);
+    const [thkAmount, setThkAmount] = useState("");  // bidirectional THK input
     const [isBuying, setIsBuying] = useState(false);
     const [buyMessage, setBuyMessage] = useState("");
     const [bnbAmount, setBnbAmount] = useState("");
+    const [bnbUsdtDisplay, setBnbUsdtDisplay] = useState("");  // editable USDT in BNB tab
+    const [bnbThkDisplay, setBnbThkDisplay] = useState("");    // editable THK in BNB tab
+    const [lastBnbPrice, setLastBnbPrice] = useState(null);    // BNB/USDT rate from last quote
     const [bnbQuote, setBnbQuote] = useState(null);
     const [bnbQuoteMessage, setBnbQuoteMessage] = useState("");
     const [isFetchingBnbQuote, setIsFetchingBnbQuote] = useState(false);
@@ -57,6 +58,10 @@ function PresalePage() {
     const [txHistory, setTxHistory] = useState([]);
     const [isLoadingTx, setIsLoadingTx] = useState(false);
     const [txTab, setTxTab] = useState("my"); // "my" | "all"
+
+    // Lang dropdown
+    const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+    const langSwitcherRef = useRef(null);
 
     // ── Data loaders ──────────────────────────────────────────────
     const loadChainData = useCallback(async (walletAddress) => {
@@ -109,7 +114,7 @@ function PresalePage() {
             if (receipt?.status) {
                 setClaimMessage("Tokens claimed successfully!");
                 await loadChainData(account);
-                setModal({ type: "success", message: "HDT tokens claimed successfully!", txHash: receipt.transactionHash });
+                setModal({ type: "success", message: "THK tokens claimed successfully!", txHash: receipt.transactionHash });
             } else {
                 setClaimMessage("Claim transaction failed.");
             }
@@ -129,7 +134,6 @@ function PresalePage() {
         try {
             setIsBuying(true);
             setBuyMessage("");
-            setApproveMessage("");
             if (!account) { setBuyMessage("Wallet is not connected."); return; }
             const trimmedBnbAmount = String(bnbAmount ?? "").trim();
             if (!trimmedBnbAmount) { setBuyMessage("Please enter BNB amount."); return; }
@@ -174,8 +178,8 @@ function PresalePage() {
                 if (!saveResult?.success) {
                     setModal({ type: "error", message: "Purchase succeeded but DB save failed." });
                 } else {
-                    setBnbAmount(""); setBnbQuote(null);
-                    setModal({ type: "success", message: "Your HDT tokens have been reserved!", txHash: receipt.transactionHash });
+                    setBnbAmount(""); setBnbUsdtDisplay(""); setBnbThkDisplay(""); setBnbQuote(null);
+                    setModal({ type: "success", message: "Your THK tokens have been reserved!", txHash: receipt.transactionHash });
                     loadChainData(account);
                     loadTxHistory(account);
                 }
@@ -206,6 +210,13 @@ function PresalePage() {
             const result = await fetchBnbQuote(account, trimmedAmount);
             if (!result || result.success === false) { setBnbQuote(null); setBnbQuoteMessage(result?.message || "Failed to fetch BNB quote."); return; }
             setBnbQuote(result);
+            // Sync USDT and THK display from quote result
+            const usdtVal = parseFloat(String(result.usdtAmount).replace(/,/g, ""));
+            const thkVal = parseFloat(String(result.tokenAmount).replace(/,/g, ""));
+            if (!isNaN(usdtVal)) setBnbUsdtDisplay(usdtVal.toFixed(6));
+            if (!isNaN(thkVal)) setBnbThkDisplay(Math.floor(thkVal).toString());
+            // Store BNB/USDT rate for reverse conversion
+            if (!isNaN(usdtVal) && numericAmount > 0) setLastBnbPrice(usdtVal / numericAmount);
         } catch (error) {
             setBnbQuote(null); setBnbQuoteMessage(error.message || "Failed to fetch BNB quote.");
         } finally {
@@ -213,11 +224,49 @@ function PresalePage() {
         }
     }
 
-    function parseUsdtToRaw(value) {
+    // BNB tab bidirectional handlers
+    function handleBnbChange(val) {
+        const v = normalizeUsdtInput(val);
+        setBnbAmount(v);
+        // USDT and THK will be updated when quote comes back (debounced)
+        if (!v || Number(v) <= 0) { setBnbUsdtDisplay(""); setBnbThkDisplay(""); setBnbQuote(null); }
+    }
+
+    function handleBnbUsdtChange(val) {
+        const v = normalizeUsdtInput(val);
+        setBnbUsdtDisplay(v);
+        const usdt = Number(v);
+        if (!v || usdt <= 0) { setBnbThkDisplay(""); setBnbAmount(""); setBnbQuote(null); return; }
+        // THK = USDT / 0.015
+        setBnbThkDisplay(Math.floor(usdt / 0.015).toString());
+        // BNB = USDT / rate (use last known price)
+        if (lastBnbPrice && lastBnbPrice > 0) {
+            const bnb = (usdt / lastBnbPrice).toFixed(8);
+            setBnbAmount(bnb);
+        }
+    }
+
+    function handleBnbThkChange(val) {
+        const v = normalizeUsdtInput(val);
+        setBnbThkDisplay(v);
+        const thk = Number(v);
+        if (!v || thk <= 0) { setBnbUsdtDisplay(""); setBnbAmount(""); setBnbQuote(null); return; }
+        // USDT = THK * 0.015
+        const usdt = (thk * 0.015).toFixed(6);
+        setBnbUsdtDisplay(usdt);
+        // BNB = USDT / rate
+        if (lastBnbPrice && lastBnbPrice > 0) {
+            const bnb = (Number(usdt) / lastBnbPrice).toFixed(8);
+            setBnbAmount(bnb);
+        }
+    }
+
+    function parseUsdtToRaw(value, decimals) {
+        const d = decimals ?? userStats?.usdtDecimals ?? 6;
         if (!value) return "0";
         const [wholePart, decimalPart = ""] = value.split(".");
         const safeWhole = wholePart.replace(/^0+(?=\d)/, "") || "0";
-        const safeDecimal = decimalPart.slice(0, 6).padEnd(6, "0");
+        const safeDecimal = decimalPart.slice(0, d).padEnd(d, "0");
         return `${safeWhole}${safeDecimal}`;
     }
 
@@ -229,8 +278,26 @@ function PresalePage() {
     async function handleBuyWithUsdt() {
         if (isBuying) return;
         try {
-            setIsBuying(true); setBuyMessage(""); setApproveMessage("");
+            setIsBuying(true); setBuyMessage("");
             const usdtAmountRaw = parseUsdtToRaw(usdtAmount);
+
+            // ── Pre-flight: only check saleActive ─────────────────────────
+            setBuyMessage("Checking presale status...");
+            const freshStats = await getPresaleStats();
+            if (!freshStats.saleActive) {
+                setBuyMessage("The presale is not currently active.");
+                return;
+            }
+            // ──────────────────────────────────────────────────────────────
+
+            // Auto-approve if allowance is insufficient
+            const allowance = await getUsdtAllowance(account);
+            if (BigInt(allowance) < BigInt(usdtAmountRaw)) {
+                setBuyMessage("Step 1/2: Approving USDT... Please confirm in wallet.");
+                await approveUsdt(account);
+            }
+
+            setBuyMessage("Step 2/2: Purchasing... Please confirm in wallet.");
             const tokenAmountRaw = getTokenAmountRawFromUsdtRaw(usdtAmountRaw);
             const receipt = await buyWithUsdt(account, usdtAmountRaw);
             if (!receipt?.status) { setBuyMessage("USDT purchase transaction was not successful."); return; }
@@ -242,53 +309,43 @@ function PresalePage() {
                 networkName: String(CONFIG.networkName)
             });
             if (saveResult?.success) {
-                setUsdtAmount("");
-                setModal({ type: "success", message: "Your HDT tokens have been reserved!", txHash: receipt.transactionHash });
+                setUsdtAmount(""); setThkAmount("");
+                setModal({ type: "success", message: "Your THK tokens have been reserved!", txHash: receipt.transactionHash });
                 loadChainData(account);
                 loadTxHistory(account);
             } else {
                 setModal({ type: "error", message: saveResult?.message || "Purchase succeeded but DB save failed." });
             }
         } catch (error) {
-            if (error?.code === 4001) setBuyMessage("Transaction was cancelled.");
-            else setBuyMessage(error?.message || "USDT purchase failed.");
+            if (error?.code === 4001 || error?.message?.includes("User denied")) {
+                setBuyMessage("Transaction was cancelled.");
+            } else {
+                setBuyMessage(error?.message || "USDT purchase failed.");
+            }
         } finally {
             setIsBuying(false);
         }
+    }
+
+    // Bidirectional USDT ↔ THK handlers
+    function handleSpendChange(val) {
+        const v = normalizeUsdtInput(val);
+        setUsdtAmount(v);
+        const num = Number(v);
+        setThkAmount(v && num > 0 ? Math.floor(num / 0.015).toString() : "");
+    }
+
+    function handleThkChange(val) {
+        const v = normalizeUsdtInput(val);
+        setThkAmount(v);
+        const num = Number(v);
+        setUsdtAmount(v && num > 0 ? (num * 0.015).toFixed(2) : "");
     }
 
     async function handleDisconnect() {
         await destroySession();
         await disconnectWalletConnect();
         navigate("/", { state: { fromDashboard: true } });
-    }
-
-    async function checkApprovalStatus(walletAddress) {
-        try {
-            const allowance = await getUsdtAllowance(walletAddress);
-            setIsApproved(BigInt(allowance) > 0n);
-        } catch { setIsApproved(false); }
-    }
-
-    async function handleApproveUsdt() {
-        if (isApproving) return;
-        try {
-            setIsApproving(true); setApproveMessage("");
-            const receipt = await approveUsdt(account);
-            if (receipt?.status) { setIsApproved(true); setApproveMessage("USDT approval completed successfully."); }
-            else setApproveMessage("USDT approval transaction was not successful.");
-        } catch (error) {
-            if (error?.code === 4001) setApproveMessage("USDT approval was rejected.");
-            else setApproveMessage(error?.message || "USDT approval failed.");
-        } finally {
-            setIsApproving(false);
-        }
-    }
-
-    function getEstimatedHdt(usdtValue) {
-        const num = Number(usdtValue);
-        if (!usdtValue || Number.isNaN(num) || num <= 0) return "0";
-        return (num * 66).toFixed(6);
     }
 
     function normalizeUsdtInput(value) { return value.replace(/[^0-9.]/g, ""); }
@@ -309,7 +366,6 @@ function PresalePage() {
                 setCurrentChainId(chainId || "");
                 const correct = chainId && (String(chainId).toLowerCase() === CONFIG.chainHex.toLowerCase() || Number(chainId) === CONFIG.chainId);
                 setIsCorrectNetwork(!!correct);
-                await checkApprovalStatus(currentAccount);
                 if (correct) {
                     loadChainData(currentAccount);
                     loadTxHistory(currentAccount);
@@ -325,7 +381,6 @@ function PresalePage() {
                 if (!accounts || accounts.length === 0) { navigate("/"); }
                 else {
                     setAccount(accounts[0]);
-                    checkApprovalStatus(accounts[0]);
                     loadChainData(accounts[0]);
                     loadTxHistory(accounts[0]);
                 }
@@ -338,7 +393,6 @@ function PresalePage() {
                 if (correct) {
                     getCurrentAccount().then((acc) => {
                         if (acc) {
-                            checkApprovalStatus(acc);
                             loadChainData(acc);
                             loadTxHistory(acc);
                         }
@@ -361,6 +415,16 @@ function PresalePage() {
         const timer = setTimeout(() => handleFetchBnbQuote(trimmedAmount), 300);
         return () => clearTimeout(timer);
     }, [account, bnbAmount]);
+
+    useEffect(() => {
+        function handleClickOutside(e) {
+            if (langSwitcherRef.current && !langSwitcherRef.current.contains(e.target)) {
+                setLangDropdownOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     // ── Derived display values ────────────────────────────────────
     const shortAddr = account ? account.slice(0, 6) + "..." + account.slice(-4) : "";
@@ -402,16 +466,19 @@ function PresalePage() {
     // Lock/cliff end date for display (must be after cliffEnd is defined)
     const lockUntilDate = cliffEnd > 0
         ? new Date(cliffEnd * 1000).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })
-        : "TGE + Cliff";
+        : "Aug 1, 2026";
 
-    function getScheduleStep() {
-        if (tge === 0) return 0;        // no TGE set yet
-        if (now < tge) return 0;        // before TGE
-        if (now < cliffEnd) return 1;   // lock period
-        if (now < vestEnd) return 2;    // vesting active
-        return 3;                       // vesting complete
-    }
-    const scheduleStep = getScheduleStep();
+    // Live THK preview from current input (updates Total Allocation card in real-time)
+    const previewHyk = (() => {
+        if (paymentTab === "USDT" && usdtAmount && Number(usdtAmount) > 0) {
+            return Math.floor(Number(usdtAmount) / 0.015);
+        }
+        if (paymentTab === "BNB" && bnbQuote?.tokenAmount) {
+            const raw = parseFloat(String(bnbQuote.tokenAmount).replace(/,/g, ""));
+            return isNaN(raw) ? null : Math.floor(raw);
+        }
+        return null;
+    })();
 
     // filtered TX list
     const displayedTx = txTab === "my"
@@ -442,6 +509,41 @@ function PresalePage() {
 
     return (
         <div style={{ minHeight: "100vh", fontFamily: "'DM Sans', sans-serif", color: "#F0F0FF" }} className={exiting ? "page-exit" : ""}>
+            <style>{`
+          .ps-header { padding: 0 48px; }
+          .ps-content { padding: 90px 48px 60px; display:flex; flex-direction:column; gap:22px; }
+          .ps-stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+          .ps-top-grid { display:grid; grid-template-columns:1.1fr 1fr; gap:20px; align-items:start; }
+          .ps-vest-steps { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
+          .ps-back-btn {}
+          .ps-wallet-pill {}
+          .ps-logo-text {}
+          @media (max-width: 767px) {
+            .ps-header { padding: 0 16px !important; }
+            .ps-content { padding: 80px 16px 40px !important; }
+            .ps-stats-row { grid-template-columns: 1fr !important; }
+            .ps-top-grid { grid-template-columns: 1fr !important; }
+            .ps-vest-steps { grid-template-columns: 1fr 1fr !important; }
+            .ps-back-btn { display: none !important; }
+            .ps-wallet-pill { display: none !important; }
+            .ps-logo-text { display: none !important; }
+          }
+          @media (min-width: 768px) and (max-width: 1023px) {
+            .ps-header { padding: 0 24px !important; }
+            .ps-content { padding: 80px 24px 40px !important; }
+            .ps-stats-row { grid-template-columns: repeat(3,1fr) !important; }
+            .ps-top-grid { grid-template-columns: 1fr !important; }
+            .ps-vest-steps { grid-template-columns: repeat(3,1fr) !important; }
+            .ps-back-btn { display: none !important; }
+          }
+          .ps-lang-btn:hover { border-color: rgba(255,255,255,0.2) !important; color: #F0F0FF !important; }
+          .ps-lang-opt:hover { background: rgba(255,255,255,0.06) !important; }
+          .vd-step-done { border-color: rgba(106,198,69,0.3) !important; }
+          .vd-step-active { border-color: rgba(255,159,28,0.4) !important; box-shadow: 0 0 16px rgba(255,159,28,0.1) !important; }
+          .vd-step-done::before { background: #6AC645 !important; opacity:1 !important; }
+          .vd-step-active::before { background: #FF9F1C !important; opacity:1 !important; }
+          @keyframes pstep { 0%,100%{box-shadow:0 0 0 transparent} 50%{box-shadow:0 0 10px rgba(255,159,28,0.5)} }
+        `}</style>
             <div className="space-bg" />
             <div className="nebula" />
             {[{ top: "12%", w: "160px", delay: "0s" }, { top: "28%", w: "120px", delay: "3.5s" }, { top: "55%", w: "90px", delay: "6s" }].map((s, i) => (
@@ -449,44 +551,76 @@ function PresalePage() {
             ))}
 
             {/* ── Header ── */}
-            <header style={{
+            <header className="ps-header" style={{
                 position: "fixed", top: 0, left: 0, right: 0, zIndex: 200,
                 display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "0 48px", height: "70px",
+                height: "70px",
                 background: "rgba(6,6,15,0.7)", backdropFilter: "blur(24px)",
                 borderBottom: "1px solid rgba(255,255,255,0.06)",
             }}>
                 {/* Logo — click to go back to landing page */}
                 <a onClick={() => navigate("/", { state: { fromDashboard: true } })} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", textDecoration: "none" }}>
                     <img src="/HiyokoLogo.png" alt="HIYOKO" style={{ width: "38px", height: "38px", objectFit: "contain", borderRadius: "8px" }} />
-                    <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: "22px", color: "#FFD84D", letterSpacing: "0.04em", textShadow: "0 0 20px rgba(255,216,77,0.4)" }}>HIYOKO</span>
+                    <span className="ps-logo-text" style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: "22px", color: "#FFD84D", letterSpacing: "0.04em", textShadow: "0 0 20px rgba(255,216,77,0.4)" }}>HIYOKO</span>
                 </a>
 
                 {/* Center decorative banner */}
                 <img src="/header-banner.png" alt="" style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", height: "50px", opacity: 0.18, pointerEvents: "none" }} />
 
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    {/* Language selector */}
-                    <div style={{ display: "flex", gap: "4px" }}>
-                        {SUPPORTED_LANGS.map((l) => (
-                            <button
-                                key={l.code}
-                                onClick={() => setLang(l.code)}
-                                style={{
-                                    padding: "5px 10px",
-                                    background: lang === l.code ? "rgba(255,216,77,0.15)" : "rgba(20,20,40,0.85)",
-                                    border: `1px solid ${lang === l.code ? "rgba(255,216,77,0.5)" : "rgba(255,255,255,0.07)"}`,
-                                    borderRadius: "8px", fontSize: "12px", fontWeight: lang === l.code ? 700 : 400,
-                                    color: lang === l.code ? "#FFD84D" : "#6666AA",
-                                    cursor: "pointer", transition: "all 0.15s",
-                                    fontFamily: "'DM Sans', sans-serif",
-                                }}
-                            >{l.label}</button>
-                        ))}
+                    {/* Language dropdown */}
+                    <div ref={langSwitcherRef} style={{ position: "relative" }}>
+                        <button
+                            className="ps-lang-btn"
+                            onClick={() => setLangDropdownOpen(!langDropdownOpen)}
+                            style={{
+                                display: "flex", alignItems: "center", gap: "7px",
+                                padding: "7px 13px",
+                                background: "rgba(20,20,40,0.85)", border: "1px solid rgba(255,255,255,0.1)",
+                                borderRadius: "100px", cursor: "pointer", transition: "all 0.2s",
+                                fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "13px",
+                                color: "#F0F0FF",
+                            }}
+                        >
+                            <img src={SUPPORTED_LANGS.find(l => l.code === lang)?.flagUrl} alt="" style={{ width: "20px", height: "15px", borderRadius: "2px", objectFit: "cover" }} />
+                            {SUPPORTED_LANGS.find(l => l.code === lang)?.shortLabel}
+                            <span style={{ fontSize: "9px", opacity: 0.5 }}>▼</span>
+                        </button>
+                        {langDropdownOpen && (
+                            <div style={{
+                                position: "absolute", top: "calc(100% + 8px)", right: 0,
+                                background: "rgba(14,14,28,0.97)", border: "1px solid rgba(255,255,255,0.1)",
+                                borderRadius: "12px", padding: "6px", zIndex: 300,
+                                minWidth: "150px", backdropFilter: "blur(20px)",
+                                boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+                            }}>
+                                {SUPPORTED_LANGS.map((l) => (
+                                    <button
+                                        key={l.code}
+                                        className="ps-lang-opt"
+                                        onClick={() => { setLang(l.code); setLangDropdownOpen(false); }}
+                                        style={{
+                                            display: "flex", alignItems: "center", gap: "10px",
+                                            width: "100%", padding: "9px 12px",
+                                            background: lang === l.code ? "rgba(255,216,77,0.1)" : "transparent",
+                                            border: "none", borderRadius: "8px",
+                                            cursor: "pointer", textAlign: "left",
+                                            fontFamily: "'Outfit', sans-serif", fontSize: "13px",
+                                            fontWeight: lang === l.code ? 700 : 500,
+                                            color: lang === l.code ? "#FFD84D" : "#F0F0FF",
+                                            transition: "all 0.15s",
+                                        }}
+                                    >
+                                        <img src={l.flagUrl} alt="" style={{ width: "20px", height: "15px", borderRadius: "2px", objectFit: "cover" }} />
+                                        {l.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {isCorrectNetwork && (
-                        <div style={{
+                        <div className="ps-wallet-pill" style={{
                             display: "flex", alignItems: "center", gap: "7px",
                             background: "rgba(20,20,40,0.85)", border: "1px solid rgba(255,255,255,0.07)",
                             borderRadius: "100px", padding: "7px 14px",
@@ -500,7 +634,7 @@ function PresalePage() {
                             {shortAddr}
                         </div>
                     )}
-                    <button onClick={() => navigate("/", { state: { fromDashboard: true } })} style={{
+                    <button className="ps-back-btn" onClick={() => navigate("/", { state: { fromDashboard: true } })} style={{
                         display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px",
                         background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)",
                         color: "rgba(240,240,255,0.7)", borderRadius: "100px",
@@ -518,7 +652,7 @@ function PresalePage() {
             </header>
 
             {/* ── Page content ── */}
-            <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "90px 48px 60px", display: "flex", flexDirection: "column", gap: "22px" }}>
+            <div className="ps-content" style={{ maxWidth: "1280px", margin: "0 auto" }}>
 
                 {/* Title */}
                 <div>
@@ -572,22 +706,32 @@ function PresalePage() {
                 {isCorrectNetwork && (
                     <>
                         {/* ── Vesting stats row ── */}
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px" }}>
+                        <div className="ps-stats-row">
                             {/* Total Allocation */}
                             <div style={{
-                                background: "rgba(14,14,28,0.9)", border: "1px solid rgba(255,255,255,0.07)",
+                                background: "rgba(14,14,28,0.9)",
+                                border: `1px solid ${previewHyk !== null ? "rgba(255,216,77,0.25)" : "rgba(255,255,255,0.07)"}`,
                                 borderRadius: "16px", padding: "20px 22px",
                                 backdropFilter: "blur(10px)", position: "relative", overflow: "hidden",
-                                transition: "all 0.25s",
+                                transition: "all 0.3s",
                             }}>
-                                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", borderRadius: "16px 16px 0 0", background: "linear-gradient(90deg, #00E5FF, transparent)", opacity: 0.7 }} />
-                                <span style={{ fontSize: "22px", marginBottom: "12px", display: "block" }}>📦</span>
+                                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", borderRadius: "16px 16px 0 0", background: previewHyk !== null ? "linear-gradient(90deg, #FFD84D, transparent)" : "linear-gradient(90deg, #00E5FF, transparent)", opacity: 0.7, transition: "background 0.3s" }} />
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+                                    <span style={{ fontSize: "22px" }}>📦</span>
+                                    {previewHyk !== null && (
+                                        <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#FFD84D", background: "rgba(255,216,77,0.1)", border: "1px solid rgba(255,216,77,0.25)", borderRadius: "100px", padding: "2px 8px" }}>Preview</span>
+                                    )}
+                                </div>
                                 <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "6px" }}>Total Allocation</div>
-                                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 800, color: "#00E5FF", lineHeight: 1.1 }}>
-                                    {totalAlloc === "—" ? "0 HYK" : `${totalAlloc} HYK`}
+                                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 800, color: previewHyk !== null ? "#FFD84D" : "#00E5FF", lineHeight: 1.1, transition: "color 0.2s" }}>
+                                    {previewHyk !== null
+                                        ? `${formatNumber(previewHyk.toString(), 0)} THK`
+                                        : totalAlloc === "—" ? "0 THK" : `${totalAlloc} THK`}
                                 </div>
                                 <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "5px" }}>
-                                    {totalAlloc !== "—" ? `≈ $${formatNumber((parseFloat(totalAlloc.replace(/,/g, "")) * 0.015).toFixed(2), 2)} ${t("atPresalePrice")}` : t("noAllocationYet")}
+                                    {previewHyk !== null
+                                        ? `≈ $${formatNumber((previewHyk * 0.015).toFixed(2), 2)} ${t("atPresalePrice")}`
+                                        : totalAlloc !== "—" ? `≈ $${formatNumber((parseFloat(totalAlloc.replace(/,/g, "")) * 0.015).toFixed(2), 2)} ${t("atPresalePrice")}` : t("noAllocationYet")}
                                 </div>
                             </div>
 
@@ -602,7 +746,7 @@ function PresalePage() {
                                 <span style={{ fontSize: "22px", marginBottom: "12px", display: "block" }}>📅</span>
                                 <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "6px" }}>{t("dailyAllocation")}</div>
                                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 800, color: "#FFD84D", lineHeight: 1.1 }}>
-                                    {dailyAlloc === "—" ? "— HYK" : `${dailyAlloc} HYK`}
+                                    {dailyAlloc === "—" ? "— THK" : `${dailyAlloc} THK`}
                                 </div>
                                 <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "5px" }}>{t("afterVestingStarts")}</div>
                             </div>
@@ -618,10 +762,10 @@ function PresalePage() {
                                 <span style={{ fontSize: "22px", marginBottom: "12px", display: "block" }}>✅</span>
                                 <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "6px" }}>{t("alreadyClaimed")}</div>
                                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 800, color: "#6AC645", lineHeight: 1.1 }}>
-                                    {claimed === "—" ? "0 HYK" : `${claimed} HYK`}
+                                    {claimed === "—" ? "0 THK" : `${claimed} THK`}
                                 </div>
                                 <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "5px" }}>
-                                    {t("disbursed")}: {claimed === "—" ? "0 HYK" : `${claimed} HYK`}
+                                    {t("Provided")}: {claimed === "—" ? "0 THK" : `${claimed} THK`}
                                 </div>
                             </div>
                         </div>
@@ -640,7 +784,7 @@ function PresalePage() {
                                 <div>
                                     <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "4px" }}>{t("claimableNow")}</div>
                                     <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 800, color: claimableRaw > 0n ? "#6AC645" : "#6666AA", lineHeight: 1.1 }}>
-                                        {claimableNow} HYK
+                                        {claimableNow} THK
                                     </div>
                                     <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "3px", display: "flex", alignItems: "center", gap: "4px" }}>
                                         🔒 {t("lockedUntil")} {lockUntilDate}
@@ -679,7 +823,7 @@ function PresalePage() {
                         </div>
 
                         {/* ── Buy card + TX panel ── */}
-                        <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: "20px", alignItems: "start" }}>
+                        <div className="ps-top-grid">
 
                             {/* ── BUY CARD ── */}
                             <div style={{
@@ -695,11 +839,14 @@ function PresalePage() {
                                     <div>
                                         <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.12em", color: "#6666AA", marginBottom: "3px", fontWeight: 600 }}>{t("presalePrice")}</div>
                                         <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "28px", fontWeight: 900, color: "#FFD84D", lineHeight: 1, textShadow: "0 0 30px rgba(255,216,77,0.5)" }}>
-                                            1 USDT <span style={{ fontSize: "13px", color: "#6666AA", fontWeight: 400 }}>= 66 HDT</span>
+                                            $0.015 <span style={{ fontSize: "13px", color: "#6666AA", fontWeight: 400 }}>USDT / THK</span>
+                                        </div>
+                                        <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "3px" }}>
+                                            {paymentTab === "USDT" ? "= 66.67 THK per USDT" : "≈ $0.015 per THK"}
                                         </div>
                                     </div>
                                     <div style={{ textAlign: "right" }}>
-                                        <div style={{ fontSize: "10px", color: "#6666AA", marginBottom: "4px" }}>BSC Testnet</div>
+                                        <div style={{ fontSize: "10px", color: "#6666AA", marginBottom: "4px" }}>BSC (BEP-20)</div>
                                         <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "11px", fontWeight: 700, color: "#FF9F1C" }}>🟡 BEP-20</div>
                                     </div>
                                 </div>
@@ -708,8 +855,8 @@ function PresalePage() {
                                 {presaleStats && (
                                     <div style={{ marginBottom: "14px" }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#6666AA", marginBottom: "5px" }}>
-                                            <span>Sold: <span style={{ color: "#F0F0FF" }}>{soldDisplay} HDT</span></span>
-                                            <span>Cap: <span style={{ color: "#F0F0FF" }}>{capDisplay} HDT</span></span>
+                                            <span>Sold: <span style={{ color: "#F0F0FF" }}>{soldDisplay} THK</span></span>
+                                            <span>Cap: <span style={{ color: "#F0F0FF" }}>{capDisplay} THK</span></span>
                                         </div>
                                         <div style={{ height: "6px", background: "rgba(255,255,255,0.06)", borderRadius: "100px", overflow: "hidden" }}>
                                             <div style={{
@@ -734,7 +881,7 @@ function PresalePage() {
                                     {["USDT", "BNB"].map((tab) => (
                                         <button
                                             key={tab}
-                                            onClick={() => { setPaymentTab(tab); setBuyMessage(""); setApproveMessage(""); }}
+                                            onClick={() => { setPaymentTab(tab); setBuyMessage(""); }}
                                             style={{
                                                 flex: 1, padding: "8px 4px",
                                                 background: "transparent",
@@ -751,72 +898,77 @@ function PresalePage() {
                                 {/* ── USDT TAB ── */}
                                 {paymentTab === "USDT" && (
                                     <>
-                                        {!isApproved ? (
-                                            <>
-                                                <div style={{ fontSize: "13px", color: "#6666AA", marginBottom: "14px", lineHeight: 1.6 }}>
-                                                    {t("firstApprove")}
-                                                </div>
-                                                <button onClick={handleApproveUsdt} disabled={isApproving} style={btnBuyStyle(!isApproving)}>
-                                                    {isApproving ? `⏳ ${t("approving")}` : t("approveUsdt")}
-                                                </button>
-                                                {approveMessage && (
-                                                    <div style={{ marginTop: "10px", fontSize: "13px", color: approveMessage.includes("success") ? "#6AC645" : "#ff6060", textAlign: "center" }}>
-                                                        {approveMessage}
-                                                    </div>
-                                                )}
-                                            </>
-                                        ) : (
-                                            <>
-                                                {userStats?.usdtBalance !== undefined && (
-                                                    <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px", textAlign: "right" }}>
-                                                        Balance: <span style={{ color: "#F0F0FF" }}>{formatNumber(formatUnits(userStats.usdtBalance, 6), 2)} USDT</span>
-                                                    </div>
-                                                )}
-                                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>
-                                                    <span>{t("amountToSpend")}</span>
-                                                    <span style={{ color: "rgba(255,255,255,0.7)" }}>Min: 10 USDT</span>
-                                                </div>
-                                                <div style={{
-                                                    display: "flex", alignItems: "center",
-                                                    background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
-                                                    borderRadius: "12px", overflow: "hidden", marginBottom: "10px",
-                                                }}>
-                                                    <input
-                                                        type="text" placeholder="0.00" value={usdtAmount}
-                                                        onChange={(e) => setUsdtAmount(normalizeUsdtInput(e.target.value))}
-                                                        style={{
-                                                            flex: 1, background: "none", border: "none", outline: "none",
-                                                            color: "#F0F0FF", fontFamily: "'Outfit', sans-serif",
-                                                            fontSize: "16px", fontWeight: 400, padding: "11px 14px",
-                                                        }}
-                                                    />
-                                                    <div style={{
-                                                        padding: "0 14px", fontFamily: "'Outfit', sans-serif",
-                                                        fontWeight: 700, fontSize: "12px", color: "rgba(255,255,255,0.5)",
-                                                        borderLeft: "1px solid rgba(255,255,255,0.07)", height: "100%",
-                                                        display: "flex", alignItems: "center",
-                                                    }}>USDT</div>
-                                                </div>
-                                                <div style={{
-                                                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                                                    background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
-                                                    borderRadius: "10px", padding: "9px 14px", marginBottom: "10px",
-                                                }}>
-                                                    <span style={{ fontSize: "11px", color: "#6666AA" }}>🐣 {t("hykYouReceive")}</span>
-                                                    <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "14px", fontWeight: 900, color: "#FFD84D", textShadow: "0 0 10px rgba(255,216,77,0.3)" }}>
-                                                        {usdtAmount ? `${getEstimatedHdt(usdtAmount)} HDT` : "— HDT"}
-                                                    </span>
-                                                </div>
-                                                {usdtAmount && !isValidUsdtAmount(usdtAmount) && (
-                                                    <div style={{ fontSize: "11px", color: "#FF9F1C", textAlign: "center", marginBottom: "8px" }}>Minimum purchase is 10 USDT</div>
-                                                )}
-                                                <button onClick={handleBuyWithUsdt} disabled={!isValidUsdtAmount(usdtAmount) || isBuying} style={btnBuyStyle(isValidUsdtAmount(usdtAmount) && !isBuying)}>
-                                                    {isBuying ? `⏳ ${t("buying")}` : t("buyNow")}
-                                                </button>
-                                                {buyMessage && (
-                                                    <div style={{ marginTop: "10px", fontSize: "13px", color: "#ff6060", textAlign: "center" }}>{buyMessage}</div>
-                                                )}
-                                            </>
+                                        {userStats?.usdtBalance !== undefined && (
+                                            <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px", textAlign: "right" }}>
+                                                Balance: <span style={{ color: "#F0F0FF" }}>{formatNumber(formatUnits(userStats.usdtBalance, userStats?.usdtDecimals ?? 6), 2)} USDT</span>
+                                            </div>
+                                        )}
+                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>
+                                            <span>{t("amountToSpend")}</span>
+                                            <span style={{ color: "rgba(255,255,255,0.7)" }}>Min: 10 USDT</span>
+                                        </div>
+                                        <div style={{
+                                            display: "flex", alignItems: "center",
+                                            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+                                            borderRadius: "12px", overflow: "hidden", marginBottom: "10px",
+                                        }}>
+                                            <input
+                                                type="text" placeholder="0.00" value={usdtAmount}
+                                                onChange={(e) => handleSpendChange(e.target.value)}
+                                                style={{
+                                                    flex: 1, background: "none", border: "none", outline: "none",
+                                                    color: "#F0F0FF", fontFamily: "'Outfit', sans-serif",
+                                                    fontSize: "16px", fontWeight: 400, padding: "11px 14px",
+                                                }}
+                                            />
+                                            {userStats?.usdtBalance && (
+                                                <button
+                                                    onClick={() => handleSpendChange(formatUnits(userStats.usdtBalance, userStats?.usdtDecimals ?? 6))}
+                                                    style={{
+                                                        background: "rgba(255,216,77,0.18)", border: "none", cursor: "pointer",
+                                                        color: "#FFD84D", fontFamily: "'Outfit', sans-serif",
+                                                        fontWeight: 800, fontSize: "10px", padding: "5px 10px",
+                                                        borderRadius: "6px", marginRight: "6px", letterSpacing: "0.06em",
+                                                    }}
+                                                >MAX</button>
+                                            )}
+                                            <div style={{
+                                                padding: "0 14px", fontFamily: "'Outfit', sans-serif",
+                                                fontWeight: 700, fontSize: "12px", color: "rgba(255,255,255,0.5)",
+                                                borderLeft: "1px solid rgba(255,255,255,0.07)", height: "100%",
+                                                display: "flex", alignItems: "center",
+                                            }}>USDT</div>
+                                        </div>
+                                        <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>🐣 {t("hykYouReceive")}</div>
+                                        <div style={{
+                                            display: "flex", alignItems: "center",
+                                            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,216,77,0.15)",
+                                            borderRadius: "12px", overflow: "hidden", marginBottom: "10px",
+                                        }}>
+                                            <input
+                                                type="text" placeholder="0" value={thkAmount}
+                                                onChange={(e) => handleThkChange(e.target.value)}
+                                                style={{
+                                                    flex: 1, background: "none", border: "none", outline: "none",
+                                                    color: "#FFD84D", fontFamily: "'Outfit', sans-serif",
+                                                    fontSize: "16px", fontWeight: 700, padding: "11px 14px",
+                                                }}
+                                            />
+                                            <div style={{
+                                                padding: "0 14px", fontFamily: "'Outfit', sans-serif",
+                                                fontWeight: 700, fontSize: "12px", color: "#FFD84D",
+                                                borderLeft: "1px solid rgba(255,216,77,0.15)", height: "100%",
+                                                display: "flex", alignItems: "center",
+                                            }}>THK</div>
+                                        </div>
+                                        {usdtAmount && !isValidUsdtAmount(usdtAmount) && (
+                                            <div style={{ fontSize: "11px", color: "#FF9F1C", textAlign: "center", marginBottom: "8px" }}>Minimum purchase is 10 USDT</div>
+                                        )}
+                                        <button onClick={handleBuyWithUsdt} disabled={!isValidUsdtAmount(usdtAmount) || isBuying} style={btnBuyStyle(isValidUsdtAmount(usdtAmount) && !isBuying)}>
+                                            {isBuying ? `⏳ ${t("buying")}` : t("buyNow")}
+                                        </button>
+                                        {buyMessage && (
+                                            <div style={{ marginTop: "10px", fontSize: "13px", color: buyMessage.startsWith("Step") ? "#FF9F1C" : "#ff6060", textAlign: "center" }}>{buyMessage}</div>
                                         )}
                                     </>
                                 )}
@@ -828,6 +980,7 @@ function PresalePage() {
                                             <span>{t("amountToSpend")}</span>
                                             <span style={{ color: "rgba(255,255,255,0.7)" }}>Min: ~10 USDT worth</span>
                                         </div>
+                                        {/* BNB input */}
                                         <div style={{
                                             display: "flex", alignItems: "center",
                                             background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
@@ -835,7 +988,7 @@ function PresalePage() {
                                         }}>
                                             <input
                                                 type="text" placeholder="0.00" value={bnbAmount}
-                                                onChange={(e) => setBnbAmount(normalizeUsdtInput(e.target.value))}
+                                                onChange={(e) => handleBnbChange(e.target.value)}
                                                 style={{
                                                     flex: 1, background: "none", border: "none", outline: "none",
                                                     color: "#F0F0FF", fontFamily: "'Outfit', sans-serif",
@@ -849,33 +1002,54 @@ function PresalePage() {
                                                 display: "flex", alignItems: "center",
                                             }}>BNB</div>
                                         </div>
-                                        {isFetchingBnbQuote && (
-                                            <div style={{ fontSize: "12px", color: "#6666AA", textAlign: "center", marginBottom: "10px" }}>⏳ {t("fetchingQuote")}</div>
-                                        )}
+                                        {/* USDT equivalent — editable */}
+                                        <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>≈ USDT value {isFetchingBnbQuote && <span style={{ color: "#FF9F1C" }}>⏳</span>}</div>
+                                        <div style={{
+                                            display: "flex", alignItems: "center",
+                                            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+                                            borderRadius: "12px", overflow: "hidden", marginBottom: "10px",
+                                        }}>
+                                            <input
+                                                type="text" placeholder="0.00" value={bnbUsdtDisplay}
+                                                onChange={(e) => handleBnbUsdtChange(e.target.value)}
+                                                style={{
+                                                    flex: 1, background: "none", border: "none", outline: "none",
+                                                    color: "#F0F0FF", fontFamily: "'Outfit', sans-serif",
+                                                    fontSize: "16px", fontWeight: 400, padding: "11px 14px",
+                                                }}
+                                            />
+                                            <div style={{
+                                                padding: "0 14px", fontFamily: "'Outfit', sans-serif",
+                                                fontWeight: 700, fontSize: "12px", color: "rgba(255,255,255,0.5)",
+                                                borderLeft: "1px solid rgba(255,255,255,0.07)", height: "100%",
+                                                display: "flex", alignItems: "center",
+                                            }}>USDT</div>
+                                        </div>
+                                        {/* THK receive — editable */}
+                                        <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>🐣 {t("hykYouReceive")}</div>
+                                        <div style={{
+                                            display: "flex", alignItems: "center",
+                                            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,216,77,0.15)",
+                                            borderRadius: "12px", overflow: "hidden", marginBottom: "10px",
+                                        }}>
+                                            <input
+                                                type="text" placeholder="0" value={bnbThkDisplay}
+                                                onChange={(e) => handleBnbThkChange(e.target.value)}
+                                                style={{
+                                                    flex: 1, background: "none", border: "none", outline: "none",
+                                                    color: "#FFD84D", fontFamily: "'Outfit', sans-serif",
+                                                    fontSize: "16px", fontWeight: 700, padding: "11px 14px",
+                                                }}
+                                            />
+                                            <div style={{
+                                                padding: "0 14px", fontFamily: "'Outfit', sans-serif",
+                                                fontWeight: 700, fontSize: "12px", color: "#FFD84D",
+                                                borderLeft: "1px solid rgba(255,216,77,0.15)", height: "100%",
+                                                display: "flex", alignItems: "center",
+                                            }}>THK</div>
+                                        </div>
                                         {bnbQuoteMessage && (
                                             <div style={{ fontSize: "12px", color: "#ff6060", textAlign: "center", marginBottom: "10px" }}>{bnbQuoteMessage}</div>
-                                        )}
-                                        {bnbQuote && !isFetchingBnbQuote && (
-                                            <>
-                                                <div style={{
-                                                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                                                    background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
-                                                    borderRadius: "10px", padding: "9px 14px", marginBottom: "6px",
-                                                }}>
-                                                    <span style={{ fontSize: "11px", color: "#6666AA" }}>≈ USDT value</span>
-                                                    <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 700, color: "#F0F0FF" }}>{bnbQuote.usdtAmount} USDT</span>
-                                                </div>
-                                                <div style={{
-                                                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                                                    background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
-                                                    borderRadius: "10px", padding: "9px 14px", marginBottom: "10px",
-                                                }}>
-                                                    <span style={{ fontSize: "11px", color: "#6666AA" }}>🐣 {t("hykYouReceive")}</span>
-                                                    <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: "14px", fontWeight: 900, color: "#FFD84D", textShadow: "0 0 10px rgba(255,216,77,0.3)" }}>
-                                                        {bnbQuote.tokenAmount} HDT
-                                                    </span>
-                                                </div>
-                                            </>
                                         )}
                                         <button
                                             onClick={handleBuyWithBnb}
@@ -960,7 +1134,7 @@ function PresalePage() {
                                                             <span style={{ fontSize: "12px", color: "#F0F0FF", fontWeight: 600 }}>{tx.usdt_amount}</span>
                                                         </div>
                                                         <div>
-                                                            <span style={{ fontSize: "11px", color: "#6666AA" }}>HDT: </span>
+                                                            <span style={{ fontSize: "11px", color: "#6666AA" }}>THK: </span>
                                                             <span style={{ fontSize: "12px", color: "#FFD84D", fontWeight: 700 }}>
                                                                 {tx.token_amount ? formatNumber(parseFloat(tx.token_amount), 0) : "—"}
                                                             </span>
@@ -977,40 +1151,160 @@ function PresalePage() {
 
                         {/* ── Vesting Schedule ── */}
                         <div style={{
-                            background: "#0C0C18", border: "1px solid rgba(255,255,255,0.07)",
-                            borderRadius: "22px", padding: "24px",
+                            background: "#111120", border: "1px solid rgba(255,255,255,0.09)",
+                            borderRadius: "22px", overflow: "hidden",
                             boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
                         }}>
-                            <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "18px", fontWeight: 800, color: "#F0F0FF", marginBottom: "20px" }}>
-                                {t("vestingSchedule")}
+                            {/* Header */}
+                            <div style={{
+                                display: "flex", alignItems: "center", justifyContent: "space-between",
+                                padding: "18px 24px", borderBottom: "1px solid rgba(255,255,255,0.06)",
+                                flexWrap: "wrap", gap: "10px",
+                            }}>
+                                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "16px", fontWeight: 800, color: "#F0F0FF" }}>
+                                    🔒 {t("vestingSchedule")}
+                                </div>
+                                <div style={{
+                                    display: "flex", alignItems: "center", gap: "6px",
+                                    background: "rgba(255,216,77,0.08)", border: "1px solid rgba(255,216,77,0.2)",
+                                    borderRadius: "8px", padding: "4px 10px",
+                                    fontSize: "11px", fontWeight: 700, color: "#FFD84D", letterSpacing: "0.04em",
+                                }}>
+                                    🔒 {t("lockedUntil")} {lockUntilDate}
+                                </div>
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "10px" }}>
-                                {[
-                                    { step: 0, label: t("step1name"), desc: t("step1sub"), color: "#FF9F1C", active: presaleActive },
-                                    { step: 1, label: t("step2name"), desc: tge > 0 ? formatDate(tge) : "TGE pending", color: "#FFD84D", active: scheduleStep >= 1 },
-                                    { step: 2, label: t("step3name"), desc: cliffEnd > 0 ? formatDate(cliffEnd) : `+${cliff > 0 ? Math.floor(cliff / 86400) : "?"} days`, color: "#00E5FF", active: scheduleStep >= 2 },
-                                    { step: 3, label: t("step4name"), desc: t("step4sub"), color: "#6AC645", active: scheduleStep >= 2 },
-                                    { step: 4, label: t("step5name"), desc: vestEnd > 0 ? formatDate(vestEnd) : "—", color: "#a78bfa", active: scheduleStep >= 3 },
-                                ].map((item) => (
-                                    <div key={item.step} style={{
-                                        background: item.active ? `${item.color}0D` : "rgba(255,255,255,0.02)",
-                                        border: `1px solid ${item.active ? `${item.color}40` : "rgba(255,255,255,0.06)"}`,
-                                        borderRadius: "14px", padding: "16px",
-                                        opacity: item.active ? 1 : 0.5,
-                                    }}>
-                                        <div style={{
-                                            width: "28px", height: "28px", borderRadius: "50%",
-                                            background: item.active ? item.color : "rgba(255,255,255,0.08)",
-                                            display: "flex", alignItems: "center", justifyContent: "center",
-                                            fontSize: "12px", fontWeight: 900, color: item.active ? "#06060F" : "#6666AA",
-                                            marginBottom: "10px",
-                                        }}>{item.step + 1}</div>
-                                        <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 800, color: item.active ? "#F0F0FF" : "#6666AA", marginBottom: "4px" }}>
-                                            {item.label}
-                                        </div>
-                                        <div style={{ fontSize: "11px", color: "#6666AA", lineHeight: 1.5 }}>{item.desc}</div>
-                                    </div>
-                                ))}
+                            {/* Steps */}
+                            <div style={{ padding: "20px 24px" }}>
+                                <div className="ps-vest-steps">
+                                    {(() => {
+                                        function getStepState(idx) {
+                                            if (tge === 0) return idx === 0 ? "active" : "upcoming";
+                                            if (now < tge) return idx === 0 ? "active" : "upcoming";
+                                            if (now < cliffEnd) {
+                                                if (idx === 0) return "done";
+                                                if (idx === 1) return "active";
+                                                return "upcoming";
+                                            }
+                                            if (now < vestEnd) {
+                                                if (idx <= 1) return "done";
+                                                if (idx <= 3) return "active";
+                                                return "upcoming";
+                                            }
+                                            return idx <= 3 ? "done" : "active";
+                                        }
+                                        // Pre-compute states so steps can reference them for val text
+                                        const stepStates = [0, 1, 2, 3, 4].map(i => getStepState(i));
+                                        const steps = [
+                                            {
+                                                icon: "🐣",
+                                                date: "Now — June 2026",
+                                                name: t("step1name"),
+                                                val: stepStates[0] === "done" ? "Completed" : stepStates[0] === "active" ? "Presale Live" : "Not Started",
+                                                sub: "Buy at $0.015",
+                                                valColor: "#6666AA",
+                                            },
+                                            {
+                                                icon: "🔒",
+                                                date: cliffEnd > 0 ? `Until ${formatDate(cliffEnd)}` : "Until Aug 1, 2026",
+                                                name: t("step2name"),
+                                                val: stepStates[1] === "done" ? "Completed" : stepStates[1] === "active" ? "Tokens Locked" : "Not Started",
+                                                sub: "All tokens locked",
+                                                valColor: "#6666AA",
+                                            },
+                                            {
+                                                icon: "🔓",
+                                                date: cliffEnd > 0 ? formatDate(cliffEnd) : "Aug 1, 2026",
+                                                name: t("step3name"),
+                                                val: stepStates[2] === "done" ? "Unlocked" : stepStates[2] === "active" ? "Vesting Started" : "Not Started",
+                                                sub: "10% × 10 months",
+                                                valColor: "#00E5FF",
+                                            },
+                                            {
+                                                icon: "📅",
+                                                date: cliffEnd > 0 && vestEnd > 0 ? `${formatDate(cliffEnd)} — ${formatDate(vestEnd)}` : "Aug 2026 — May 2027",
+                                                name: t("step4name"),
+                                                val: dailyAlloc !== "—" ? `${dailyAlloc} THK` : "—",
+                                                sub: "per month",
+                                                valColor: "#6AC645",
+                                            },
+                                            {
+                                                icon: "🎉",
+                                                date: vestEnd > 0 ? formatDate(vestEnd) : "May 2027",
+                                                name: t("step5name"),
+                                                val: totalAlloc !== "—" ? `${totalAlloc} THK` : "—",
+                                                sub: "100% received",
+                                                valColor: "#a78bfa",
+                                            },
+                                        ];
+                                        return steps.map((s, i) => {
+                                            const state = stepStates[i];
+                                            const isDone = state === "done";
+                                            const isActive = state === "active";
+                                            const isUpcoming = state === "upcoming";
+                                            // Color tokens
+                                            const doneGreen = "#6AC645";
+                                            const activeGreen = "#4ade80";
+                                            const borderColor = isDone ? "rgba(106,198,69,0.4)" : isActive ? "rgba(74,222,128,0.55)" : "rgba(255,255,255,0.07)";
+                                            const bgColor = isDone ? "rgba(106,198,69,0.06)" : isActive ? "rgba(74,222,128,0.07)" : "rgba(255,255,255,0.02)";
+                                            const accentColor = isDone ? doneGreen : isActive ? activeGreen : "transparent";
+                                            const iconBg = isDone ? "rgba(106,198,69,0.18)" : isActive ? "rgba(74,222,128,0.15)" : "rgba(255,255,255,0.06)";
+                                            return (
+                                                <div key={i}
+                                                    className={isDone ? "vd-step-done" : isActive ? "vd-step-active" : ""}
+                                                    style={{
+                                                        background: bgColor,
+                                                        border: `1px solid ${borderColor}`,
+                                                        borderRadius: "14px", padding: "14px",
+                                                        position: "relative", overflow: "hidden",
+                                                        transition: "border-color 0.2s",
+                                                        opacity: isUpcoming ? 0.45 : 1,
+                                                        boxShadow: isActive ? "0 0 16px rgba(74,222,128,0.12)" : "none",
+                                                    }}>
+                                                    {/* top border accent */}
+                                                    <div style={{
+                                                        position: "absolute", top: 0, left: 0, right: 0, height: "2px",
+                                                        background: accentColor,
+                                                        borderRadius: "14px 14px 0 0",
+                                                    }} />
+                                                    {/* header row: icon + active badge */}
+                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+                                                        <div style={{
+                                                            width: "28px", height: "28px", borderRadius: "50%",
+                                                            background: iconBg,
+                                                            display: "flex", alignItems: "center", justifyContent: "center",
+                                                            fontSize: "14px",
+                                                        }}>{isDone ? "✓" : s.icon}</div>
+                                                        {isActive && (
+                                                            <div style={{
+                                                                fontSize: "9px", fontWeight: 800, letterSpacing: "0.1em",
+                                                                textTransform: "uppercase", color: activeGreen,
+                                                                background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.3)",
+                                                                borderRadius: "100px", padding: "2px 8px",
+                                                                animation: "pstep 1.5s infinite",
+                                                            }}>● Active</div>
+                                                        )}
+                                                        {isDone && (
+                                                            <div style={{
+                                                                fontSize: "9px", fontWeight: 800, letterSpacing: "0.08em",
+                                                                textTransform: "uppercase", color: doneGreen,
+                                                                background: "rgba(106,198,69,0.1)", border: "1px solid rgba(106,198,69,0.25)",
+                                                                borderRadius: "100px", padding: "2px 8px",
+                                                            }}>✓ Done</div>
+                                                        )}
+                                                    </div>
+                                                    {/* date */}
+                                                    <div style={{ fontSize: "10px", color: "#6666AA", letterSpacing: "0.04em", marginBottom: "4px" }}>{s.date}</div>
+                                                    {/* step name */}
+                                                    <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 700, color: isDone || isActive ? "#F0F0FF" : "#8888AA", lineHeight: 1.2, marginBottom: "8px" }}>{s.name}</div>
+                                                    {/* status value */}
+                                                    <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 800, color: isDone ? doneGreen : isActive ? activeGreen : s.valColor }}>{s.val}</div>
+                                                    {/* sub text */}
+                                                    <div style={{ fontSize: "10px", color: "#6666AA", marginTop: "3px", lineHeight: 1.4 }}>{s.sub}</div>
+                                                </div>
+                                            );
+                                        });
+                                    })()}
+                                </div>
                             </div>
                         </div>
 

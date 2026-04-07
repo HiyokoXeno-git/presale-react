@@ -10,23 +10,76 @@ import { TOKEN_ABI } from "../abi/tokenAbi";
 // ── WalletConnect provider (persisted across calls) ──────────────────────────
 let _wcProvider = null;
 
+// Extracts a readable revert reason from a web3/ethers error object
+function extractRevertReason(err) {
+  // Collect all candidate message strings, from most specific to least
+  const candidates = [
+    err?.cause?.cause?.message,
+    err?.cause?.message,
+    err?.data?.message,
+    err?.data?.data,
+    err?.message,
+  ].filter(Boolean).map(String);
+
+  const fullText = candidates.join(" ");
+
+  // Common contract revert patterns → friendly messages
+  const patterns = [
+    [/Sale is not active/i, "The presale is not currently active."],
+    [/sale.*not.*active/i, "The presale is not currently active."],
+    [/Sale cap reached/i, "The presale cap has been reached."],
+    [/Below minimum/i, "Amount is below the minimum purchase (10 USDT)."],
+    [/Exceeds maximum/i, "Amount exceeds the maximum purchase limit."],
+    [/exceeds.*max/i, "Amount exceeds the maximum purchase limit."],
+    [/transfer.*failed/i, "USDT transfer failed. Check your balance."],
+    [/insufficient.*allowance/i, "USDT allowance insufficient. Please try again."],
+    [/ERC20.*allowance/i, "USDT allowance insufficient. Please try again."],
+    [/insufficient.*balance/i, "Insufficient USDT balance."],
+    [/execution reverted/i, "Transaction rejected by the contract. The presale may not be active or your balance is insufficient."],
+    [/Internal JSON-RPC/i, "Transaction rejected by the contract. The presale may not be active or your balance is insufficient."],
+    [/revert/i, "Transaction rejected by the contract."],
+  ];
+
+  for (const [regex, friendly] of patterns) {
+    if (regex.test(fullText)) return friendly;
+  }
+
+  // Return the most specific real message we have
+  return candidates[0] || "Transaction failed. Please try again.";
+}
+
 export function getPresaleContract() {
   const web3 = getWeb3();
   return new web3.eth.Contract(PRESALE_ABI, CONFIG.presaleAddress);
 }
 
-export async function buyWithUsdt(account, usdtAmountRaw) {
-  if (!account) {
-    throw new Error("Wallet is not connected.");
+// Returns an optimal gasPrice string (current + 10% buffer) for reliable inclusion
+async function getOptimalGasPrice() {
+  try {
+    const web3 = getWeb3();
+    const price = await web3.eth.getGasPrice();
+    return (BigInt(price) * 110n / 100n).toString();
+  } catch {
+    return undefined;
   }
+}
 
+export async function buyWithUsdt(account, usdtAmountRaw) {
+  if (!account) throw new Error("Wallet is not connected.");
   const presaleContract = getPresaleContract();
-
-  const receipt = await presaleContract.methods
-    .buy(usdtAmountRaw)
-    .send({ from: account });
-
-  return receipt;
+  const gasPrice = await getOptimalGasPrice();
+  const tx = presaleContract.methods.buy(usdtAmountRaw);
+  let gas;
+  try {
+    gas = await tx.estimateGas({ from: account });
+  } catch (err) {
+    throw new Error(extractRevertReason(err));
+  }
+  try {
+    return await tx.send({ from: account, gas, ...(gasPrice && { gasPrice }) });
+  } catch (err) {
+    throw new Error(extractRevertReason(err));
+  }
 }
 
 export async function getUsdtAllowance(account) {
@@ -48,21 +101,28 @@ export function getUsdtContract() {
   return new web3.eth.Contract(USDT_ABI, CONFIG.usdtAddress);
 }
 
-export async function approveUsdt(account) {
-  if (!account) {
-    throw new Error("Wallet is not connected.");
+// Cache decimals so we only call it once per session
+let _usdtDecimals = null;
+export async function getUsdtDecimals() {
+  if (_usdtDecimals !== null) return _usdtDecimals;
+  try {
+    const dec = await getUsdtContract().methods.decimals().call();
+    _usdtDecimals = Number(dec);
+  } catch {
+    _usdtDecimals = 6; // fallback
   }
+  return _usdtDecimals;
+}
 
+export async function approveUsdt(account) {
+  if (!account) throw new Error("Wallet is not connected.");
   const usdtContract = getUsdtContract();
-
-  const maxUint =
-    "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
-
-  const receipt = await usdtContract.methods
-    .approve(CONFIG.presaleAddress, maxUint)
-    .send({ from: account });
-
-  return receipt;
+  const maxUint = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+  const gasPrice = await getOptimalGasPrice();
+  const tx = usdtContract.methods.approve(CONFIG.presaleAddress, maxUint);
+  let gas;
+  try { gas = await tx.estimateGas({ from: account }); } catch { gas = 100000; }
+  return await tx.send({ from: account, gas, ...(gasPrice && { gasPrice }) });
 }
 
 export function getEthereum() {
@@ -209,32 +269,28 @@ export async function getTokenAmount(usdtAmountRaw) {
   return result;
 }
 
-export async function buyWithBnb(
-  account,
-  bnbAmountWei,
-  usdtAmountRaw,
-  deadline,
-  signature
-) {
+export async function buyWithBnb(account, bnbAmountWei, usdtAmountRaw, deadline, signature) {
   const contract = getPresaleContract();
-
+  const gasPrice = await getOptimalGasPrice();
   const tx = contract.methods.buyWithBnb(
-    String(bnbAmountWei),
-    String(usdtAmountRaw),
-    String(deadline),
-    signature
+    String(bnbAmountWei), String(usdtAmountRaw), String(deadline), signature
   );
-
-  const gas = await tx.estimateGas({
-    from: account,
-    value: String(bnbAmountWei)
-  });
-
-  return await tx.send({
-    from: account,
-    value: String(bnbAmountWei),
-    gas
-  });
+  let gas;
+  try {
+    gas = await tx.estimateGas({ from: account, value: String(bnbAmountWei) });
+  } catch (err) {
+    throw new Error(extractRevertReason(err));
+  }
+  try {
+    return await tx.send({
+      from: account,
+      value: String(bnbAmountWei),
+      gas,
+      ...(gasPrice && { gasPrice }),
+    });
+  } catch (err) {
+    throw new Error(extractRevertReason(err));
+  }
 }
 
 export function getVestingContract() {
@@ -267,15 +323,16 @@ export async function getUserStats(account) {
   const usdt = getUsdtContract();
   const vesting = getVestingContract();
 
-  const [usdtBalance, userTokenPurchased, userUsdtSpent, userRemainingUsdt, claimable] =
+  const [usdtBalance, userTokenPurchased, userUsdtSpent, userRemainingUsdt, claimable, usdtDecimals] =
     await Promise.all([
       usdt.methods.balanceOf(account).call(),
       presale.methods.userTokenPurchased(account).call(),
       presale.methods.userUsdtSpent(account).call(),
       presale.methods.userRemainingUsdt(account).call(),
       vesting.methods.claimable(account).call(),
+      getUsdtDecimals(),
     ]);
-  return { usdtBalance, userTokenPurchased, userUsdtSpent, userRemainingUsdt, claimable };
+  return { usdtBalance, userTokenPurchased, userUsdtSpent, userRemainingUsdt, claimable, usdtDecimals };
 }
 
 export async function getVestingInfo(account) {

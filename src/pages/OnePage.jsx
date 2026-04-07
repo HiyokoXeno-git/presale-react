@@ -1,19 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { usePageTransition } from "../App";
 import { useLanguage } from "../hooks/useLanguage";
 import { SUPPORTED_LANGS } from "../i18n/translations";
-import { connectWithWalletConnect, getCurrentAccount, switchNetwork } from "../services/web3";
 import { createSession, getPresaleStats, validateSession } from "../services/api";
+import { connectWithWalletConnect, getCurrentAccount, switchNetwork } from "../services/web3";
 
 // ── Donut chart data ──────────────────────────────────────
 const DONUT_SEGMENTS = [
-  { pct: 0.22, color: "#00E5FF", label: "Ecosystem", amount: "100,000,000" },
-  { pct: 0.11, color: "#FF9F1C", label: "Game to Earn", amount: "50,000,000" },
-  { pct: 0.22, color: "#8888CC", label: "Team", amount: "100,000,000" },
-  { pct: 0.22, color: "#44AAFF", label: "Marketing", amount: "100,000,000" },
-  { pct: 0.22, color: "#FF6688", label: "Foundation", amount: "100,000,000" },
-  { pct: 0.01, color: "#FFD84D", label: "Presale", amount: "~50,000,000" },
+  { pct: 0.10, color: "#00E5FF", label: "Ecosystem", amount: "100,000,000" },
+  { pct: 0.05, color: "#FF9F1C", label: "Game to Earn (CheePoint)", amount: "50,000,000" },
+  { pct: 0.10, color: "#8888CC", label: "Team", amount: "100,000,000" },
+  { pct: 0.10, color: "#44AAFF", label: "Marketing / KOL / Listing", amount: "100,000,000" },
+  { pct: 0.10, color: "#FF6688", label: "Foundation / Reserve", amount: "100,000,000" },
+  { pct: 0.35, color: "#FFD84D", label: "Market Make", amount: "350,000,000" },
+  { pct: 0.10, color: "#AA55FF", label: "Investors", amount: "100,000,000" },
+  { pct: 0.10, color: "#FF6B35", label: "Presale", amount: "~100,000,000" },
 ];
 const C = 2 * Math.PI * 88; // ≈ 552.92
 
@@ -21,30 +23,92 @@ const C = 2 * Math.PI * 88; // ≈ 552.92
 function DonutChart() {
   let offset = 0;
   return (
-    <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <svg viewBox="0 0 220 220" style={{ width: "100%", maxWidth: "280px" }}>
-        <circle cx="110" cy="110" r="88" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="32" />
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%" }}>
+      <svg viewBox="0 0 320 320" style={{ width: "100%", maxWidth: "420px", overflow: "visible" }}>
+        <defs>
+          <linearGradient id="presaleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#FF9F1C" />
+            <stop offset="100%" stopColor="#FFD84D" />
+          </linearGradient>
+          <filter id="presaleGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+
+        {/* Background track */}
+        <circle cx="160" cy="160" r="88" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="32" />
+
+        {/* Segments */}
         {DONUT_SEGMENTS.map((seg, i) => {
           const da = seg.pct * C;
           const curOffset = offset;
           offset += da;
           return (
-            <circle key={i}
-              cx="110" cy="110" r="88"
-              fill="none"
-              stroke={seg.color}
-              strokeWidth="32"
+            <circle key={i} cx="160" cy="160" r="88" fill="none"
+              stroke={i === 7 ? "url(#presaleGrad)" : seg.color}
+              strokeWidth={i === 7 ? 34 : 32}
               strokeDasharray={`${da} ${C}`}
               strokeDashoffset={-curOffset}
-              transform="rotate(-90 110 110)"
+              transform="rotate(-90 160 160)"
+              filter={i === 7 ? "url(#presaleGlow)" : undefined}
             />
           );
         })}
+
+        {/* ── SVG Labels with leader lines (matching HTML reference) ── */}
+        {/* Ecosystem – cyan, top-right */}
+        <line x1="192.1" y1="61.1" x2="198.9" y2="40.2" stroke="#00E5FF" strokeWidth="1.2" opacity="0.7" />
+        <line x1="198.9" y1="40.2" x2="220.9" y2="40.2" stroke="#00E5FF" strokeWidth="1.2" opacity="0.7" />
+        <text x="224.9" y="37.2" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#00E5FF" textAnchor="start">Ecosystem</text>
+        <text x="224.9" y="49.2" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">10%</text>
+
+        {/* Game to Earn – orange, right */}
+        <line x1="233.5" y1="86.5" x2="249.1" y2="70.9" stroke="#FF9F1C" strokeWidth="1.2" opacity="0.7" />
+        <line x1="249.1" y1="70.9" x2="271.1" y2="70.9" stroke="#FF9F1C" strokeWidth="1.2" opacity="0.7" />
+        <text x="275.1" y="67.9" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#FF9F1C" textAnchor="start">Game to Earn</text>
+        <text x="275.1" y="79.9" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">5%</text>
+
+        {/* Team – lavender, right-middle */}
+        <line x1="258.9" y1="127.9" x2="279.8" y2="121.1" stroke="#8888CC" strokeWidth="1.2" opacity="0.7" />
+        <line x1="279.8" y1="121.1" x2="301.8" y2="121.1" stroke="#8888CC" strokeWidth="1.2" opacity="0.7" />
+        <text x="305.8" y="118.1" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#8888CC" textAnchor="start">Team</text>
+        <text x="305.8" y="130.1" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">10%</text>
+
+        {/* Marketing – blue, right-lower */}
+        <line x1="258.9" y1="192.1" x2="279.8" y2="198.9" stroke="#44AAFF" strokeWidth="1.2" opacity="0.7" />
+        <line x1="279.8" y1="198.9" x2="301.8" y2="198.9" stroke="#44AAFF" strokeWidth="1.2" opacity="0.7" />
+        <text x="305.8" y="195.9" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#44AAFF" textAnchor="start">Marketing</text>
+        <text x="305.8" y="207.9" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">10%</text>
+
+        {/* Foundation – pink, bottom-right */}
+        <line x1="221.1" y1="244.1" x2="234.1" y2="261.9" stroke="#FF6688" strokeWidth="1.2" opacity="0.7" />
+        <line x1="234.1" y1="261.9" x2="256.1" y2="261.9" stroke="#FF6688" strokeWidth="1.2" opacity="0.7" />
+        <text x="260.1" y="258.9" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#FF6688" textAnchor="start">Foundation</text>
+        <text x="260.1" y="270.9" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">10%</text>
+
+        {/* Market Make – yellow, left-bottom */}
+        <line x1="86.5" y1="233.5" x2="70.9" y2="249.1" stroke="#FFD84D" strokeWidth="1.2" opacity="0.7" />
+        <line x1="70.9" y1="249.1" x2="48.9" y2="249.1" stroke="#FFD84D" strokeWidth="1.2" opacity="0.7" />
+        <text x="44.9" y="246.1" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#FFD84D" textAnchor="end">Market Make</text>
+        <text x="44.9" y="258.1" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="end">35%</text>
+
+        {/* Investors – violet, left */}
+        <line x1="75.9" y1="98.9" x2="58.1" y2="85.9" stroke="#AA55FF" strokeWidth="1.2" opacity="0.7" />
+        <line x1="58.1" y1="85.9" x2="36.1" y2="85.9" stroke="#AA55FF" strokeWidth="1.2" opacity="0.7" />
+        <text x="32.1" y="82.9" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#AA55FF" textAnchor="end">Investors</text>
+        <text x="32.1" y="94.9" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="end">10%</text>
+
+        {/* Presale – gradient yellow, top-left */}
+        <line x1="127.9" y1="61.1" x2="121.1" y2="40.2" stroke="#FFD84D" strokeWidth="1.5" opacity="0.9" />
+        <line x1="121.1" y1="40.2" x2="99.1" y2="40.2" stroke="#FFD84D" strokeWidth="1.5" opacity="0.9" />
+        <text x="95.1" y="35.2" fontFamily="Outfit,sans-serif" fontSize="13" fontWeight="700" fill="#FFD84D" textAnchor="end">🔥 Presale</text>
+        <text x="95.1" y="49.2" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,216,77,0.8)" textAnchor="end">10%</text>
+
+        {/* Center text */}
+        <text x="160" y="152" fontFamily="Outfit,sans-serif" fontSize="30" fontWeight="900" fill="#FFD84D" textAnchor="middle">1B</text>
+        <text x="160" y="170" fontFamily="DM Sans,sans-serif" fontSize="11" fill="rgba(160,160,220,0.7)" textAnchor="middle">Total THK</text>
       </svg>
-      <div style={{ position: "absolute", textAlign: "center", pointerEvents: "none" }}>
-        <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "26px", fontWeight: 900, color: "#FFD84D" }}>1B</div>
-        <div style={{ fontSize: "11px", color: "#6666AA" }}>HYK Total</div>
-      </div>
     </div>
   );
 }
@@ -60,6 +124,28 @@ function OnePage() {
     { q: t("faq2q"), a: t("faq2a") },
     { q: t("faq3q"), a: t("faq3a") },
     { q: t("faq4q"), a: t("faq4a") },
+    { q: t("faq5q"), a: t("faq5a") },
+    { q: t("faq6q"), a: t("faq6a") },
+    { q: t("faq7q"), a: t("faq7a") },
+    { q: t("faq8q"), a: t("faq8a") },
+    { q: t("faq9q"), a: t("faq9a") },
+    { q: t("faq10q"), a: t("faq10a") },
+    { q: t("faq11q"), a: t("faq11a") },
+    { q: t("faq12q"), a: t("faq12a") },
+    { q: t("faq13q"), a: t("faq13a") },
+    { q: t("faq14q"), a: t("faq14a") },
+    { q: t("faq15q"), a: t("faq15a") },
+    { q: t("faq16q"), a: t("faq16a") },
+    { q: t("faq17q"), a: t("faq17a") },
+    { q: t("faq18q"), a: t("faq18a") },
+    { q: t("faq19q"), a: t("faq19a") },
+    { q: t("faq20q"), a: t("faq20a") },
+    { q: t("faq21q"), a: t("faq21a") },
+    { q: t("faq22q"), a: t("faq22a") },
+    { q: t("faq23q"), a: t("faq23a") },
+    { q: t("faq24q"), a: t("faq24a") },
+    { q: t("faq25q"), a: t("faq25a") },
+    { q: t("faq26q"), a: t("faq26a") },
   ];
 
   const ROADMAP = [
@@ -69,11 +155,14 @@ function OnePage() {
     { phase: t("rm4phase"), title: t("rm4title"), now: false, items: [t("rm4item1"), t("rm4item2"), t("rm4item3")] },
   ];
 
+  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+  const langSwitcherRef = useRef(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectError, setConnectError] = useState("");
   const [walletConnected, setWalletConnected] = useState(false);
   const [countdown, setCountdown] = useState({ d: "--", h: "--", m: "--", s: "--" });
   const [openFaq, setOpenFaq] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [copiedAddr, setCopiedAddr] = useState(null);
   const PRESALE_GOAL = 1500000;
   const [presaleStats, setPresaleStats] = useState(null);
@@ -111,6 +200,17 @@ function OnePage() {
     tick();
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  // close lang dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (langSwitcherRef.current && !langSwitcherRef.current.contains(e.target)) {
+        setLangDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // animate progress bar
@@ -157,6 +257,9 @@ function OnePage() {
     "0x4d5e6f7890abcdef1234567890abcdef12345678",
     "0x5e6f7890abcdef1234567890abcdef1234567890",
     "0x6f7890abcdef1234567890abcdef123456789012",
+    "0x7890abcdef1234567890abcdef12345678901234",
+    "0x890abcdef1234567890abcdef123456789012345",
+    "0x90abcdef1234567890abcdef1234567890123456",
   ];
 
 
@@ -174,11 +277,13 @@ function OnePage() {
 
       {/* ── HEADER ── */}
       <header>
-        <a className="logo" href="#">
+        <a className="logo" href="/" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
           <img className="logo-img" src="/HiyokoLogo.png" alt="HIYOKO" />
-          <span className="logo-text">HIYOKO</span>
+          <img className="logo-name-img" src="/HiyokoName.png" alt="HIYOKO" />
         </a>
         <img className="header-banner" src="/header-banner.png" alt="" />
+
+        {/* Desktop nav */}
         <nav>
           <a href="#" onClick={(e) => { e.preventDefault(); scrollTo("tokenomics"); }}>{t("navTokenomics")}</a>
           <a href="#" onClick={(e) => { e.preventDefault(); scrollTo("roadmap"); }}>{t("navRoadmap")}</a>
@@ -188,18 +293,28 @@ function OnePage() {
             {t("navCommunity")}
           </a>
         </nav>
-        <div style={{ display: "flex", gap: "4px" }}>
-          {SUPPORTED_LANGS.map((l) => (
-            <button key={l.code} onClick={() => setLang(l.code)} style={{
-              padding: "5px 10px", border: "none", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer",
-              background: lang === l.code ? "rgba(255,216,77,0.2)" : "transparent",
-              color: lang === l.code ? "#FFD84D" : "rgba(240,240,255,0.45)",
-              outline: lang === l.code ? "1px solid rgba(255,216,77,0.4)" : "none",
-              transition: "all 0.15s",
-            }}>{l.label}</button>
-          ))}
+
+        {/* Desktop: language dropdown */}
+        <div ref={langSwitcherRef} className={`lang-switcher${langDropdownOpen ? " open" : ""}`}>
+          <button className="lang-btn" onClick={() => setLangDropdownOpen((v) => !v)}>
+            {(() => { const cur = SUPPORTED_LANGS.find(l => l.code === lang); return cur ? <img src={cur.flagUrl} alt={lang} className="lang-flag-img" /> : "🌐"; })()}
+            <span>{lang.toUpperCase()}</span>
+            <svg width="10" height="8" viewBox="0 0 10 8" fill="currentColor" style={{ transition: "transform 0.2s", transform: langDropdownOpen ? "rotate(180deg)" : "none" }}>
+              <path d="M1 1.5l4 4 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+            </svg>
+          </button>
+          <div className="lang-dropdown">
+            {SUPPORTED_LANGS.map((l) => (
+              <div key={l.code} className={`lang-option${lang === l.code ? " active" : ""}`} onClick={() => { setLang(l.code); setLangDropdownOpen(false); }}>
+                <img src={l.flagUrl} alt={l.code} className="lang-flag-img" />
+                {l.label}
+              </div>
+            ))}
+          </div>
         </div>
-        <div style={{ display: "flex", gap: "8px" }}>
+
+        {/* Desktop: wallet button */}
+        <div className="header-wallet-desktop">
           {walletConnected ? (
             <button onClick={() => transitionTo("/presale")} style={{
               display: "flex", alignItems: "center", gap: "8px", padding: "11px 24px",
@@ -224,7 +339,82 @@ function OnePage() {
             </button>
           )}
         </div>
+
+        {/* Mobile/tablet: inline lang pill */}
+        <div className="lang-inline">
+          {SUPPORTED_LANGS.map((l, i) => (
+            <span key={l.code} style={{ display: "contents" }}>
+              {i > 0 && <div className="lang-inline-divider" />}
+              <button
+                className={`lang-inline-btn${lang === l.code ? " active" : ""}`}
+                onClick={() => setLang(l.code)}
+              >{l.code.toUpperCase()}</button>
+            </span>
+          ))}
+        </div>
+
+        {/* Mobile/tablet: hamburger */}
+        <button
+          className={`hamburger${mobileMenuOpen ? " open" : ""}`}
+          onClick={() => setMobileMenuOpen((v) => !v)}
+          aria-label="Toggle menu"
+        >
+          <span /><span /><span />
+        </button>
       </header>
+
+      {/* ── MOBILE MENU ── */}
+      {mobileMenuOpen && (
+        <div className="mobile-menu open">
+          <a href="#" onClick={(e) => { e.preventDefault(); scrollTo("tokenomics"); setMobileMenuOpen(false); }}>{t("navTokenomics")}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); scrollTo("roadmap"); setMobileMenuOpen(false); }}>{t("navRoadmap")}</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); scrollTo("faq"); setMobileMenuOpen(false); }}>{t("navFaq")}</a>
+          <a className="tg-link" href="https://t.me/hiyoko_Official" target="_blank" rel="noreferrer" onClick={() => setMobileMenuOpen(false)}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-2.04 9.607c-.148.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.48 14.796l-2.95-.924c-.64-.203-.653-.64.136-.948l11.527-4.446c.537-.194 1.006.13.37.77z" /></svg>
+            {t("navCommunity")}
+          </a>
+          <div className="mobile-lang-section">
+            <div className="mobile-lang-label">Language</div>
+            <div className="mobile-lang-options">
+              {SUPPORTED_LANGS.map((l) => (
+                <div
+                  key={l.code}
+                  className={`mobile-lang-opt${lang === l.code ? " active" : ""}`}
+                  onClick={() => { setLang(l.code); setMobileMenuOpen(false); }}
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  <img src={l.flagUrl} alt={l.code} className="lang-flag-img" />
+                  {l.label}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mobile-bottom">
+            {walletConnected ? (
+              <button onClick={() => { transitionTo("/presale"); setMobileMenuOpen(false); }} style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                padding: "13px 24px", width: "100%",
+                background: "linear-gradient(135deg, #FFD84D, #FF9F1C)",
+                color: "#06060F", border: "none", borderRadius: "100px",
+                fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "15px", cursor: "pointer",
+              }}>
+                🐣 Go to Dashboard
+              </button>
+            ) : (
+              <button onClick={() => { handleConnectWC(); setMobileMenuOpen(false); }} disabled={isConnecting} style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                padding: "13px 24px", width: "100%",
+                background: "rgba(255,216,77,0.12)", border: "1px solid rgba(255,216,77,0.45)",
+                color: "#FFD84D", borderRadius: "100px",
+                fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "15px",
+                cursor: isConnecting ? "not-allowed" : "pointer", opacity: isConnecting ? 0.7 : 1,
+              }}>
+                {WC_SVG} {isConnecting ? t("connectingBtn") : t("connectWalletBtn")}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── HERO ── */}
       <div className="hero">
@@ -234,9 +424,9 @@ function OnePage() {
             {t("heroBadge")}
           </div>
           <h1>
-            Game. Health.<br />
+            Play More. Live Better.<br />
             <span className="y">Earn </span>
-            <span className="c">HYK.</span>
+            <span className="c">THK.</span>
           </h1>
           <p className="hero-sub">{t("heroSubtitle")}</p>
 
@@ -244,7 +434,7 @@ function OnePage() {
             <div className="price-label">{t("heroPresalePrice")}</div>
             <div className="price-main">
               <span className="price-num">$0.015</span>
-              <span className="price-unit">USDT / HYK</span>
+              <span className="price-unit">USDT / THK</span>
             </div>
             <div className="prog-labels">
               <span>{t("heroRaised")}: <b>${presaleRaised.toLocaleString()}</b></span>
@@ -304,6 +494,47 @@ function OnePage() {
               <div className="feat-desc">{f.desc}</div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* ── HAPPY CHICK ── */}
+      <div className="vitalis-section">
+        <div className="vitalis-card" style={{ borderColor: "rgba(255,159,28,0.2)", boxShadow: "0 0 60px rgba(255,159,28,0.06)" }}>
+          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 60% at 20% 50%, rgba(255,159,28,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
+          <div className="vitalis-text">
+            <span className="vitalis-tag" style={{ color: "#FF9F1C" }}>{t("happyChickTag")}</span>
+            <div className="vitalis-title">{t("happyChickTitle")}</div>
+            <p className="vitalis-desc">{t("happyChickDesc")}</p>
+            <div className="vitalis-badge" style={{ borderColor: "rgba(255,159,28,0.3)", background: "rgba(255,159,28,0.08)", color: "#FF9F1C" }}>{t("happyChickBadge")}</div>
+          </div>
+          <img className="vitalis-img" src="/HiyokoHero.png" alt="Happy Chick" onError={(e) => { e.target.style.display = "none"; }} />
+        </div>
+      </div>
+
+      {/* ── VITALIS ── */}
+      <div className="vitalis-section">
+        <div className="vitalis-card">
+          <div className="vitalis-text">
+            <span className="vitalis-tag">{t("vitalisTag")}</span>
+            <div className="vitalis-title">{t("vitalisTitle")}</div>
+            <p className="vitalis-desc">{t("vitalisDesc")}</p>
+            <div className="vitalis-badge">{t("vitalisBadge")}</div>
+          </div>
+          <img className="vitalis-img" src="/download.png" alt="Vitalis" onError={(e) => { e.target.style.display = "none"; }} />
+        </div>
+      </div>
+
+      {/* ── CHEEPOINT ── */}
+      <div className="vitalis-section">
+        <div className="vitalis-card" style={{ borderColor: "rgba(255,216,77,0.2)", boxShadow: "0 0 60px rgba(255,216,77,0.06)" }}>
+          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 60% at 80% 50%, rgba(255,216,77,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
+          <div className="vitalis-text">
+            <span className="vitalis-tag" style={{ color: "#FFD84D" }}>{t("cheepointTag")}</span>
+            <div className="vitalis-title">{t("cheepointTitle")}</div>
+            <p className="vitalis-desc">{t("cheepointDesc")}</p>
+            <div className="vitalis-badge" style={{ borderColor: "rgba(255,216,77,0.3)", background: "rgba(255,216,77,0.08)", color: "#FFD84D" }}>{t("cheepointBadge")}</div>
+          </div>
+          <img className="vitalis-img" src="/CheePoint.png" alt="CheePoint" onError={(e) => { e.target.style.display = "none"; }} />
         </div>
       </div>
 
@@ -370,19 +601,6 @@ function OnePage() {
         </div>
       </div>
 
-      {/* ── VITALIS ── */}
-      <div className="vitalis-section">
-        <div className="vitalis-card">
-          <div className="vitalis-text">
-            <span className="vitalis-tag">{t("vitalisTag")}</span>
-            <div className="vitalis-title">{t("vitalisTitle")}</div>
-            <p className="vitalis-desc">{t("vitalisDesc")}</p>
-            <div className="vitalis-badge">{t("vitalisBadge")}</div>
-          </div>
-          <img className="vitalis-img" src="/download.png" alt="Vitalis" onError={(e) => { e.target.style.display = "none"; }} />
-        </div>
-      </div>
-
       {/* ── CTA ── */}
       <div className="section" style={{ textAlign: "center" }}>
         <div style={{ background: "linear-gradient(135deg, rgba(255,159,28,0.1), rgba(0,229,255,0.08))", border: "1px solid rgba(255,216,77,0.2)", borderRadius: "28px", padding: "64px 48px", position: "relative", overflow: "hidden" }}>
@@ -391,15 +609,15 @@ function OnePage() {
           <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: "clamp(26px,3.5vw,42px)", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "14px" }}>
             Join the <span style={{ color: "#FFD84D" }}>HIYOKO</span> Ecosystem <span style={{ color: "#00E5FF" }}>Early.</span>
           </h2>
-          <p style={{ fontSize: "15px", color: "#6666AA", maxWidth: "520px", margin: "0 auto 36px", lineHeight: 1.75 }}>{t("ctaSubtitle")}</p>
+          <p style={{ fontSize: "15px", color: "rgba(240,240,255,0.7)", maxWidth: "520px", margin: "0 auto 36px", lineHeight: 1.75 }}>{t("ctaSubtitle")}</p>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px", flexWrap: "wrap" }}>
-            <div className="btn-flow wc" onClick={handleConnectWC} style={{ maxWidth: "420px", opacity: isConnecting ? 0.7 : 1, cursor: isConnecting ? "not-allowed" : "pointer", fontSize: "15px" }}>
-              <span className="btn-flow-buy" style={{ padding: "15px 22px" }}>{isConnecting ? t("connectingBtn") : t("heroBuyNow")}</span>
+            <div className="btn-flow hero-wc" onClick={handleConnectWC} style={{ maxWidth: "420px", opacity: isConnecting ? 0.7 : 1, cursor: isConnecting ? "not-allowed" : "pointer" }}>
+              <span className="btn-flow-buy" style={{ padding: "15px 22px", fontSize: "15px" }}>{isConnecting ? t("connectingBtn") : t("heroBuyNow")}</span>
               <span className="btn-flow-arrow" style={{ padding: "15px 12px", fontSize: "18px" }}>→</span>
-              <span className="btn-flow-wallet" style={{ padding: "15px 24px", fontSize: "15px" }}>{WC_SVG} WalletConnect</span>
+              <span className="btn-flow-wallet" style={{ padding: "13px 24px", fontSize: "15px", display: "flex", alignItems: "center", gap: "7px" }}>{WC_SVG} WalletConnect</span>
             </div>
           </div>
-          <p style={{ marginTop: "20px", fontSize: "12px", color: "rgba(100,100,160,0.6)" }}>{t("ctaDisclaimer")}</p>
+          <p style={{ marginTop: "20px", fontSize: "12px", color: "rgba(240,240,255,0.45)" }}>{t("ctaDisclaimer")}</p>
         </div>
       </div>
 
