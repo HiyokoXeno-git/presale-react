@@ -12,14 +12,33 @@ export async function createSession(walletAddress) {
   if (data?.success && data.token) {
     localStorage.setItem("hyk_token", data.token);
     localStorage.setItem("hyk_wallet", walletAddress.toLowerCase());
+    // Store today's date (local) so we can expire at 23:59
+    const today = new Date().toDateString();
+    localStorage.setItem("hyk_session_date", today);
   }
   return data;
+}
+
+// Returns false if session date is not today (expired at midnight)
+function isSessionDateValid() {
+  const stored = localStorage.getItem("hyk_session_date");
+  if (!stored) return false;
+  return stored === new Date().toDateString();
 }
 
 export async function validateSession() {
   const token  = localStorage.getItem("hyk_token");
   const wallet = localStorage.getItem("hyk_wallet");
   if (!token || !wallet) return false;
+
+  // Expire session if it's a new day (past 23:59 from login day)
+  if (!isSessionDateValid()) {
+    localStorage.removeItem("hyk_token");
+    localStorage.removeItem("hyk_wallet");
+    localStorage.removeItem("hyk_session_date");
+    return false;
+  }
+
   try {
     const res = await fetch(
       `${CONFIG.presaleApiBaseUrl}/session.php?token=${encodeURIComponent(token)}&wallet=${encodeURIComponent(wallet)}`
@@ -35,6 +54,7 @@ export async function destroySession() {
   const token = localStorage.getItem("hyk_token");
   localStorage.removeItem("hyk_token");
   localStorage.removeItem("hyk_wallet");
+  localStorage.removeItem("hyk_session_date");
   localStorage.removeItem("hyk_session"); // legacy key cleanup
   if (!token) return;
   try {

@@ -423,6 +423,33 @@ function PresalePage() {
         getAnnouncements().then(data => { if (data.length > 0) setAnnouncements(data); });
     }, []);
 
+    // ── Auto-logout at 23:59 local time ──────────────────────────
+    useEffect(() => {
+        function getMsUntil2359() {
+            const now = new Date();
+            const target = new Date(
+                now.getFullYear(), now.getMonth(), now.getDate(),
+                23, 59, 0, 0
+            );
+            // If 23:59 has already passed today, target tomorrow
+            if (now >= target) target.setDate(target.getDate() + 1);
+            return target - now;
+        }
+
+        let timer;
+        function scheduleLogout() {
+            const ms = getMsUntil2359();
+            timer = setTimeout(async () => {
+                await destroySession();
+                await disconnectWalletConnect();
+                navigate("/", { state: { fromDashboard: true } });
+            }, ms);
+        }
+
+        scheduleLogout();
+        return () => clearTimeout(timer);
+    }, [navigate]);
+
     useEffect(() => {
         function handleClickOutside(e) {
             if (langSwitcherRef.current && !langSwitcherRef.current.contains(e.target)) {
