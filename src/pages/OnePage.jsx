@@ -437,8 +437,8 @@ function OnePage() {
               <span className="price-unit">USDT / THK</span>
             </div>
             <div className="prog-labels">
-              <span>{t("heroRaised")}: <b>${presaleRaised.toLocaleString()}</b></span>
-              <span>{t("heroGoal")}: $1,500,000 &nbsp;<strong style={{ color: "#00E5FF" }}>{presaleProgress.toFixed(1)}%</strong></span>
+              <span>{t("heroRaised")}: <b>HYK {presaleRaised.toLocaleString()}</b></span>
+              <span>{t("heroGoal")}: HYK 1,500,000 &nbsp;<strong style={{ color: "#00E5FF" }}>{presaleProgress.toFixed(1)}%</strong></span>
             </div>
             <div className="prog-bar">
               <div className="prog-fill" style={{ width: `${progWidth}%` }} />

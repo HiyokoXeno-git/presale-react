@@ -322,8 +322,9 @@ export async function getUserStats(account) {
   const presale = getPresaleContract();
   const usdt = getUsdtContract();
   const vesting = getVestingContract();
+  const web3 = getWeb3();
 
-  const [usdtBalance, userTokenPurchased, userUsdtSpent, userRemainingUsdt, claimable, usdtDecimals] =
+  const [usdtBalance, userTokenPurchased, userUsdtSpent, userRemainingUsdt, claimable, usdtDecimals, bnbBalance] =
     await Promise.all([
       usdt.methods.balanceOf(account).call(),
       presale.methods.userTokenPurchased(account).call(),
@@ -331,8 +332,9 @@ export async function getUserStats(account) {
       presale.methods.userRemainingUsdt(account).call(),
       vesting.methods.claimable(account).call(),
       getUsdtDecimals(),
+      web3.eth.getBalance(account),
     ]);
-  return { usdtBalance, userTokenPurchased, userUsdtSpent, userRemainingUsdt, claimable, usdtDecimals };
+  return { usdtBalance, userTokenPurchased, userUsdtSpent, userRemainingUsdt, claimable, usdtDecimals, bnbBalance };
 }
 
 export async function getVestingInfo(account) {

@@ -976,11 +976,17 @@ function PresalePage() {
                                 {/* ── BNB TAB ── */}
                                 {paymentTab === "BNB" && (
                                     <>
+                                        {/* BNB balance + min row */}
+                                        {userStats?.bnbBalance !== undefined && (
+                                            <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px", textAlign: "right" }}>
+                                                Balance: <span style={{ color: "#F0F0FF" }}>{formatNumber(formatUnits(userStats.bnbBalance, 18), 4)} BNB</span>
+                                            </div>
+                                        )}
                                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>
                                             <span>{t("amountToSpend")}</span>
                                             <span style={{ color: "rgba(255,255,255,0.7)" }}>Min: ~10 USDT worth</span>
                                         </div>
-                                        {/* BNB input */}
+                                        {/* BNB input + MAX */}
                                         <div style={{
                                             display: "flex", alignItems: "center",
                                             background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
@@ -995,6 +1001,24 @@ function PresalePage() {
                                                     fontSize: "16px", fontWeight: 400, padding: "11px 14px",
                                                 }}
                                             />
+                                            {userStats?.bnbBalance && BigInt(userStats.bnbBalance) > 0n && (
+                                                <button
+                                                    onClick={() => {
+                                                        // Leave small reserve for gas (~0.001 BNB)
+                                                        const raw = BigInt(userStats.bnbBalance);
+                                                        const reserve = BigInt("1000000000000000"); // 0.001 BNB
+                                                        const spendable = raw > reserve ? raw - reserve : 0n;
+                                                        const val = (Number(spendable) / 1e18).toFixed(6);
+                                                        handleBnbChange(val);
+                                                    }}
+                                                    style={{
+                                                        background: "rgba(255,216,77,0.18)", border: "none", cursor: "pointer",
+                                                        color: "#FFD84D", fontFamily: "'Outfit', sans-serif",
+                                                        fontWeight: 800, fontSize: "10px", padding: "5px 10px",
+                                                        borderRadius: "6px", marginRight: "6px", letterSpacing: "0.06em",
+                                                    }}
+                                                >MAX</button>
+                                            )}
                                             <div style={{
                                                 padding: "0 14px", fontFamily: "'Outfit', sans-serif",
                                                 fontWeight: 700, fontSize: "12px", color: "rgba(255,255,255,0.5)",
