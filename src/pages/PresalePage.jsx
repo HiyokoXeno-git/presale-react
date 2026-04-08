@@ -35,8 +35,10 @@ function PresalePage() {
     const [thkAmount, setThkAmount] = useState("");  // bidirectional THK input
     const [isBuying, setIsBuying] = useState(false);
     const [buyMessage, setBuyMessage] = useState("");
+    const [txCountdown, setTxCountdown] = useState(null); // countdown in seconds
+    const txCountdownIntervalRef = useRef(null);
     const [bnbAmount, setBnbAmount] = useState("");
-    const [bnbUsdtDisplay, setBnbUsdtDisplay] = useState("");  // editable USDT in BNB tab
+    const [bnbUsdtDisplay, setBnbUsdtDisplay] = useState("");  // read-only USDT in BNB tab
     const [bnbThkDisplay, setBnbThkDisplay] = useState("");    // editable THK in BNB tab
     const [lastBnbPrice, setLastBnbPrice] = useState(null);    // BNB/USDT rate from last quote
     const [bnbQuote, setBnbQuote] = useState(null);
@@ -44,6 +46,8 @@ function PresalePage() {
     const [isFetchingBnbQuote, setIsFetchingBnbQuote] = useState(false);
     const [paymentTab, setPaymentTab] = useState("USDT");
     const [modal, setModal] = useState(null);
+    const lastEditedBnbFieldRef = useRef("bnb"); // "bnb" | "thk" — tracks which field user last edited
+    const bnbUsdtTargetRef = useRef(null); // USDT target when user types THK with no prior BNB price
 
     // Presale stats from blockchain
     const [presaleStats, setPresaleStats] = useState(null);
@@ -163,7 +167,7 @@ function PresalePage() {
             if (BigInt(usdtAmountRaw) < BigInt("10000000")) { setBuyMessage("Minimum purchase is 10 USDT worth of BNB."); return; }
 
             const tokenAmountRaw = await getTokenAmount(usdtAmountRaw);
-            const receipt = await buyWithBnb(account, bnbAmountWei, usdtAmountRaw, quoteDeadline, signature);
+            const receipt = await withTimeout(buyWithBnb(account, bnbAmountWei, usdtAmountRaw, quoteDeadline, signature));
 
             if (receipt?.status) {
                 const saveResult = await savePurchase({
@@ -191,6 +195,8 @@ function PresalePage() {
             const msg = String(error?.message || "");
             if (msg.includes("User denied") || msg.includes("MetaMask Tx Signature")) {
                 setBuyMessage("Transaction was cancelled.");
+            } else if (msg.includes("not mined within") || msg.includes("blocks") || msg.includes("timed out")) {
+                setBuyMessage("Transaction not confirmed in time. It may still be processing — please refresh the page and check your wallet before trying again.");
             } else {
                 setBuyMessage(msg || "BNB purchase failed.");
             }
@@ -211,13 +217,25 @@ function PresalePage() {
             const result = await fetchBnbQuote(account, trimmedAmount);
             if (!result || result.success === false) { setBnbQuote(null); setBnbQuoteMessage(result?.message || "Failed to fetch BNB quote."); return; }
             setBnbQuote(result);
-            // Sync USDT and THK display from quote result
+            // Sync USDT display from quote result (always)
             const usdtVal = parseFloat(String(result.usdtAmount).replace(/,/g, ""));
             const thkVal = parseFloat(String(result.tokenAmount).replace(/,/g, ""));
             if (!isNaN(usdtVal)) setBnbUsdtDisplay(usdtVal.toFixed(6));
-            if (!isNaN(thkVal)) setBnbThkDisplay(Math.floor(thkVal).toString());
+            // Only sync THK display if user didn't manually type in the THK field
+            if (!isNaN(thkVal) && lastEditedBnbFieldRef.current !== "thk") {
+                setBnbThkDisplay(Math.floor(thkVal).toString());
+            }
             // Store BNB/USDT rate for reverse conversion
-            if (!isNaN(usdtVal) && numericAmount > 0) setLastBnbPrice(usdtVal / numericAmount);
+            if (!isNaN(usdtVal) && numericAmount > 0) {
+                const price = usdtVal / numericAmount;
+                setLastBnbPrice(price);
+                // If user was typing THK with no prior price, recalculate the correct BNB amount
+                if (lastEditedBnbFieldRef.current === "thk" && bnbUsdtTargetRef.current != null) {
+                    const correctBnb = (bnbUsdtTargetRef.current / price).toFixed(8);
+                    bnbUsdtTargetRef.current = null;
+                    setBnbAmount(correctBnb); // triggers debounce again for the accurate quote
+                }
+            }
         } catch (error) {
             setBnbQuote(null); setBnbQuoteMessage(error.message || "Failed to fetch BNB quote.");
         } finally {
@@ -227,38 +245,32 @@ function PresalePage() {
 
     // BNB tab bidirectional handlers
     function handleBnbChange(val) {
+        lastEditedBnbFieldRef.current = "bnb";
         const v = normalizeUsdtInput(val);
         setBnbAmount(v);
         // USDT and THK will be updated when quote comes back (debounced)
         if (!v || Number(v) <= 0) { setBnbUsdtDisplay(""); setBnbThkDisplay(""); setBnbQuote(null); }
     }
 
-    function handleBnbUsdtChange(val) {
-        const v = normalizeUsdtInput(val);
-        setBnbUsdtDisplay(v);
-        const usdt = Number(v);
-        if (!v || usdt <= 0) { setBnbThkDisplay(""); setBnbAmount(""); setBnbQuote(null); return; }
-        // THK = USDT / 0.015
-        setBnbThkDisplay(Math.floor(usdt / 0.015).toString());
-        // BNB = USDT / rate (use last known price)
-        if (lastBnbPrice && lastBnbPrice > 0) {
-            const bnb = (usdt / lastBnbPrice).toFixed(8);
-            setBnbAmount(bnb);
-        }
-    }
-
     function handleBnbThkChange(val) {
+        lastEditedBnbFieldRef.current = "thk";
         const v = normalizeUsdtInput(val);
         setBnbThkDisplay(v);
         const thk = Number(v);
         if (!v || thk <= 0) { setBnbUsdtDisplay(""); setBnbAmount(""); setBnbQuote(null); return; }
-        // USDT = THK * 0.015
-        const usdt = (thk * 0.015).toFixed(6);
+        // USDT = THK / 66
+        const usdt = (thk / 66).toFixed(6);
         setBnbUsdtDisplay(usdt);
-        // BNB = USDT / rate
+        // BNB = USDT / rate — triggers debounced quote fetch to get accurate values
         if (lastBnbPrice && lastBnbPrice > 0) {
+            bnbUsdtTargetRef.current = null;
             const bnb = (Number(usdt) / lastBnbPrice).toFixed(8);
             setBnbAmount(bnb);
+        } else {
+            // No price yet — store USDT target and bootstrap with a small BNB amount
+            // to trigger the quote fetch. handleFetchBnbQuote will recalculate once price is known.
+            bnbUsdtTargetRef.current = Number(usdt);
+            setBnbAmount("0.01");
         }
     }
 
@@ -300,7 +312,7 @@ function PresalePage() {
 
             setBuyMessage("Step 2/2: Purchasing... Please confirm in wallet.");
             const tokenAmountRaw = getTokenAmountRawFromUsdtRaw(usdtAmountRaw);
-            const receipt = await buyWithUsdt(account, usdtAmountRaw);
+            const receipt = await withTimeout(buyWithUsdt(account, usdtAmountRaw));
             if (!receipt?.status) { setBuyMessage("USDT purchase transaction was not successful."); return; }
             const saveResult = await savePurchase({
                 walletAddress: String(account), txHash: String(receipt.transactionHash),
@@ -318,10 +330,13 @@ function PresalePage() {
                 setModal({ type: "error", message: saveResult?.message || "Purchase succeeded but DB save failed." });
             }
         } catch (error) {
-            if (error?.code === 4001 || error?.message?.includes("User denied")) {
+            const msg = String(error?.message || "");
+            if (error?.code === 4001 || msg.includes("User denied")) {
                 setBuyMessage("Transaction was cancelled.");
+            } else if (msg.includes("not mined within") || msg.includes("blocks") || msg.includes("timed out")) {
+                setBuyMessage("Transaction not confirmed in time. It may still be processing — please refresh the page and check your wallet before trying again.");
             } else {
-                setBuyMessage(error?.message || "USDT purchase failed.");
+                setBuyMessage(msg || "USDT purchase failed.");
             }
         } finally {
             setIsBuying(false);
@@ -333,14 +348,14 @@ function PresalePage() {
         const v = normalizeUsdtInput(val);
         setUsdtAmount(v);
         const num = Number(v);
-        setThkAmount(v && num > 0 ? Math.floor(num / 0.015).toString() : "");
+        setThkAmount(v && num > 0 ? Math.floor(num * 66).toString() : "");
     }
 
     function handleThkChange(val) {
         const v = normalizeUsdtInput(val);
         setThkAmount(v);
         const num = Number(v);
-        setUsdtAmount(v && num > 0 ? (num * 0.015).toFixed(2) : "");
+        setUsdtAmount(v && num > 0 ? (num / 66).toFixed(2) : "");
     }
 
     async function handleDisconnect() {
@@ -351,6 +366,15 @@ function PresalePage() {
 
     function normalizeUsdtInput(value) { return value.replace(/[^0-9.]/g, ""); }
     function isValidUsdtAmount(value) { const num = Number(value); return !(!value || Number.isNaN(num)) && num >= 10; }
+
+    function withTimeout(promise, ms = 60000) {
+        return Promise.race([
+            promise,
+            new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("Transaction timed out (> 1 minute). Please refresh the page and try again.")), ms)
+            ),
+        ]);
+    }
 
     // ── Effects ───────────────────────────────────────────────────
     useEffect(() => {
@@ -420,6 +444,26 @@ function PresalePage() {
     useEffect(() => {
         getAnnouncements().then(data => { if (data.length > 0) setAnnouncements(data); });
     }, []);
+
+    // ── Transaction countdown ─────────────────────────────────────
+    useEffect(() => {
+        if (isBuying) {
+            setTxCountdown(60);
+            txCountdownIntervalRef.current = setInterval(() => {
+                setTxCountdown(prev => {
+                    if (prev === null || prev <= 1) {
+                        clearInterval(txCountdownIntervalRef.current);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        } else {
+            clearInterval(txCountdownIntervalRef.current);
+            setTxCountdown(null);
+        }
+        return () => clearInterval(txCountdownIntervalRef.current);
+    }, [isBuying]);
 
     // ── Auto-logout at 23:59 local time ──────────────────────────
     useEffect(() => {
@@ -499,18 +543,6 @@ function PresalePage() {
     const lockUntilDate = cliffEnd > 0
         ? new Date(cliffEnd * 1000).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })
         : "Aug 1, 2026";
-
-    // Live THK preview from current input (updates Total Allocation card in real-time)
-    const previewHyk = (() => {
-        if (paymentTab === "USDT" && usdtAmount && Number(usdtAmount) > 0) {
-            return Math.floor(Number(usdtAmount) / 0.015);
-        }
-        if (paymentTab === "BNB" && bnbQuote?.tokenAmount) {
-            const raw = parseFloat(String(bnbQuote.tokenAmount).replace(/,/g, ""));
-            return isNaN(raw) ? null : Math.floor(raw);
-        }
-        return null;
-    })();
 
     // filtered TX list
     const displayedTx = txTab === "my"
@@ -742,28 +774,21 @@ function PresalePage() {
                             {/* Total Allocation */}
                             <div style={{
                                 background: "rgba(14,14,28,0.9)",
-                                border: `1px solid ${previewHyk !== null ? "rgba(255,216,77,0.25)" : "rgba(255,255,255,0.07)"}`,
+                                border: "1px solid rgba(255,255,255,0.07)",
                                 borderRadius: "16px", padding: "20px 22px",
                                 backdropFilter: "blur(10px)", position: "relative", overflow: "hidden",
                                 transition: "all 0.3s",
                             }}>
-                                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", borderRadius: "16px 16px 0 0", background: previewHyk !== null ? "linear-gradient(90deg, #FFD84D, transparent)" : "linear-gradient(90deg, #00E5FF, transparent)", opacity: 0.7, transition: "background 0.3s" }} />
+                                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", borderRadius: "16px 16px 0 0", background: "linear-gradient(90deg, #00E5FF, transparent)", opacity: 0.7 }} />
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
                                     <span style={{ fontSize: "22px" }}>📦</span>
-                                    {previewHyk !== null && (
-                                        <span style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#FFD84D", background: "rgba(255,216,77,0.1)", border: "1px solid rgba(255,216,77,0.25)", borderRadius: "100px", padding: "2px 8px" }}>Preview</span>
-                                    )}
                                 </div>
                                 <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "6px" }}>Total Allocation</div>
-                                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 800, color: previewHyk !== null ? "#FFD84D" : "#00E5FF", lineHeight: 1.1, transition: "color 0.2s" }}>
-                                    {previewHyk !== null
-                                        ? `${formatNumber(previewHyk.toString(), 0)} THK`
-                                        : totalAlloc === "—" ? "0 THK" : `${totalAlloc} THK`}
+                                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 800, color: "#00E5FF", lineHeight: 1.1 }}>
+                                    {totalAlloc === "—" ? "0 THK" : `${totalAlloc} THK`}
                                 </div>
                                 <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "5px" }}>
-                                    {previewHyk !== null
-                                        ? `≈ $${formatNumber((previewHyk * 0.015).toFixed(2), 2)} ${t("atPresalePrice")}`
-                                        : totalAlloc !== "—" ? `≈ $${formatNumber((parseFloat(totalAlloc.replace(/,/g, "")) * 0.015).toFixed(2), 2)} ${t("atPresalePrice")}` : t("noAllocationYet")}
+                                    {totalAlloc !== "—" ? `≈ $${formatNumber((parseFloat(totalAlloc.replace(/,/g, "")) * 0.015).toFixed(2), 2)} ${t("atPresalePrice")}` : t("noAllocationYet")}
                                 </div>
                             </div>
 
@@ -874,7 +899,7 @@ function PresalePage() {
                                             $0.015 <span style={{ fontSize: "13px", color: "#6666AA", fontWeight: 400 }}>USDT / THK</span>
                                         </div>
                                         <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "3px" }}>
-                                            {paymentTab === "USDT" ? "= 66.67 THK per USDT" : "≈ $0.015 per THK"}
+                                            {paymentTab === "USDT" ? "= 66 THK per USDT" : "≈ $0.015 per THK"}
                                         </div>
                                     </div>
                                     <div style={{ textAlign: "right" }}>
@@ -997,10 +1022,20 @@ function PresalePage() {
                                             <div style={{ fontSize: "11px", color: "#FF9F1C", textAlign: "center", marginBottom: "8px" }}>Minimum purchase is 10 USDT</div>
                                         )}
                                         <button onClick={handleBuyWithUsdt} disabled={!isValidUsdtAmount(usdtAmount) || isBuying} style={btnBuyStyle(isValidUsdtAmount(usdtAmount) && !isBuying)}>
-                                            {isBuying ? `⏳ ${t("buying")}` : t("buyNow")}
+                                            {isBuying ? `⏳ ${t("buying")} (${txCountdown ?? 60}s)` : t("buyNow")}
                                         </button>
+                                        {isBuying && txCountdown !== null && (
+                                            <div style={{ marginTop: "8px" }}>
+                                                <div style={{ height: "3px", background: "rgba(255,255,255,0.06)", borderRadius: "100px", overflow: "hidden" }}>
+                                                    <div style={{ height: "100%", borderRadius: "100px", width: `${(txCountdown / 60) * 100}%`, background: txCountdown > 20 ? "linear-gradient(90deg, #6AC645, #FFD84D)" : "linear-gradient(90deg, #ff6060, #FF9F1C)", transition: "width 1s linear, background 0.5s" }} />
+                                                </div>
+                                                <div style={{ fontSize: "11px", color: txCountdown > 20 ? "#6AC645" : "#FF9F1C", textAlign: "center", marginTop: "4px" }}>
+                                                    {txCountdown > 0 ? `Transaction must complete within ${txCountdown}s` : "Time limit reached — please refresh if needed"}
+                                                </div>
+                                            </div>
+                                        )}
                                         {buyMessage && (
-                                            <div style={{ marginTop: "10px", fontSize: "13px", color: buyMessage.startsWith("Step") ? "#FF9F1C" : "#ff6060", textAlign: "center" }}>{buyMessage}</div>
+                                            <div style={{ marginTop: "10px", fontSize: "13px", color: buyMessage.startsWith("Step") || buyMessage.includes("not confirmed") ? "#FF9F1C" : "#ff6060", textAlign: "center" }}>{buyMessage}</div>
                                         )}
                                     </>
                                 )}
@@ -1058,26 +1093,28 @@ function PresalePage() {
                                                 display: "flex", alignItems: "center",
                                             }}>BNB</div>
                                         </div>
-                                        {/* USDT equivalent — editable */}
+                                        {/* USDT equivalent — read-only, computed from BNB/THK */}
                                         <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>≈ USDT value {isFetchingBnbQuote && <span style={{ color: "#FF9F1C" }}>⏳</span>}</div>
                                         <div style={{
                                             display: "flex", alignItems: "center",
-                                            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+                                            background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)",
                                             borderRadius: "12px", overflow: "hidden", marginBottom: "10px",
+                                            opacity: 0.7,
                                         }}>
                                             <input
                                                 type="text" placeholder="0.00" value={bnbUsdtDisplay}
-                                                onChange={(e) => handleBnbUsdtChange(e.target.value)}
+                                                readOnly
                                                 style={{
                                                     flex: 1, background: "none", border: "none", outline: "none",
-                                                    color: "#F0F0FF", fontFamily: "'Outfit', sans-serif",
+                                                    color: "#A0A0CC", fontFamily: "'Outfit', sans-serif",
                                                     fontSize: "16px", fontWeight: 400, padding: "11px 14px",
+                                                    cursor: "default",
                                                 }}
                                             />
                                             <div style={{
                                                 padding: "0 14px", fontFamily: "'Outfit', sans-serif",
-                                                fontWeight: 700, fontSize: "12px", color: "rgba(255,255,255,0.5)",
-                                                borderLeft: "1px solid rgba(255,255,255,0.07)", height: "100%",
+                                                fontWeight: 700, fontSize: "12px", color: "rgba(255,255,255,0.4)",
+                                                borderLeft: "1px solid rgba(255,255,255,0.05)", height: "100%",
                                                 display: "flex", alignItems: "center",
                                             }}>USDT</div>
                                         </div>
@@ -1112,10 +1149,20 @@ function PresalePage() {
                                             disabled={!bnbAmount || !bnbQuote || isBuying || isFetchingBnbQuote}
                                             style={btnBuyStyle(!!bnbAmount && !!bnbQuote && !isBuying && !isFetchingBnbQuote)}
                                         >
-                                            {isBuying ? "⏳ Processing..." : "BUY NOW"}
+                                            {isBuying ? `⏳ Processing... (${txCountdown ?? 60}s)` : "BUY NOW"}
                                         </button>
+                                        {isBuying && txCountdown !== null && (
+                                            <div style={{ marginTop: "8px" }}>
+                                                <div style={{ height: "3px", background: "rgba(255,255,255,0.06)", borderRadius: "100px", overflow: "hidden" }}>
+                                                    <div style={{ height: "100%", borderRadius: "100px", width: `${(txCountdown / 60) * 100}%`, background: txCountdown > 20 ? "linear-gradient(90deg, #6AC645, #FFD84D)" : "linear-gradient(90deg, #ff6060, #FF9F1C)", transition: "width 1s linear, background 0.5s" }} />
+                                                </div>
+                                                <div style={{ fontSize: "11px", color: txCountdown > 20 ? "#6AC645" : "#FF9F1C", textAlign: "center", marginTop: "4px" }}>
+                                                    {txCountdown > 0 ? `Transaction must complete within ${txCountdown}s` : "Time limit reached — please refresh if needed"}
+                                                </div>
+                                            </div>
+                                        )}
                                         {buyMessage && (
-                                            <div style={{ marginTop: "10px", fontSize: "13px", color: "#ff6060", textAlign: "center" }}>{buyMessage}</div>
+                                            <div style={{ marginTop: "10px", fontSize: "13px", color: buyMessage.includes("not confirmed") ? "#FF9F1C" : "#ff6060", textAlign: "center" }}>{buyMessage}</div>
                                         )}
                                     </>
                                 )}
@@ -1192,7 +1239,7 @@ function PresalePage() {
                                                         <div>
                                                             <span style={{ fontSize: "11px", color: "#6666AA" }}>THK: </span>
                                                             <span style={{ fontSize: "12px", color: "#FFD84D", fontWeight: 700 }}>
-                                                                {tx.token_amount ? formatNumber(parseFloat(tx.token_amount), 0) : "—"}
+                                                                {tx.token_amount ? formatNumber(parseFloat(tx.token_amount), 2) : "—"}
                                                             </span>
                                                         </div>
                                                         <div style={{ fontSize: "10px", color: "#6666AA" }}>{formatDate(tx.created_at ? Math.floor(new Date(tx.created_at).getTime() / 1000) : null)}</div>
@@ -1384,9 +1431,8 @@ function PresalePage() {
                             </div>
                             <div>
                                 {(() => {
-                                    // Use API data if available, fallback to hardcoded
                                     const items = announcements.length > 0
-                                        ? announcements
+                                        ? [...announcements].sort((a, b) => (b.id || 0) - (a.id || 0))
                                         : [
                                             { icon: "🚀", title: t("ann1title"), body: t("ann1body"), time_label: t("ann1time") },
                                             { icon: "🏥", title: t("ann2title"), body: t("ann2body"), time_label: t("ann2time") },
@@ -1414,7 +1460,7 @@ function PresalePage() {
                                                 {item.icon}
                                             </div>
                                             <div>
-                                                <div style={{ fontSize: "13px", fontWeight: 600, color: "#F0F0FF", lineHeight: 1.4, marginBottom: "3px" }}>{item.title}</div>
+                                                <div style={{ fontSize: "13px", fontWeight: 600, color: item.color || item.text_color || "#F0F0FF", lineHeight: 1.4, marginBottom: "3px" }}>{item.title}</div>
                                                 <div style={{ fontSize: "12px", color: "#6666AA", lineHeight: 1.5 }}>{item.body}</div>
                                                 <div style={{ fontSize: "11px", color: "rgba(102,102,170,0.6)", marginTop: "4px" }}>{item.time_label}</div>
                                             </div>

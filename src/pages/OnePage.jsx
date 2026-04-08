@@ -340,17 +340,17 @@ function OnePage() {
           )}
         </div>
 
-        {/* Mobile/tablet: inline lang pill */}
+        {/* Mobile/tablet: language dropdown */}
         <div className="lang-inline">
-          {SUPPORTED_LANGS.map((l, i) => (
-            <span key={l.code} style={{ display: "contents" }}>
-              {i > 0 && <div className="lang-inline-divider" />}
-              <button
-                className={`lang-inline-btn${lang === l.code ? " active" : ""}`}
-                onClick={() => setLang(l.code)}
-              >{l.code.toUpperCase()}</button>
-            </span>
-          ))}
+          <select
+            className="lang-inline-select"
+            value={lang}
+            onChange={(e) => setLang(e.target.value)}
+          >
+            {SUPPORTED_LANGS.map((l) => (
+              <option key={l.code} value={l.code}>{l.label}</option>
+            ))}
+          </select>
         </div>
 
         {/* Mobile/tablet: hamburger */}
@@ -375,19 +375,15 @@ function OnePage() {
           </a>
           <div className="mobile-lang-section">
             <div className="mobile-lang-label">Language</div>
-            <div className="mobile-lang-options">
+            <select
+              className="mobile-lang-select"
+              value={lang}
+              onChange={(e) => { setLang(e.target.value); setMobileMenuOpen(false); }}
+            >
               {SUPPORTED_LANGS.map((l) => (
-                <div
-                  key={l.code}
-                  className={`mobile-lang-opt${lang === l.code ? " active" : ""}`}
-                  onClick={() => { setLang(l.code); setMobileMenuOpen(false); }}
-                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
-                >
-                  <img src={l.flagUrl} alt={l.code} className="lang-flag-img" />
-                  {l.label}
-                </div>
+                <option key={l.code} value={l.code}>{l.label}</option>
               ))}
-            </div>
+            </select>
           </div>
           <div className="mobile-bottom">
             {walletConnected ? (
