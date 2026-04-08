@@ -68,18 +68,16 @@ function PresalePage() {
 
     // ── Data loaders ──────────────────────────────────────────────
     const loadChainData = useCallback(async (walletAddress) => {
-        try {
-            const [stats, user, vesting] = await Promise.all([
-                getPresaleStats(),
-                getUserStats(walletAddress),
-                getVestingInfo(walletAddress),
-            ]);
-            setPresaleStats(stats);
-            setUserStats(user);
-            setVestingInfo(vesting);
-        } catch {
-            // silently fail — contract may not have all methods
-        }
+        const [statsResult, userResult, vestingResult] = await Promise.allSettled([
+            getPresaleStats(),
+            getUserStats(walletAddress),
+            getVestingInfo(walletAddress),
+        ]);
+        if (statsResult.status === "fulfilled") setPresaleStats(statsResult.value);
+        if (userResult.status === "fulfilled") setUserStats(userResult.value);
+        else console.error("[loadChainData] getUserStats failed:", userResult.reason);
+        if (vestingResult.status === "fulfilled") setVestingInfo(vestingResult.value);
+        else console.error("[loadChainData] getVestingInfo failed:", vestingResult.reason);
     }, []);
 
     const loadTxHistory = useCallback(async (walletAddress) => {
