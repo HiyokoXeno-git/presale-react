@@ -183,7 +183,7 @@ function PresalePage() {
                 if (!saveResult?.success) {
                     setModal({ type: "error", message: "Purchase succeeded but DB save failed." });
                 } else {
-                    setBnbAmount(""); setBnbUsdtDisplay(""); setBnbThkDisplay(""); setBnbQuote(null);
+                    setBnbAmount(""); setBnbUsdtDisplay(""); setBnbThkDisplay(""); setBnbQuote(null); setBuyMessage("");
                     setModal({ type: "success", message: "Your THK tokens have been reserved!", txHash: receipt.transactionHash });
                     loadChainData(account);
                     loadTxHistory(account);
@@ -322,7 +322,7 @@ function PresalePage() {
                 networkName: String(CONFIG.networkName)
             });
             if (saveResult?.success) {
-                setUsdtAmount(""); setThkAmount("");
+                setUsdtAmount(""); setThkAmount(""); setBuyMessage("");
                 setModal({ type: "success", message: "Your THK tokens have been reserved!", txHash: receipt.transactionHash });
                 loadChainData(account);
                 loadTxHistory(account);
