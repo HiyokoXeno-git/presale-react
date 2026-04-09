@@ -15,5 +15,8 @@ export const CONFIG = {
   adminApiBaseUrl: "http://52.65.232.128/admin/api",
 
   usdtDecimals: 6,
-  tokenDecimals: 18
+  tokenDecimals: 18,
+
+  // Presale end date — May 1 2026 07:00 WIB = 2026-05-01T00:00:00Z (UTC)
+  presaleEndDate: "2026-05-01T00:00:00Z",
 };

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { usePageTransition } from "../App";
+import { CONFIG } from "../config/config";
 import { useLanguage } from "../hooks/useLanguage";
 import { SUPPORTED_LANGS } from "../i18n/translations";
-import { createSession, getPresaleStats, validateSession } from "../services/api";
+import { createSession, getPresaleStats, getRoadmap, validateSession } from "../services/api";
 import { connectWithWalletConnect, getCurrentAccount, switchNetwork } from "../services/web3";
 
 // ── Donut chart data ──────────────────────────────────────
@@ -148,12 +149,8 @@ function OnePage() {
     { q: t("faq26q"), a: t("faq26a") },
   ];
 
-  const ROADMAP = [
-    { phase: t("rm1phase"), title: t("rm1title"), now: true, items: [t("rm1item1"), t("rm1item2"), t("rm1item3")] },
-    { phase: t("rm2phase"), title: t("rm2title"), now: false, items: [t("rm2item1"), t("rm2item2"), t("rm2item3"), t("rm2item4")] },
-    { phase: t("rm3phase"), title: t("rm3title"), now: false, items: [t("rm3item1"), t("rm3item2"), t("rm3item3")] },
-    { phase: t("rm4phase"), title: t("rm4title"), now: false, items: [t("rm4item1"), t("rm4item2"), t("rm4item3")] },
-  ];
+  const [roadmap, setRoadmap] = useState([]);
+  const [roadmapLoading, setRoadmapLoading] = useState(true);
 
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const langSwitcherRef = useRef(null);
@@ -174,6 +171,15 @@ function OnePage() {
     getPresaleStats().then((data) => { if (data) setPresaleStats(data); }).catch(() => { });
   }, []);
 
+  // fetch roadmap from backend whenever language changes
+  useEffect(() => {
+    setRoadmapLoading(true);
+    getRoadmap(lang).then(data => {
+      setRoadmap(data);
+      setRoadmapLoading(false);
+    }).catch(() => setRoadmapLoading(false));
+  }, [lang]);
+
   // Check if wallet is connected AND server session is still valid (< 24 h)
   useEffect(() => {
     async function checkSession() {
@@ -185,9 +191,11 @@ function OnePage() {
     checkSession();
   }, [location.state]);
 
-  // countdown timer
+  // countdown timer — uses endDate from API stats if available, falls back to CONFIG
   useEffect(() => {
-    const target = new Date("2026-08-01T00:00:00Z").getTime();
+    const endDateStr = presaleStats?.endDate || CONFIG.presaleEndDate;
+    const target = new Date(endDateStr).getTime();
+    if (isNaN(target)) return;
     function tick() {
       const diff = target - Date.now();
       if (diff <= 0) { setCountdown({ d: "0", h: "0", m: "0", s: "0" }); return; }
@@ -200,7 +208,7 @@ function OnePage() {
     tick();
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [presaleStats?.endDate]);
 
   // close lang dropdown on outside click
   useEffect(() => {
@@ -294,23 +302,53 @@ function OnePage() {
           </a>
         </nav>
 
-        {/* Desktop: language dropdown */}
-        <div ref={langSwitcherRef} className={`lang-switcher${langDropdownOpen ? " open" : ""}`}>
-          <button className="lang-btn" onClick={() => setLangDropdownOpen((v) => !v)}>
-            {(() => { const cur = SUPPORTED_LANGS.find(l => l.code === lang); return cur ? <img src={cur.flagUrl} alt={lang} className="lang-flag-img" /> : "🌐"; })()}
-            <span>{lang.toUpperCase()}</span>
-            <svg width="10" height="8" viewBox="0 0 10 8" fill="currentColor" style={{ transition: "transform 0.2s", transform: langDropdownOpen ? "rotate(180deg)" : "none" }}>
-              <path d="M1 1.5l4 4 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-            </svg>
+        {/* Language dropdown — all screen sizes */}
+        <div ref={langSwitcherRef} className="onepage-lang-wrap" style={{ position: "relative", flexShrink: 0 }}>
+          <button
+            onClick={() => setLangDropdownOpen((v) => !v)}
+            style={{
+              display: "flex", alignItems: "center", gap: "7px",
+              padding: "7px 13px",
+              background: "rgba(20,20,40,0.85)", border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: "100px", cursor: "pointer", transition: "all 0.2s",
+              fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "13px",
+              color: "#F0F0FF",
+            }}
+          >
+            <img src={SUPPORTED_LANGS.find(l => l.code === lang)?.flagUrl} alt="" style={{ width: "20px", height: "15px", borderRadius: "2px", objectFit: "cover" }} />
+            {SUPPORTED_LANGS.find(l => l.code === lang)?.shortLabel}
+            <span style={{ fontSize: "9px", opacity: 0.5 }}>▼</span>
           </button>
-          <div className="lang-dropdown">
-            {SUPPORTED_LANGS.map((l) => (
-              <div key={l.code} className={`lang-option${lang === l.code ? " active" : ""}`} onClick={() => { setLang(l.code); setLangDropdownOpen(false); }}>
-                <img src={l.flagUrl} alt={l.code} className="lang-flag-img" />
-                {l.label}
-              </div>
-            ))}
-          </div>
+          {langDropdownOpen && (
+            <div style={{
+              position: "absolute", top: "calc(100% + 8px)", right: 0,
+              background: "rgba(14,14,28,0.97)", border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: "12px", padding: "6px", zIndex: 300,
+              minWidth: "150px", backdropFilter: "blur(20px)",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+            }}>
+              {SUPPORTED_LANGS.map((l) => (
+                <button
+                  key={l.code}
+                  onClick={() => { setLang(l.code); setLangDropdownOpen(false); }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "10px",
+                    width: "100%", padding: "9px 12px",
+                    background: lang === l.code ? "rgba(255,216,77,0.1)" : "transparent",
+                    border: "none", borderRadius: "8px",
+                    cursor: "pointer", textAlign: "left",
+                    fontFamily: "'Outfit', sans-serif", fontSize: "13px",
+                    fontWeight: lang === l.code ? 700 : 500,
+                    color: lang === l.code ? "#FFD84D" : "#F0F0FF",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <img src={l.flagUrl} alt="" style={{ width: "20px", height: "15px", borderRadius: "2px", objectFit: "cover" }} />
+                  {l.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Desktop: wallet button */}
@@ -340,19 +378,6 @@ function OnePage() {
           )}
         </div>
 
-        {/* Mobile/tablet: language dropdown */}
-        <div className="lang-inline">
-          <select
-            className="lang-inline-select"
-            value={lang}
-            onChange={(e) => setLang(e.target.value)}
-          >
-            {SUPPORTED_LANGS.map((l) => (
-              <option key={l.code} value={l.code}>{l.label}</option>
-            ))}
-          </select>
-        </div>
-
         {/* Mobile/tablet: hamburger */}
         <button
           className={`hamburger${mobileMenuOpen ? " open" : ""}`}
@@ -375,15 +400,28 @@ function OnePage() {
           </a>
           <div className="mobile-lang-section">
             <div className="mobile-lang-label">Language</div>
-            <select
-              className="mobile-lang-select"
-              value={lang}
-              onChange={(e) => { setLang(e.target.value); setMobileMenuOpen(false); }}
-            >
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
               {SUPPORTED_LANGS.map((l) => (
-                <option key={l.code} value={l.code}>{l.label}</option>
+                <button
+                  key={l.code}
+                  onClick={() => { setLang(l.code); setMobileMenuOpen(false); }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "10px",
+                    padding: "9px 12px", width: "100%",
+                    background: lang === l.code ? "rgba(255,216,77,0.1)" : "transparent",
+                    border: lang === l.code ? "1px solid rgba(255,216,77,0.3)" : "1px solid transparent",
+                    borderRadius: "8px", cursor: "pointer", textAlign: "left",
+                    fontFamily: "'Outfit', sans-serif", fontSize: "13px",
+                    fontWeight: lang === l.code ? 700 : 500,
+                    color: lang === l.code ? "#FFD84D" : "#F0F0FF",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <img src={l.flagUrl} alt="" style={{ width: "20px", height: "15px", borderRadius: "2px", objectFit: "cover" }} />
+                  {l.label}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
           <div className="mobile-bottom">
             {walletConnected ? (
@@ -433,8 +471,8 @@ function OnePage() {
               <span className="price-unit">USDT / THK</span>
             </div>
             <div className="prog-labels">
-              <span>{t("heroRaised")}: <b>HYK {presaleRaised.toLocaleString()}</b></span>
-              <span>{t("heroGoal")}: HYK 1,500,000 &nbsp;<strong style={{ color: "#00E5FF" }}>{presaleProgress.toFixed(1)}%</strong></span>
+              <span>{t("heroRaised")}: <b>THK {presaleRaised.toLocaleString()}</b></span>
+              <span>{t("heroGoal")}: THK 1,500,000 &nbsp;<strong style={{ color: "#00E5FF" }}>{presaleProgress.toFixed(1)}%</strong></span>
             </div>
             <div className="prog-bar">
               <div className="prog-fill" style={{ width: `${progWidth}%` }} />
@@ -567,14 +605,26 @@ function OnePage() {
         <div className="sec-tag">{t("projectTimeline")}</div>
         <div className="sec-title">{t("roadmapTitle")}</div>
         <div className="rm-grid">
-          {ROADMAP.map((ph) => (
-            <div key={ph.phase} className={`rm-card${ph.now ? " now" : ""}`}>
+          {roadmapLoading ? (
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "14px", padding: "32px 0" }}>Loading roadmap...</div>
+          ) : roadmap.length === 0 ? (
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: "14px", padding: "32px 0" }}>No roadmap data.</div>
+          ) : roadmap.map((ph) => (
+            <div key={ph.phase_number} className={`rm-card${ph.is_active ? " now" : ""}`}>
               <div className="rm-dot" />
-              <div className="rm-phase">{ph.phase}</div>
+              <div className="rm-phase">{ph.period}</div>
               <div className="rm-title">{ph.title}</div>
               <ul className="rm-list">
-                {ph.items.map((item) => <li key={item}>{item}</li>)}
+                {ph.items.map((item, idx) => <li key={idx}>{item}</li>)}
               </ul>
+              {ph.is_active && (
+                <div style={{
+                  marginTop: "10px", display: "inline-block",
+                  fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em",
+                  background: "linear-gradient(90deg,#FF9F1C,#FFD84D)",
+                  WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                }}>▶ NOW</div>
+              )}
             </div>
           ))}
         </div>

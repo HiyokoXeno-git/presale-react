@@ -181,7 +181,12 @@ export function getWeb3() {
     throw new Error("No wallet provider found.");
   }
 
-  return new Web3(ethereum);
+  const web3 = new Web3(ethereum);
+  // Set a high block timeout so web3's internal timer never fires before
+  // our own withTimeout (30 s). 200 blocks ≈ 10 min on BSC Testnet.
+  web3.eth.transactionBlockTimeout = 200;
+  web3.eth.transactionPollingTimeout = 600; // 10 min max polling
+  return web3;
 }
 
 export async function connectWallet() {

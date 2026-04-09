@@ -132,6 +132,21 @@ export async function getAnnouncements() {
   }
 }
 
+export async function getRoadmap(lang = 'en') {
+  try {
+    const res = await fetch(
+      `${CONFIG.adminApiBaseUrl}/getRoadmap.php?lang=${encodeURIComponent(lang)}`
+    );
+    const text = await res.text();
+    if (!text) return [];
+    const data = JSON.parse(text);
+    if (data?.success && Array.isArray(data.data)) return data.data;
+    return [];
+  } catch {
+    return [];
+  }
+}
+
 export async function savePurchase(payload) {
   const safePayload = JSON.parse(
     JSON.stringify(payload, (_, value) =>
