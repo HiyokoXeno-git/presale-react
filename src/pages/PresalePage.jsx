@@ -35,9 +35,6 @@ function PresalePage() {
     const [thkAmount, setThkAmount] = useState("");  // bidirectional THK input
     const [isBuying, setIsBuying] = useState(false);
     const [buyMessage, setBuyMessage] = useState("");
-    const [txCountdown, setTxCountdown] = useState(null); // countdown in seconds
-    const txCountdownIntervalRef = useRef(null);
-    const txAbortedRef = useRef(false); // true = timed out, ignore any late receipt
     const [bnbAmount, setBnbAmount] = useState("");
     const [bnbUsdtDisplay, setBnbUsdtDisplay] = useState("");  // read-only USDT in BNB tab
     const [bnbThkDisplay, setBnbThkDisplay] = useState("");    // editable THK in BNB tab
@@ -168,11 +165,7 @@ function PresalePage() {
             if (BigInt(usdtAmountRaw) < BigInt("10000000")) { setBuyMessage("Minimum purchase is 10 USDT worth of BNB."); return; }
 
             const tokenAmountRaw = await getTokenAmount(usdtAmountRaw);
-            startTxCountdown();
-            const receipt = await withTimeout(buyWithBnb(account, bnbAmountWei, usdtAmountRaw, quoteDeadline, signature));
-
-            // Guard: if countdown already expired, discard the receipt entirely
-            if (txAbortedRef.current) { setBuyMessage("Transaction timed out (30s). Transaction cancelled — please try again."); return; }
+            const receipt = await buyWithBnb(account, bnbAmountWei, usdtAmountRaw, quoteDeadline, signature);
 
             if (receipt?.status) {
                 const saveResult = await savePurchase({
@@ -316,12 +309,8 @@ function PresalePage() {
             }
 
             setBuyMessage("Step 2/2: Purchasing... Please confirm in wallet.");
-            startTxCountdown();
             const tokenAmountRaw = getTokenAmountRawFromUsdtRaw(usdtAmountRaw);
-            const receipt = await withTimeout(buyWithUsdt(account, usdtAmountRaw));
-
-            // Guard: if countdown already expired, discard the receipt entirely
-            if (txAbortedRef.current) { setBuyMessage("Transaction timed out (30s). Transaction cancelled — please try again."); return; }
+            const receipt = await buyWithUsdt(account, usdtAmountRaw);
 
             if (!receipt?.status) { setBuyMessage("USDT purchase transaction was not successful."); return; }
             const saveResult = await savePurchase({
@@ -377,16 +366,7 @@ function PresalePage() {
     function normalizeUsdtInput(value) { return value.replace(/[^0-9.]/g, ""); }
     function isValidUsdtAmount(value) { const num = Number(value); return !(!value || Number.isNaN(num)) && num >= 10; }
 
-    function withTimeout(promise, ms = 30000) {
-        return Promise.race([
-            promise,
-            new Promise((_, reject) =>
-                setTimeout(() => reject(new Error("Transaction timed out (30s). Please try again.")), ms)
-            ),
-        ]);
-    }
-
-    // ── Effects ───────────────────────────────────────────────────
+// ── Effects ───────────────────────────────────────────────────
     useEffect(() => {
         async function init() {
             try {
@@ -462,41 +442,6 @@ function PresalePage() {
     useEffect(() => {
         getAnnouncements().then(data => { if (data.length > 0) setAnnouncements(data); });
     }, []);
-
-    // ── Transaction countdown ─────────────────────────────────────
-    // Cleanup when isBuying finishes (success/cancel)
-    useEffect(() => {
-        if (!isBuying) {
-            clearInterval(txCountdownIntervalRef.current);
-            setTxCountdown(null);
-        }
-        return () => clearInterval(txCountdownIntervalRef.current);
-    }, [isBuying]);
-
-    // Called just before the buy tx is sent — countdown starts HERE (not at button click)
-    // Uses real wall-clock time so interval drift / multiple renders can't skew it
-    function startTxCountdown() {
-        txAbortedRef.current = false;
-        clearInterval(txCountdownIntervalRef.current);
-        const deadline = Date.now() + 30000; // absolute end timestamp (30 s)
-
-        function tick() {
-            const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-            setTxCountdown(remaining);
-            if (remaining <= 0) clearInterval(txCountdownIntervalRef.current);
-        }
-        tick(); // render 30 immediately
-        txCountdownIntervalRef.current = setInterval(tick, 500); // 500ms for precision
-    }
-
-    // When countdown hits 0: mark aborted + stop buy state
-    useEffect(() => {
-        if (txCountdown === 0) {
-            txAbortedRef.current = true;
-            setIsBuying(false);
-            setBuyMessage("Transaction timed out (30s). Transaction cancelled — please try again.");
-        }
-    }, [txCountdown]);
 
     // ── Session hard-expires after 30 min — fully disconnect wallet on expiry ──
     useEffect(() => {
@@ -1070,18 +1015,8 @@ function PresalePage() {
                                             <div style={{ fontSize: "11px", color: "#FF9F1C", textAlign: "center", marginBottom: "8px" }}>Minimum purchase is 10 USDT</div>
                                         )}
                                         <button onClick={handleBuyWithUsdt} disabled={!isValidUsdtAmount(usdtAmount) || isBuying} style={btnBuyStyle(isValidUsdtAmount(usdtAmount) && !isBuying)}>
-                                            {isBuying ? `⏳ ${t("buying")} (${txCountdown ?? 30}s)` : t("buyNow")}
+                                            {isBuying ? `⏳ ${t("buying")}...` : t("buyNow")}
                                         </button>
-                                        {isBuying && txCountdown !== null && (
-                                            <div style={{ marginTop: "8px" }}>
-                                                <div style={{ height: "3px", background: "rgba(255,255,255,0.06)", borderRadius: "100px", overflow: "hidden" }}>
-                                                    <div style={{ height: "100%", borderRadius: "100px", width: `${(txCountdown / 30) * 100}%`, background: txCountdown > 10 ? "linear-gradient(90deg, #6AC645, #FFD84D)" : "linear-gradient(90deg, #ff6060, #FF9F1C)", transition: "width 0.5s linear, background 0.5s" }} />
-                                                </div>
-                                                <div style={{ fontSize: "11px", color: txCountdown > 10 ? "#6AC645" : "#FF9F1C", textAlign: "center", marginTop: "4px" }}>
-                                                    {txCountdown > 0 ? `Transaction must complete within ${txCountdown}s` : "Time limit reached — please refresh if needed"}
-                                                </div>
-                                            </div>
-                                        )}
                                         {buyMessage && (
                                             <div style={{ marginTop: "10px", fontSize: "13px", color: buyMessage.startsWith("Step") || buyMessage.includes("not confirmed") ? "#FF9F1C" : "#ff6060", textAlign: "center" }}>{buyMessage}</div>
                                         )}
@@ -1197,18 +1132,8 @@ function PresalePage() {
                                             disabled={!bnbAmount || !bnbQuote || isBuying || isFetchingBnbQuote}
                                             style={btnBuyStyle(!!bnbAmount && !!bnbQuote && !isBuying && !isFetchingBnbQuote)}
                                         >
-                                            {isBuying ? `⏳ Processing... (${txCountdown ?? 30}s)` : "BUY NOW"}
+                                            {isBuying ? "⏳ Processing..." : "BUY NOW"}
                                         </button>
-                                        {isBuying && txCountdown !== null && (
-                                            <div style={{ marginTop: "8px" }}>
-                                                <div style={{ height: "3px", background: "rgba(255,255,255,0.06)", borderRadius: "100px", overflow: "hidden" }}>
-                                                    <div style={{ height: "100%", borderRadius: "100px", width: `${(txCountdown / 30) * 100}%`, background: txCountdown > 10 ? "linear-gradient(90deg, #6AC645, #FFD84D)" : "linear-gradient(90deg, #ff6060, #FF9F1C)", transition: "width 0.5s linear, background 0.5s" }} />
-                                                </div>
-                                                <div style={{ fontSize: "11px", color: txCountdown > 10 ? "#6AC645" : "#FF9F1C", textAlign: "center", marginTop: "4px" }}>
-                                                    {txCountdown > 0 ? `Transaction must complete within ${txCountdown}s` : "Time limit reached — please refresh if needed"}
-                                                </div>
-                                            </div>
-                                        )}
                                         {buyMessage && (
                                             <div style={{ marginTop: "10px", fontSize: "13px", color: buyMessage.includes("not confirmed") ? "#FF9F1C" : "#ff6060", textAlign: "center" }}>{buyMessage}</div>
                                         )}
