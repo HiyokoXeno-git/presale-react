@@ -5,6 +5,7 @@ import { CONFIG } from "../config/config";
 import { useLanguage } from "../hooks/useLanguage";
 import { SUPPORTED_LANGS } from "../i18n/translations";
 import { destroySession, fetchBnbQuote, getAnnouncements, getUserTransactions, savePurchase, validateSession } from "../services/api";
+import { dequeue, enqueue, getPending } from "../services/rescueQueue";
 import { formatDate, formatNumber, formatUnits } from "../services/format";
 import {
     approveUsdt,
@@ -94,6 +95,26 @@ function PresalePage() {
             setIsLoadingTx(false);
         }
     }, []);
+
+    // ── Rescue queue flush — retries any DB saves that failed in a prior session ──
+    const flushRescueQueue = useCallback(async () => {
+        const pending = getPending();
+        if (pending.length === 0) return;
+        let anyFlushed = false;
+        for (const payload of pending) {
+            try {
+                const result = await savePurchase(payload);
+                if (result?.success || result?.message?.includes("already saved")) {
+                    dequeue(payload.txHash);
+                    anyFlushed = true;
+                }
+            } catch { /* leave in queue, retry next time */ }
+        }
+        if (anyFlushed) {
+            loadChainData(account);
+            loadTxHistory();
+        }
+    }, [account, loadChainData, loadTxHistory]);
 
     // ── Handlers ──────────────────────────────────────────────────
     async function handleSwitchNetwork() {
@@ -236,7 +257,7 @@ function PresalePage() {
             const receipt = await buyWithBnb(account, bnbAmountWei, usdtAmountRaw, quoteDeadline, signature);
 
             if (receipt?.status) {
-                const saveResult = await savePurchase({
+                const bnbPayload = {
                     walletAddress: String(account), txHash: String(receipt.transactionHash),
                     paymentToken: "BNB", bnbAmountRaw: String(bnbAmountWei),
                     bnbAmount: String(quote.bnbAmount ?? trimmedBnbAmount),
@@ -245,10 +266,13 @@ function PresalePage() {
                     presaleAddress: String(CONFIG.presaleAddress), vestingAddress: String(CONFIG.vestingAddress),
                     blockNumber: String(receipt.blockNumber), chainId: String(CONFIG.chainId),
                     networkName: String(CONFIG.networkName)
-                });
+                };
+                enqueue(bnbPayload);
+                const saveResult = await savePurchase(bnbPayload);
                 if (!saveResult?.success) {
-                    setModal({ type: "error", message: "Purchase succeeded but DB save failed." });
+                    setModal({ type: "error", message: "Purchase confirmed on-chain. Data will be saved automatically when you return." });
                 } else {
+                    dequeue(bnbPayload.txHash);
                     setBnbAmount(""); setBnbUsdtDisplay(""); setBnbThkDisplay(""); setBnbQuote(null); setBuyMessage("");
                     setModal({ type: "success", message: "Your THK tokens have been reserved!", txHash: receipt.transactionHash });
                     loadChainData(account);
@@ -374,20 +398,23 @@ function PresalePage() {
             const receipt = await buyWithUsdt(account, usdtAmountRaw);
 
             if (!receipt?.status) { setBuyMessage("USDT purchase transaction was not successful."); return; }
-            const saveResult = await savePurchase({
+            const usdtPayload = {
                 walletAddress: String(account), txHash: String(receipt.transactionHash),
                 paymentToken: "USDT", usdtAmount: String(usdtAmountRaw), tokenAmount: String(tokenAmountRaw),
                 presaleAddress: String(CONFIG.presaleAddress), vestingAddress: String(CONFIG.vestingAddress),
                 blockNumber: String(receipt.blockNumber), chainId: String(CONFIG.chainId),
                 networkName: String(CONFIG.networkName)
-            });
+            };
+            enqueue(usdtPayload);
+            const saveResult = await savePurchase(usdtPayload);
             if (saveResult?.success) {
+                dequeue(usdtPayload.txHash);
                 setUsdtAmount(""); setThkAmount(""); setBuyMessage("");
                 setModal({ type: "success", message: "Your THK tokens have been reserved!", txHash: receipt.transactionHash });
                 loadChainData(account);
                 loadTxHistory();
             } else {
-                setModal({ type: "error", message: saveResult?.message || "Purchase succeeded but DB save failed." });
+                setModal({ type: "error", message: "Purchase confirmed on-chain. Data will be saved automatically when you return." });
             }
         } catch (error) {
             setBuyMessage(classifyTxError(error, "USDT"));
@@ -446,6 +473,7 @@ function PresalePage() {
                 if (correct) {
                     loadChainData(currentAccount);
                     loadTxHistory();
+                    flushRescueQueue();
                 }
             } catch { await disconnectWalletConnect(); navigate("/"); }
             finally { setIsLoading(false); }
@@ -483,7 +511,7 @@ function PresalePage() {
                 ethereum.removeListener("chainChanged", handleChainChanged);
             };
         }
-    }, [loadChainData, loadTxHistory]);
+    }, [loadChainData, loadTxHistory, flushRescueQueue]);
 
     useEffect(() => {
         if (!account) { setBnbQuote(null); setBnbQuoteMessage(""); return; }
