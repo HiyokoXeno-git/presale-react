@@ -132,6 +132,73 @@ function PresalePage() {
         }
     }
 
+    function buyMsgColor(msg) {
+        if (!msg) return "#ff6060";
+        // Green for in-progress steps
+        if (msg.startsWith("Step") || msg.includes("Checking") || msg.includes("Approving")) return "#FF9F1C";
+        // Yellow warning for submitted-but-pending
+        if (msg.includes("BSCScan") || msg.includes("taking longer") || msg.includes("replaced")) return "#FFD84D";
+        // Orange for cancelled by user (not really an error)
+        if (msg.includes("cancelled") || msg.includes("rejected")) return "#FF9F1C";
+        // Red for actual errors
+        return "#ff6060";
+    }
+
+    function classifyTxError(error, token = "") {
+        const code = error?.code;
+        const msg = String(error?.message || error?.reason || "").toLowerCase();
+
+        // User rejected in wallet
+        if (code === 4001 || code === "ACTION_REJECTED" ||
+            msg.includes("user denied") || msg.includes("user rejected") ||
+            msg.includes("metamask tx signature") || msg.includes("cancelled by user")) {
+            return "Transaction rejected. You cancelled the request in your wallet.";
+        }
+
+        // Transaction submitted but not confirmed yet (web3 polling timeout)
+        // The tx may still be pending on-chain — DO NOT say "cancelled"
+        if (msg.includes("not mined within") || msg.includes("50 blocks") ||
+            msg.includes("transaction was not mined")) {
+            return `Transaction submitted but confirmation is taking longer than expected. Check BSCScan Testnet for your wallet address to see if it went through.`;
+        }
+
+        // Transaction replaced / sped up / dropped
+        if (msg.includes("transaction was replaced") || msg.includes("replacement fee too low") ||
+            code === "TRANSACTION_REPLACED") {
+            return "Transaction was replaced or dropped. Please check your wallet history.";
+        }
+
+        // Insufficient gas / funds
+        if (msg.includes("insufficient funds") || msg.includes("not enough") ||
+            msg.includes("insufficient balance")) {
+            return `Insufficient ${token === "BNB" ? "BNB" : "USDT or BNB"} balance to cover this transaction.`;
+        }
+
+        // Gas underpriced
+        if (msg.includes("underpriced") || msg.includes("gas too low")) {
+            return "Transaction gas price too low. Please try again.";
+        }
+
+        // Nonce issues
+        if (msg.includes("nonce too low") || msg.includes("nonce too high")) {
+            return "Nonce error — please reset your MetaMask account (Settings → Advanced → Reset Account) and try again.";
+        }
+
+        // Network / RPC error
+        if (msg.includes("network") || msg.includes("disconnected") || msg.includes("rpc") ||
+            msg.includes("connection") || msg.includes("timeout") || msg.includes("failed to fetch")) {
+            return "Network error. Please check your connection and try again.";
+        }
+
+        // Contract revert (already handled in web3.js extractRevertReason, but just in case)
+        if (msg.includes("revert") || msg.includes("execution reverted")) {
+            return "Transaction reverted by the contract. The presale may not be active or your purchase exceeds the limit.";
+        }
+
+        // Fallback
+        return error?.message || `${token} purchase failed. Please try again.`;
+    }
+
     async function handleBuyWithBnb() {
         if (isBuying) return;
         try {
@@ -190,14 +257,7 @@ function PresalePage() {
                 setModal({ type: "error", message: "BNB purchase transaction failed." });
             }
         } catch (error) {
-            const msg = String(error?.message || "");
-            if (msg.includes("User denied") || msg.includes("MetaMask Tx Signature")) {
-                setBuyMessage("Transaction was cancelled.");
-            } else if (msg.includes("not mined within") || msg.includes("blocks") || msg.includes("timed out")) {
-                setBuyMessage("Transaction timed out (30s). Transaction cancelled — please try again.");
-            } else {
-                setBuyMessage(msg || "BNB purchase failed.");
-            }
+            setBuyMessage(classifyTxError(error, "BNB"));
         } finally {
             setIsBuying(false);
         }
@@ -329,14 +389,7 @@ function PresalePage() {
                 setModal({ type: "error", message: saveResult?.message || "Purchase succeeded but DB save failed." });
             }
         } catch (error) {
-            const msg = String(error?.message || "");
-            if (error?.code === 4001 || msg.includes("User denied")) {
-                setBuyMessage("Transaction was cancelled.");
-            } else if (msg.includes("not mined within") || msg.includes("blocks") || msg.includes("timed out")) {
-                setBuyMessage("Transaction timed out (30s). Transaction cancelled — please try again.");
-            } else {
-                setBuyMessage(msg || "USDT purchase failed.");
-            }
+            setBuyMessage(classifyTxError(error, "USDT"));
         } finally {
             setIsBuying(false);
         }
@@ -1018,7 +1071,7 @@ function PresalePage() {
                                             {isBuying ? `⏳ ${t("buying")}...` : t("buyNow")}
                                         </button>
                                         {buyMessage && (
-                                            <div style={{ marginTop: "10px", fontSize: "13px", color: buyMessage.startsWith("Step") || buyMessage.includes("not confirmed") ? "#FF9F1C" : "#ff6060", textAlign: "center" }}>{buyMessage}</div>
+                                            <div style={{ marginTop: "10px", fontSize: "13px", color: buyMsgColor(buyMessage), textAlign: "center" }}>{buyMessage}</div>
                                         )}
                                     </>
                                 )}
@@ -1135,7 +1188,7 @@ function PresalePage() {
                                             {isBuying ? "⏳ Processing..." : "BUY NOW"}
                                         </button>
                                         {buyMessage && (
-                                            <div style={{ marginTop: "10px", fontSize: "13px", color: buyMessage.includes("not confirmed") ? "#FF9F1C" : "#ff6060", textAlign: "center" }}>{buyMessage}</div>
+                                            <div style={{ marginTop: "10px", fontSize: "13px", color: buyMsgColor(buyMessage), textAlign: "center" }}>{buyMessage}</div>
                                         )}
                                     </>
                                 )}
