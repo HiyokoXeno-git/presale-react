@@ -109,7 +109,9 @@ export async function getPresaleStats() {
 }
 
 export async function getUserTransactions(walletAddress) {
-  const url = `${CONFIG.adminApiBaseUrl}/getUsers.php?wallet=${encodeURIComponent(walletAddress)}`;
+  const url = walletAddress
+    ? `${CONFIG.adminApiBaseUrl}/getUsers.php?wallet=${encodeURIComponent(walletAddress)}`
+    : `${CONFIG.adminApiBaseUrl}/getUsers.php`;
   const response = await fetch(url);
   const text = await response.text();
   if (!text) return [];
