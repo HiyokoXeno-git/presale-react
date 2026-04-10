@@ -173,6 +173,20 @@ export async function disconnectWalletConnect() {
     await modal.disconnect();
   } catch { /* ignore */ }
   _wcProvider = null;
+
+  // Clear AppKit / WalletConnect cached session from localStorage so the
+  // next connect() call always shows the wallet confirmation modal
+  try {
+    const keysToRemove = Object.keys(localStorage).filter(k =>
+      k.startsWith("wc@") ||
+      k.startsWith("wagmi") ||
+      k.startsWith("W3M") ||
+      k.startsWith("@appkit") ||
+      k.startsWith("reown") ||
+      k === "walletconnect"
+    );
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+  } catch { /* ignore */ }
 }
 
 export function getWeb3() {

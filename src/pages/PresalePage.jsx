@@ -392,10 +392,18 @@ function PresalePage() {
             try {
                 // Enforce 30-minute session TTL — redirect if missing or expired
                 const sessionValid = await validateSession();
-                if (!sessionValid) { navigate("/"); return; }
+                if (!sessionValid) {
+                    await disconnectWalletConnect();
+                    navigate("/");
+                    return;
+                }
 
                 const currentAccount = await getCurrentAccount();
-                if (!currentAccount) { navigate("/"); return; }
+                if (!currentAccount) {
+                    await disconnectWalletConnect();
+                    navigate("/");
+                    return;
+                }
                 setAccount(currentAccount);
                 const chainId = await getCurrentChainId();
                 setCurrentChainId(chainId || "");
@@ -405,7 +413,7 @@ function PresalePage() {
                     loadChainData(currentAccount);
                     loadTxHistory(currentAccount);
                 }
-            } catch { navigate("/"); }
+            } catch { await disconnectWalletConnect(); navigate("/"); }
             finally { setIsLoading(false); }
         }
         init();
