@@ -5,7 +5,8 @@ import { CONFIG } from "../config/config";
 import { useLanguage } from "../hooks/useLanguage";
 import { SUPPORTED_LANGS } from "../i18n/translations";
 import { createSession, getPresaleStats, getRoadmap, validateSession } from "../services/api";
-import { connectWithWalletConnect, getCurrentAccount, switchNetwork } from "../services/web3";
+import { formatUnits } from "../services/format";
+import { connectWithWalletConnect, getCurrentAccount, getPresaleStats as getPresaleStatsChain, switchNetwork } from "../services/web3";
 
 // ── Donut chart data ──────────────────────────────────────
 const DONUT_SEGMENTS = [
@@ -167,8 +168,14 @@ function OnePage() {
   const presaleProgress = Math.min((presaleRaised / PRESALE_GOAL) * 100, 100);
   const presalePurchases = presaleStats?.totalPurchases ?? 0;
 
+  const [chainStats, setChainStats] = useState(null);
+  const soldDisplay = chainStats?.totalSold ? parseFloat(formatUnits(BigInt(chainStats.totalSold), 18)).toLocaleString(undefined, { maximumFractionDigits: 2 }) : "--";
+  const capDisplay = chainStats?.saleCap ? parseFloat(formatUnits(BigInt(chainStats.saleCap), 18)).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "--";
+  const remainingDisplay = chainStats?.remainingForSale ? parseFloat(formatUnits(BigInt(chainStats.remainingForSale), 18)).toLocaleString(undefined, { maximumFractionDigits: 2 }) : "--";
+
   useEffect(() => {
     getPresaleStats().then((data) => { if (data) setPresaleStats(data); }).catch(() => { });
+    getPresaleStatsChain().then((data) => { if (data) setChainStats(data); }).catch(() => { });
   }, []);
 
   // fetch roadmap from backend whenever language changes
@@ -477,6 +484,24 @@ function OnePage() {
             <div className="prog-bar">
               <div className="prog-fill" style={{ width: `${progWidth}%` }} />
             </div>
+            <div style={{ display: "flex", gap: "8px", marginTop: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
+              {[
+                { label: "Total Sold", value: `${soldDisplay} THK`, color: "#FFD84D" },
+                { label: "Hard Cap", value: `${capDisplay} THK`, color: "#00E5FF" },
+                { label: "Remaining", value: `${remainingDisplay} THK`, color: "#AA55FF" },
+              ].map(({ label, value, color }) => (
+                <div key={label} style={{
+                  flex: 1, minWidth: "100px",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: "12px",
+                  padding: "12px 14px",
+                }}>
+                  <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "5px", fontWeight: 600 }}>{label}</div>
+                  <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "15px", fontWeight: 700, color }}>{value}</div>
+                </div>
+              ))}
+            </div>
             <div className="countdown">
               {[["d", t("heroCountDays")], ["h", t("heroCountHours")], ["m", t("heroCountMins")], ["s", t("heroCountSecs")]].map(([k, lbl]) => (
                 <div key={k} className="cnt-box">
@@ -676,7 +701,7 @@ function OnePage() {
           <a href="https://t.me/hiyoko_Official" target="_blank" rel="noreferrer">Telegram</a>
           <a href="https://www.instagram.com/hiyokop2e/" target="_blank" rel="noreferrer">Instagram</a>
           <a href="https://www.youtube.com/@hiyokoglobal" target="_blank" rel="noreferrer">YouTube</a>
-          <a href="#">Whitepaper</a>
+          <a href="https://hiyokotoken.com/wp/EN_HIYOKO_Whitepaper.pdf" target="_blank" rel="noreferrer">Whitepaper</a>
         </div>
         <p className="foot-disc">{t("footerDisclaimer")}<br />{t("footerRights")}</p>
       </footer>

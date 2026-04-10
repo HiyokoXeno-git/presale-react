@@ -1241,6 +1241,11 @@ footer {
 }
 
 /* ═══ LANG INLINE (mobile/tablet pill) ══════════════ */
+/* lang dropdown nempel kanan di mobile/tablet saat nav hidden */
+.onepage-lang-wrap {
+  margin-left: auto;
+}
+
 .lang-inline {
   display: none;
   align-items: center;
@@ -1845,6 +1850,10 @@ footer {
 
   nav {
     display: flex;
+  }
+
+  .onepage-lang-wrap {
+    margin-left: 28px;
   }
 
   .header-lang-desktop {

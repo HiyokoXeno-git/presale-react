@@ -562,6 +562,8 @@ function PresalePage() {
     const soldPct = capRaw > 0n ? Number((soldRaw * 10000n) / capRaw) / 100 : 0;
     const soldDisplay = formatNumber(formatUnits(soldRaw, 18), 2);
     const capDisplay = formatNumber(formatUnits(capRaw, 18), 0);
+    const remainingRaw = presaleStats?.remainingForSale ? BigInt(presaleStats.remainingForSale) : 0n;
+    const remainingDisplay = formatNumber(formatUnits(remainingRaw, 18), 2);
 
     const totalAlloc = vestingInfo?.vestingData?.totalAmount
         ? formatNumber(formatUnits(vestingInfo.vestingData.totalAmount, 18), 2) : "—";
@@ -978,6 +980,26 @@ function PresalePage() {
                                         </div>
                                         <div style={{ fontSize: "10px", color: "#FF9F1C", marginTop: "4px", textAlign: "right" }}>
                                             {soldPct.toFixed(1)}% {t("percentSold")}
+                                        </div>
+
+                                        {/* Presale Stats */}
+                                        <div style={{ display: "flex", gap: "6px", marginTop: "12px", flexWrap: "wrap" }}>
+                                            {[
+                                                { label: "Total Sold", value: `${soldDisplay} HYK`, color: "#FFD84D" },
+                                                { label: "Hard Cap", value: `${capDisplay} HYK`, color: "#00E5FF" },
+                                                { label: "Remaining", value: `${remainingDisplay} HYK`, color: "#AA55FF" },
+                                            ].map(({ label, value, color }) => (
+                                                <div key={label} style={{
+                                                    flex: 1, minWidth: "90px",
+                                                    background: "rgba(255,255,255,0.04)",
+                                                    border: "1px solid rgba(255,255,255,0.08)",
+                                                    borderRadius: "10px",
+                                                    padding: "8px 10px",
+                                                }}>
+                                                    <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "3px", fontWeight: 600 }}>{label}</div>
+                                                    <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "12px", fontWeight: 700, color }}>{value}</div>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
                                 )}
