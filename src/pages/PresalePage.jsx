@@ -223,6 +223,7 @@ function PresalePage() {
 
     async function handleBuyWithBnb() {
         if (isBuying) return;
+        let bnbAmountWei = "";
         try {
             setIsBuying(true);
             setBuyMessage("");
@@ -245,7 +246,7 @@ function PresalePage() {
             }
 
             const usdtAmountRaw = String(quote.usdtAmountRaw ?? "");
-            const bnbAmountWei = String(quote.bnbAmountWei ?? "");
+            bnbAmountWei = String(quote.bnbAmountWei ?? "");
             const signature = String(quote.signature ?? "");
             const quoteDeadline = String(quote.deadline ?? "");
             const quoteDigest = String(quote.digest ?? "");
@@ -254,11 +255,11 @@ function PresalePage() {
             if (BigInt(usdtAmountRaw) < BigInt("10000000")) { setBuyMessage("Minimum purchase is 10 USDT worth of BNB."); return; }
 
             const tokenAmountRaw = await getTokenAmount(usdtAmountRaw);
-            const receipt = await buyWithBnb(account, bnbAmountWei, usdtAmountRaw, quoteDeadline, signature);
+            const { receipt, txHash } = await buyWithBnb(account, bnbAmountWei, usdtAmountRaw, quoteDeadline, signature);
 
             if (receipt?.status) {
                 const bnbPayload = {
-                    walletAddress: String(account), txHash: String(receipt.transactionHash),
+                    walletAddress: String(account), txHash: String(txHash),
                     paymentToken: "BNB", bnbAmountRaw: String(bnbAmountWei),
                     bnbAmount: String(quote.bnbAmount ?? trimmedBnbAmount),
                     usdtAmount: String(usdtAmountRaw), tokenAmount: String(tokenAmountRaw),
@@ -274,7 +275,7 @@ function PresalePage() {
                 } else {
                     dequeue(bnbPayload.txHash);
                     setBnbAmount(""); setBnbUsdtDisplay(""); setBnbThkDisplay(""); setBnbQuote(null); setBuyMessage("");
-                    setModal({ type: "success", message: "Your THK tokens have been reserved!", txHash: receipt.transactionHash });
+                    setModal({ type: "success", message: "Your THK tokens have been reserved!", txHash });
                     loadChainData(account);
                     loadTxHistory();
                 }
@@ -282,7 +283,24 @@ function PresalePage() {
                 setModal({ type: "error", message: "BNB purchase transaction failed." });
             }
         } catch (error) {
-            setBuyMessage(classifyTxError(error, "BNB"));
+            // TX submitted but web3 timed out — rescue with txHash if available
+            if (error.txHash) {
+                enqueue({
+                    walletAddress: String(account), txHash: String(error.txHash),
+                    paymentToken: "BNB", bnbAmountRaw: String(bnbAmountWei ?? ""),
+                    bnbAmount: String(bnbAmount ?? ""),
+                    usdtAmount: String(bnbQuote?.usdtAmountRaw ?? "0"),
+                    tokenAmount: "0",
+                    quoteDeadline: String(bnbQuote?.deadline ?? ""),
+                    quoteDigest: String(bnbQuote?.digest ?? ""),
+                    presaleAddress: String(CONFIG.presaleAddress), vestingAddress: String(CONFIG.vestingAddress),
+                    blockNumber: null, chainId: String(CONFIG.chainId),
+                    networkName: String(CONFIG.networkName)
+                });
+                setBuyMessage("Transaction submitted. Data will sync automatically when you return to this page.");
+            } else {
+                setBuyMessage(classifyTxError(error, "BNB"));
+            }
         } finally {
             setIsBuying(false);
         }
@@ -395,11 +413,11 @@ function PresalePage() {
 
             setBuyMessage("Step 2/2: Purchasing... Please confirm in wallet.");
             const tokenAmountRaw = getTokenAmountRawFromUsdtRaw(usdtAmountRaw);
-            const receipt = await buyWithUsdt(account, usdtAmountRaw);
+            const { receipt, txHash } = await buyWithUsdt(account, usdtAmountRaw);
 
             if (!receipt?.status) { setBuyMessage("USDT purchase transaction was not successful."); return; }
             const usdtPayload = {
-                walletAddress: String(account), txHash: String(receipt.transactionHash),
+                walletAddress: String(account), txHash: String(txHash),
                 paymentToken: "USDT", usdtAmount: String(usdtAmountRaw), tokenAmount: String(tokenAmountRaw),
                 presaleAddress: String(CONFIG.presaleAddress), vestingAddress: String(CONFIG.vestingAddress),
                 blockNumber: String(receipt.blockNumber), chainId: String(CONFIG.chainId),
@@ -410,14 +428,28 @@ function PresalePage() {
             if (saveResult?.success) {
                 dequeue(usdtPayload.txHash);
                 setUsdtAmount(""); setThkAmount(""); setBuyMessage("");
-                setModal({ type: "success", message: "Your THK tokens have been reserved!", txHash: receipt.transactionHash });
+                setModal({ type: "success", message: "Your THK tokens have been reserved!", txHash });
                 loadChainData(account);
                 loadTxHistory();
             } else {
                 setModal({ type: "error", message: "Purchase confirmed on-chain. Data will be saved automatically when you return." });
             }
         } catch (error) {
-            setBuyMessage(classifyTxError(error, "USDT"));
+            // TX was submitted but web3 timed out before receipt — rescue with txHash
+            if (error.txHash) {
+                const tokenAmountRaw = getTokenAmountRawFromUsdtRaw(parseUsdtToRaw(usdtAmount));
+                enqueue({
+                    walletAddress: String(account), txHash: String(error.txHash),
+                    paymentToken: "USDT", usdtAmount: String(parseUsdtToRaw(usdtAmount)),
+                    tokenAmount: String(tokenAmountRaw),
+                    presaleAddress: String(CONFIG.presaleAddress), vestingAddress: String(CONFIG.vestingAddress),
+                    blockNumber: null, chainId: String(CONFIG.chainId),
+                    networkName: String(CONFIG.networkName)
+                });
+                setBuyMessage("Transaction submitted. Data will sync automatically when you return to this page.");
+            } else {
+                setBuyMessage(classifyTxError(error, "USDT"));
+            }
         } finally {
             setIsBuying(false);
         }

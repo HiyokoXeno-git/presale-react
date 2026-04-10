@@ -64,6 +64,9 @@ async function getOptimalGasPrice() {
   }
 }
 
+// Sends a buy transaction and returns { receipt, txHash }.
+// txHash is set as soon as the TX is submitted (before confirmation),
+// so callers can rescue the payload even if web3 times out waiting for the receipt.
 export async function buyWithUsdt(account, usdtAmountRaw) {
   if (!account) throw new Error("Wallet is not connected.");
   const presaleContract = getPresaleContract();
@@ -75,11 +78,18 @@ export async function buyWithUsdt(account, usdtAmountRaw) {
   } catch (err) {
     throw new Error(extractRevertReason(err));
   }
-  try {
-    return await tx.send({ from: account, gas, ...(gasPrice && { gasPrice }) });
-  } catch (err) {
-    throw new Error(extractRevertReason(err));
-  }
+
+  return new Promise((resolve, reject) => {
+    let capturedTxHash = null;
+    tx.send({ from: account, gas, ...(gasPrice && { gasPrice }) })
+      .on("transactionHash", (hash) => { capturedTxHash = hash; })
+      .on("receipt", (receipt) => resolve({ receipt, txHash: capturedTxHash ?? receipt.transactionHash }))
+      .on("error", (err) => {
+        const error = new Error(extractRevertReason(err));
+        error.txHash = capturedTxHash; // attach even on error so caller can rescue
+        reject(error);
+      });
+  });
 }
 
 export async function getUsdtAllowance(account) {
@@ -300,16 +310,18 @@ export async function buyWithBnb(account, bnbAmountWei, usdtAmountRaw, deadline,
   } catch (err) {
     throw new Error(extractRevertReason(err));
   }
-  try {
-    return await tx.send({
-      from: account,
-      value: String(bnbAmountWei),
-      gas,
-      ...(gasPrice && { gasPrice }),
-    });
-  } catch (err) {
-    throw new Error(extractRevertReason(err));
-  }
+
+  return new Promise((resolve, reject) => {
+    let capturedTxHash = null;
+    tx.send({ from: account, value: String(bnbAmountWei), gas, ...(gasPrice && { gasPrice }) })
+      .on("transactionHash", (hash) => { capturedTxHash = hash; })
+      .on("receipt", (receipt) => resolve({ receipt, txHash: capturedTxHash ?? receipt.transactionHash }))
+      .on("error", (err) => {
+        const error = new Error(extractRevertReason(err));
+        error.txHash = capturedTxHash;
+        reject(error);
+      });
+  });
 }
 
 export function getVestingContract() {
