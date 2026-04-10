@@ -6,7 +6,7 @@ import { useLanguage } from "../hooks/useLanguage";
 import { SUPPORTED_LANGS } from "../i18n/translations";
 import { createSession, getPresaleStats, getRoadmap, validateSession } from "../services/api";
 import { formatUnits } from "../services/format";
-import { connectWithWalletConnect, getCurrentAccount, getPresaleStats as getPresaleStatsChain, switchNetwork } from "../services/web3";
+import { connectWithWalletConnect, disconnectWalletConnect, getCurrentAccount, getPresaleStats as getPresaleStatsChain, switchNetwork } from "../services/web3";
 
 // ── Donut chart data ──────────────────────────────────────
 const DONUT_SEGMENTS = [
@@ -188,10 +188,15 @@ function OnePage() {
   }, [lang]);
 
   // Check if wallet is connected AND server session is still valid (30-min TTL)
+  // If session is expired, fully disconnect wallet so next connect requires confirmation
   useEffect(() => {
     async function checkSession() {
       const valid = await validateSession();
-      if (!valid) return;
+      if (!valid) {
+        // Ensure AppKit/WalletConnect state is cleared so re-connect shows confirmation
+        await disconnectWalletConnect().catch(() => {});
+        return;
+      }
       const acc = await getCurrentAccount().catch(() => null);
       if (acc) setWalletConnected(true);
     }

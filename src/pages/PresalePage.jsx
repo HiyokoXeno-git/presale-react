@@ -490,19 +490,23 @@ function PresalePage() {
         }
     }, [txCountdown]);
 
-    // ── Session hard-expires after 30 min (enforced by validateSession in api.js) ──
-    // Auto-redirect when the 30-min TTL elapses while user is on this page
+    // ── Session hard-expires after 30 min — fully disconnect wallet on expiry ──
     useEffect(() => {
         const createdAt = Number(localStorage.getItem("hyk_session_created_at") ?? 0);
         if (!createdAt) return;
         const remaining = createdAt + 30 * 60 * 1000 - Date.now();
-        if (remaining <= 0) {
+
+        async function expireSession() {
+            await destroySession();
+            await disconnectWalletConnect();
             navigate("/", { state: { fromDashboard: true } });
+        }
+
+        if (remaining <= 0) {
+            expireSession();
             return;
         }
-        const timer = setTimeout(() => {
-            navigate("/", { state: { fromDashboard: true } });
-        }, remaining);
+        const timer = setTimeout(expireSession, remaining);
         return () => clearTimeout(timer);
     }, [navigate]);
 
