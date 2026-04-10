@@ -187,7 +187,7 @@ function OnePage() {
     }).catch(() => setRoadmapLoading(false));
   }, [lang]);
 
-  // Check if wallet is connected AND server session is still valid (< 24 h)
+  // Check if wallet is connected AND server session is still valid (30-min TTL)
   useEffect(() => {
     async function checkSession() {
       const valid = await validateSession();

@@ -1,6 +1,8 @@
 import { CONFIG } from "../config/config";
 
-// ── Server-side session (24 h TTL) ───────────────────────────────────────────
+// ── Server-side session (30-minute hard TTL) ────────────────────────────────
+
+const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 export async function createSession(walletAddress) {
   const res = await fetch(`${CONFIG.presaleApiBaseUrl}/session.php`, {
@@ -12,18 +14,26 @@ export async function createSession(walletAddress) {
   if (data?.success && data.token) {
     localStorage.setItem("hyk_token", data.token);
     localStorage.setItem("hyk_wallet", walletAddress.toLowerCase());
-    // Store today's date (local) so we can expire at 23:59
-    const today = new Date().toDateString();
-    localStorage.setItem("hyk_session_date", today);
+    localStorage.setItem("hyk_session_created_at", String(Date.now()));
+    // clean up legacy key
+    localStorage.removeItem("hyk_session_date");
   }
   return data;
 }
 
-// Returns false if session date is not today (expired at midnight)
-function isSessionDateValid() {
-  const stored = localStorage.getItem("hyk_session_date");
-  if (!stored) return false;
-  return stored === new Date().toDateString();
+// Returns false if session is older than 30 minutes
+function isSessionFresh() {
+  const createdAt = localStorage.getItem("hyk_session_created_at");
+  if (!createdAt) return false;
+  return Date.now() - Number(createdAt) < SESSION_TTL_MS;
+}
+
+function clearSessionData() {
+  localStorage.removeItem("hyk_token");
+  localStorage.removeItem("hyk_wallet");
+  localStorage.removeItem("hyk_session_created_at");
+  localStorage.removeItem("hyk_session_date"); // legacy key cleanup
+  localStorage.removeItem("hyk_session");       // legacy key cleanup
 }
 
 export async function validateSession() {
@@ -31,11 +41,9 @@ export async function validateSession() {
   const wallet = localStorage.getItem("hyk_wallet");
   if (!token || !wallet) return false;
 
-  // Expire session if it's a new day (past 23:59 from login day)
-  if (!isSessionDateValid()) {
-    localStorage.removeItem("hyk_token");
-    localStorage.removeItem("hyk_wallet");
-    localStorage.removeItem("hyk_session_date");
+  // Hard-expire after 30 minutes from creation
+  if (!isSessionFresh()) {
+    clearSessionData();
     return false;
   }
 
@@ -52,10 +60,7 @@ export async function validateSession() {
 
 export async function destroySession() {
   const token = localStorage.getItem("hyk_token");
-  localStorage.removeItem("hyk_token");
-  localStorage.removeItem("hyk_wallet");
-  localStorage.removeItem("hyk_session_date");
-  localStorage.removeItem("hyk_session"); // legacy key cleanup
+  clearSessionData();
   if (!token) return;
   try {
     await fetch(`${CONFIG.presaleApiBaseUrl}/session.php`, {

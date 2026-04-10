@@ -390,7 +390,7 @@ function PresalePage() {
     useEffect(() => {
         async function init() {
             try {
-                // Enforce 24-hour server session — redirect if missing or expired
+                // Enforce 30-minute session TTL — redirect if missing or expired
                 const sessionValid = await validateSession();
                 if (!sessionValid) { navigate("/"); return; }
 
@@ -490,58 +490,20 @@ function PresalePage() {
         }
     }, [txCountdown]);
 
-    // ── Auto-logout at 23:59 local time ──────────────────────────
+    // ── Session hard-expires after 30 min (enforced by validateSession in api.js) ──
+    // Auto-redirect when the 30-min TTL elapses while user is on this page
     useEffect(() => {
-        function getMsUntil2359() {
-            const now = new Date();
-            const target = new Date(
-                now.getFullYear(), now.getMonth(), now.getDate(),
-                23, 59, 0, 0
-            );
-            // If 23:59 has already passed today, target tomorrow
-            if (now >= target) target.setDate(target.getDate() + 1);
-            return target - now;
-        }
-
-        let timer;
-        function scheduleLogout() {
-            const ms = getMsUntil2359();
-            timer = setTimeout(async () => {
-                await destroySession();
-                await disconnectWalletConnect();
-                navigate("/", { state: { fromDashboard: true } });
-            }, ms);
-        }
-
-        scheduleLogout();
-        return () => clearTimeout(timer);
-    }, [navigate]);
-
-    // ── Auto-disconnect after 30 min of inactivity ────────────────
-    useEffect(() => {
-        const INACTIVITY_MS = 30 * 60 * 1000; // 30 minutes
-        let inactivityTimer;
-
-        async function handleInactivityLogout() {
-            await destroySession();
-            await disconnectWalletConnect();
+        const createdAt = Number(localStorage.getItem("hyk_session_created_at") ?? 0);
+        if (!createdAt) return;
+        const remaining = createdAt + 30 * 60 * 1000 - Date.now();
+        if (remaining <= 0) {
             navigate("/", { state: { fromDashboard: true } });
+            return;
         }
-
-        function resetInactivityTimer() {
-            clearTimeout(inactivityTimer);
-            inactivityTimer = setTimeout(handleInactivityLogout, INACTIVITY_MS);
-        }
-
-        const ACTIVITY_EVENTS = ["mousemove", "mousedown", "keydown", "scroll", "touchstart", "click", "visibilitychange"];
-        ACTIVITY_EVENTS.forEach(ev => document.addEventListener(ev, resetInactivityTimer, { passive: true }));
-
-        resetInactivityTimer(); // start the clock on mount
-
-        return () => {
-            clearTimeout(inactivityTimer);
-            ACTIVITY_EVENTS.forEach(ev => document.removeEventListener(ev, resetInactivityTimer));
-        };
+        const timer = setTimeout(() => {
+            navigate("/", { state: { fromDashboard: true } });
+        }, remaining);
+        return () => clearTimeout(timer);
     }, [navigate]);
 
     useEffect(() => {
