@@ -17,6 +17,10 @@ export const CONFIG = {
   usdtDecimals: 6,
   tokenDecimals: 18,
 
+  // BSCScan Testnet API
+  bscscanApiUrl: "https://api-testnet.bscscan.com/api",
+  bscscanApiKey: "YourApiKeyToken", // free tier — works without a real key on testnet
+
   // Presale end date — May 1 2026 07:00 WIB = 2026-05-01T00:00:00Z (UTC)
   presaleEndDate: "2026-05-01T00:00:00Z",
 };

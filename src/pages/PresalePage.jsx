@@ -4,7 +4,7 @@ import MessageModal from "../components/MessageModal";
 import { CONFIG } from "../config/config";
 import { useLanguage } from "../hooks/useLanguage";
 import { SUPPORTED_LANGS } from "../i18n/translations";
-import { destroySession, fetchBnbQuote, getAnnouncements, getUserTransactions, savePurchase, validateSession } from "../services/api";
+import { destroySession, fetchBnbQuote, getAnnouncements, getPresaleTxFromBscscan, savePurchase, validateSession } from "../services/api";
 import { formatDate, formatNumber, formatUnits } from "../services/format";
 import {
     approveUsdt,
@@ -82,10 +82,10 @@ function PresalePage() {
         else console.error("[loadChainData] getVestingInfo failed:", vestingResult.reason);
     }, []);
 
-    const loadTxHistory = useCallback(async (walletAddress) => {
+    const loadTxHistory = useCallback(async () => {
         try {
             setIsLoadingTx(true);
-            const rows = await getUserTransactions(walletAddress);
+            const rows = await getPresaleTxFromBscscan();
             setTxHistory(rows);
         } catch {
             setTxHistory([]);
@@ -251,7 +251,7 @@ function PresalePage() {
                     setBnbAmount(""); setBnbUsdtDisplay(""); setBnbThkDisplay(""); setBnbQuote(null); setBuyMessage("");
                     setModal({ type: "success", message: "Your THK tokens have been reserved!", txHash: receipt.transactionHash });
                     loadChainData(account);
-                    loadTxHistory(account);
+                    loadTxHistory();
                 }
             } else {
                 setModal({ type: "error", message: "BNB purchase transaction failed." });
@@ -384,7 +384,7 @@ function PresalePage() {
                 setUsdtAmount(""); setThkAmount(""); setBuyMessage("");
                 setModal({ type: "success", message: "Your THK tokens have been reserved!", txHash: receipt.transactionHash });
                 loadChainData(account);
-                loadTxHistory(account);
+                loadTxHistory();
             } else {
                 setModal({ type: "error", message: saveResult?.message || "Purchase succeeded but DB save failed." });
             }
@@ -444,7 +444,7 @@ function PresalePage() {
                 setIsCorrectNetwork(!!correct);
                 if (correct) {
                     loadChainData(currentAccount);
-                    loadTxHistory(currentAccount);
+                    loadTxHistory();
                 }
             } catch { await disconnectWalletConnect(); navigate("/"); }
             finally { setIsLoading(false); }
@@ -458,7 +458,7 @@ function PresalePage() {
                 else {
                     setAccount(accounts[0]);
                     loadChainData(accounts[0]);
-                    loadTxHistory(accounts[0]);
+                    loadTxHistory();
                 }
             }
             function handleChainChanged(chainId) {
@@ -470,7 +470,7 @@ function PresalePage() {
                     getCurrentAccount().then((acc) => {
                         if (acc) {
                             loadChainData(acc);
-                            loadTxHistory(acc);
+                            loadTxHistory();
                         }
                     });
                 }
@@ -1234,44 +1234,63 @@ function PresalePage() {
                                         <div style={{ padding: "32px", textAlign: "center", fontSize: "13px", color: "#6666AA" }}>{t("noTx")}</div>
                                     ) : (
                                         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                                            {displayedTx.slice(0, 20).map((tx, i) => (
-                                                <div key={tx.id || tx.tx_hash || i} style={{
-                                                    background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)",
-                                                    borderRadius: "12px", padding: "12px 14px",
-                                                }}>
-                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                                                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                                            <span style={{
-                                                                padding: "2px 8px", borderRadius: "100px", fontSize: "10px", fontWeight: 700,
-                                                                background: tx.payment_token === "BNB" ? "rgba(255,159,28,0.15)" : "rgba(0,229,255,0.1)",
-                                                                color: tx.payment_token === "BNB" ? "#FF9F1C" : "#00E5FF",
-                                                                border: `1px solid ${tx.payment_token === "BNB" ? "rgba(255,159,28,0.3)" : "rgba(0,229,255,0.2)"}`,
-                                                            }}>{tx.payment_token}</span>
-                                                            <span style={{ fontFamily: "'Courier New', monospace", fontSize: "11px", color: "#6666AA" }}>
-                                                                {tx.wallet_address ? tx.wallet_address.slice(0, 6) + "..." + tx.wallet_address.slice(-4) : ""}
-                                                            </span>
+                                            {displayedTx.slice(0, 50).map((tx, i) => {
+                                                const isBnb = tx.payment_token === "BNB";
+                                                const isFailed = tx.tx_status === "failed";
+                                                const shortAddr = tx.wallet_address
+                                                    ? tx.wallet_address.slice(0, 6) + "..." + tx.wallet_address.slice(-4)
+                                                    : "";
+                                                const timeStr = tx.created_at
+                                                    ? formatDate(Math.floor(new Date(tx.created_at).getTime() / 1000))
+                                                    : "—";
+                                                const amountLabel = isBnb
+                                                    ? `${tx.bnb_amount ?? "—"} BNB`
+                                                    : `${tx.usdt_amount ?? "—"} USDT`;
+                                                return (
+                                                    <div key={tx.tx_hash || i} style={{
+                                                        background: isFailed ? "rgba(255,60,60,0.04)" : "rgba(255,255,255,0.03)",
+                                                        border: `1px solid ${isFailed ? "rgba(255,60,60,0.15)" : "rgba(255,255,255,0.06)"}`,
+                                                        borderRadius: "12px", padding: "10px 14px",
+                                                    }}>
+                                                        {/* Row 1: token badge · wallet · status · bscscan link */}
+                                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                                                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                                                <span style={{
+                                                                    padding: "2px 8px", borderRadius: "100px", fontSize: "10px", fontWeight: 700,
+                                                                    background: isBnb ? "rgba(255,159,28,0.15)" : "rgba(0,229,255,0.1)",
+                                                                    color: isBnb ? "#FF9F1C" : "#00E5FF",
+                                                                    border: `1px solid ${isBnb ? "rgba(255,159,28,0.3)" : "rgba(0,229,255,0.2)"}`,
+                                                                }}>{tx.payment_token}</span>
+                                                                <span style={{ fontFamily: "'Courier New', monospace", fontSize: "11px", color: "#6666AA" }}>{shortAddr}</span>
+                                                                {isFailed && (
+                                                                    <span style={{ fontSize: "10px", color: "#ff6060", fontWeight: 600 }}>✕ Failed</span>
+                                                                )}
+                                                            </div>
+                                                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                                <span style={{ fontSize: "10px", color: "#6666AA" }}>{timeStr}</span>
+                                                                <a
+                                                                    href={`https://testnet.bscscan.com/tx/${tx.tx_hash}`}
+                                                                    target="_blank" rel="noreferrer"
+                                                                    style={{ fontSize: "10px", color: "#00E5FF", textDecoration: "none", fontWeight: 600 }}
+                                                                >↗ BSCScan</a>
+                                                            </div>
                                                         </div>
-                                                        <a
-                                                            href={`https://testnet.bscscan.com/tx/${tx.tx_hash}`}
-                                                            target="_blank" rel="noreferrer"
-                                                            style={{ fontSize: "10px", color: "#00E5FF", textDecoration: "none" }}
-                                                        >↗ Tx</a>
+                                                        {/* Row 2: amount paid */}
+                                                        <div style={{ fontSize: "12px", color: "#F0F0FF" }}>
+                                                            <span style={{ color: "#6666AA", fontSize: "11px" }}>Paid: </span>
+                                                            <span style={{ fontWeight: 600 }}>{amountLabel}</span>
+                                                            {tx.token_amount && (
+                                                                <>
+                                                                    <span style={{ color: "#6666AA", fontSize: "11px", margin: "0 6px" }}>→</span>
+                                                                    <span style={{ color: "#FFD84D", fontWeight: 700 }}>
+                                                                        {formatNumber(parseFloat(tx.token_amount), 2)} THK
+                                                                    </span>
+                                                                </>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                                        <div>
-                                                            <span style={{ fontSize: "11px", color: "#6666AA" }}>USDT: </span>
-                                                            <span style={{ fontSize: "12px", color: "#F0F0FF", fontWeight: 600 }}>{tx.usdt_amount}</span>
-                                                        </div>
-                                                        <div>
-                                                            <span style={{ fontSize: "11px", color: "#6666AA" }}>THK: </span>
-                                                            <span style={{ fontSize: "12px", color: "#FFD84D", fontWeight: 700 }}>
-                                                                {tx.token_amount ? formatNumber(parseFloat(tx.token_amount), 2) : "—"}
-                                                            </span>
-                                                        </div>
-                                                        <div style={{ fontSize: "10px", color: "#6666AA" }}>{formatDate(tx.created_at ? Math.floor(new Date(tx.created_at).getTime() / 1000) : null)}</div>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>

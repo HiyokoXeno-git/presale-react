@@ -152,6 +152,47 @@ export async function getRoadmap(lang = 'en') {
   }
 }
 
+// ── BSCScan live transaction history ────────────────────────────────────────
+// Fetches all normal transactions TO the presale contract (= all buy calls).
+// Returns a normalized array ready for the TX table.
+export async function getPresaleTxFromBscscan() {
+  try {
+    const url = new URL(CONFIG.bscscanApiUrl);
+    url.search = new URLSearchParams({
+      module: "account",
+      action: "txlist",
+      address: CONFIG.presaleAddress,
+      sort: "desc",
+      apikey: CONFIG.bscscanApiKey,
+    }).toString();
+
+    const res = await fetch(url.toString());
+    const data = await res.json();
+    if (data.status !== "1" || !Array.isArray(data.result)) return [];
+
+    return data.result
+      .filter(tx => tx.to?.toLowerCase() === CONFIG.presaleAddress.toLowerCase())
+      .map(tx => {
+        const bnbValue = parseFloat(tx.value) / 1e18;
+        const isUsdt = bnbValue === 0;
+        return {
+          _source: "bscscan",
+          tx_hash: tx.hash,
+          wallet_address: tx.from,
+          payment_token: isUsdt ? "USDT" : "BNB",
+          bnb_amount: isUsdt ? null : bnbValue.toFixed(6),
+          usdt_amount: null,   // not decodable without ABI parsing
+          token_amount: null,  // not in txlist, shown separately
+          created_at: new Date(Number(tx.timeStamp) * 1000).toISOString(),
+          tx_status: tx.isError === "0" ? "success" : "failed",
+          block_number: tx.blockNumber,
+        };
+      });
+  } catch {
+    return [];
+  }
+}
+
 export async function savePurchase(payload) {
   const safePayload = JSON.parse(
     JSON.stringify(payload, (_, value) =>
