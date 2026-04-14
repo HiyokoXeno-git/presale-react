@@ -26,6 +26,7 @@ function PresalePage() {
     const [account, setAccount] = useState("");
     const [currentChainId, setCurrentChainId] = useState("");
     const [isCorrectNetwork, setIsCorrectNetwork] = useState(false);
+    const [isDetectingChain, setIsDetectingChain] = useState(true); // true until first chainId check completes
     const [isLoading, setIsLoading] = useState(true);
     const [isSwitchingNetwork, setIsSwitchingNetwork] = useState(false);
     const [switchNetworkMessage, setSwitchNetworkMessage] = useState("");
@@ -35,6 +36,8 @@ function PresalePage() {
     const [usdtAmount, setUsdtAmount] = useState("");
     const [thkAmount, setThkAmount] = useState("");  // bidirectional THK input
     const [isBuying, setIsBuying] = useState(false);
+    // Keep ref in sync so session timer always sees current value (avoids stale closure)
+    useEffect(() => { isBuyingRef.current = isBuying; }, [isBuying]);
     const [buyMessage, setBuyMessage] = useState("");
     const [bnbAmount, setBnbAmount] = useState("");
     const [bnbUsdtDisplay, setBnbUsdtDisplay] = useState("");  // read-only USDT in BNB tab
@@ -47,6 +50,7 @@ function PresalePage() {
     const [modal, setModal] = useState(null);
     const lastEditedBnbFieldRef = useRef("bnb"); // "bnb" | "thk" — tracks which field user last edited
     const bnbUsdtTargetRef = useRef(null); // USDT target when user types THK with no prior BNB price
+    const isBuyingRef = useRef(false); // always-current mirror of isBuying state (avoids stale closure in session timer)
 
     // Presale stats from blockchain
     const [presaleStats, setPresaleStats] = useState(null);
@@ -96,25 +100,42 @@ function PresalePage() {
         }
     }, []);
 
+    // After a confirmed on-chain tx, poll history until the new row appears (max 5×)
+    const pollTxHistoryUntilNew = useCallback(async (txHash) => {
+        const delays = [2000, 3000, 5000, 8000, 12000];
+        for (const delay of delays) {
+            await new Promise(r => setTimeout(r, delay));
+            try {
+                const rows = await getUserTransactions();
+                setTxHistory(rows);
+                // Stop polling once the tx appears in history
+                if (rows.some(r => r.tx_hash?.toLowerCase() === txHash?.toLowerCase())) break;
+            } catch { /* ignore, keep polling */ }
+        }
+    }, []);
+
     // ── Rescue queue flush — retries any DB saves that failed in a prior session ──
     const flushRescueQueue = useCallback(async () => {
         const pending = getPending();
         if (pending.length === 0) return;
         let anyFlushed = false;
+        let flushedHash = null;
         for (const payload of pending) {
             try {
                 const result = await savePurchase(payload);
-                if (result?.success || result?.message?.includes("already saved")) {
+                if (result?.success || result?.message?.toLowerCase().includes("already saved")) {
                     dequeue(payload.txHash);
+                    flushedHash = payload.txHash;
                     anyFlushed = true;
                 }
             } catch { /* leave in queue, retry next time */ }
         }
         if (anyFlushed) {
-            loadChainData(account);
-            loadTxHistory();
+            loadChainData(account).catch(err => console.error("[flushRescueQueue] loadChainData:", err));
+            loadTxHistory().catch(err => console.error("[flushRescueQueue] loadTxHistory:", err));
+            if (flushedHash) pollTxHistoryUntilNew(flushedHash).catch(err => console.error("[flushRescueQueue] pollTxHistory:", err));
         }
-    }, [account, loadChainData, loadTxHistory]);
+    }, [account, loadChainData, loadTxHistory, pollTxHistoryUntilNew]);
 
     // ── Handlers ──────────────────────────────────────────────────
     async function handleSwitchNetwork() {
@@ -164,6 +185,22 @@ function PresalePage() {
         if (msg.includes("cancelled") || msg.includes("rejected")) return "#FF9F1C";
         // Red for actual errors
         return "#ff6060";
+    }
+
+    function isBlockTimeoutError(error) {
+        const msg = String(error?.message || error?.cause?.message || "").toLowerCase();
+        return msg.includes("not mined within") ||
+            msg.includes("600 blocks") ||
+            msg.includes("transaction was not mined") ||
+            msg.includes("poll timeout") ||
+            msg.includes("transaction poll");
+    }
+
+    // Fires when user did not confirm MetaMask within the 10-minute window.
+    // The MetaMask popup is still alive; the app auto-expires the buy flow
+    // and reloads the page so the user starts fresh.
+    function isMetaMaskTimeoutError(error) {
+        return error?.isMetaMaskTimeout === true;
     }
 
     function classifyTxError(error, token = "") {
@@ -224,6 +261,7 @@ function PresalePage() {
     async function handleBuyWithBnb() {
         if (isBuying) return;
         let bnbAmountWei = "";
+        let capturedTxHashForUI = null;
         try {
             setIsBuying(true);
             setBuyMessage("");
@@ -255,7 +293,24 @@ function PresalePage() {
             if (BigInt(usdtAmountRaw) < BigInt("10000000")) { setBuyMessage("Minimum purchase is 10 USDT worth of BNB."); return; }
 
             const tokenAmountRaw = await getTokenAmount(usdtAmountRaw);
-            const { receipt, txHash } = await buyWithBnb(account, bnbAmountWei, usdtAmountRaw, quoteDeadline, signature);
+
+            // Enqueue immediately when TX is broadcast (before mining)
+            const onHashCaptured = (hash) => {
+                capturedTxHashForUI = hash;
+                enqueue({
+                    walletAddress: String(account), txHash: String(hash),
+                    paymentToken: "BNB", bnbAmountRaw: String(bnbAmountWei),
+                    bnbAmount: String(quote.bnbAmount ?? trimmedBnbAmount),
+                    usdtAmount: String(usdtAmountRaw), tokenAmount: String(tokenAmountRaw),
+                    quoteDeadline: String(quoteDeadline), quoteDigest: String(quoteDigest),
+                    presaleAddress: String(CONFIG.presaleAddress), vestingAddress: String(CONFIG.vestingAddress),
+                    blockNumber: null, chainId: String(CONFIG.chainId),
+                    networkName: String(CONFIG.networkName)
+                });
+                setBuyMessage("Transaction submitted! Waiting for blockchain confirmation...");
+            };
+
+            const { receipt, txHash } = await buyWithBnb(account, bnbAmountWei, usdtAmountRaw, quoteDeadline, signature, onHashCaptured);
 
             if (receipt?.status) {
                 const bnbPayload = {
@@ -268,45 +323,61 @@ function PresalePage() {
                     blockNumber: String(receipt.blockNumber), chainId: String(CONFIG.chainId),
                     networkName: String(CONFIG.networkName)
                 };
-                enqueue(bnbPayload);
-                const saveResult = await savePurchase(bnbPayload);
-                if (!saveResult?.success) {
-                    setModal({ type: "error", message: "Purchase confirmed on-chain. Data will be saved automatically when you return." });
-                } else {
+                let saveResult = null;
+                try { saveResult = await savePurchase(bnbPayload); } catch { /* stays in rescue queue */ }
+
+                if (saveResult?.success || saveResult?.message?.toLowerCase().includes("already saved")) {
                     dequeue(bnbPayload.txHash);
                     setBnbAmount(""); setBnbUsdtDisplay(""); setBnbThkDisplay(""); setBnbQuote(null); setBuyMessage("");
                     setModal({ type: "success", message: "Your THK tokens have been reserved!", txHash });
                     loadChainData(account);
-                    loadTxHistory();
+                    pollTxHistoryUntilNew(txHash);
+                } else {
+                    setModal({ type: "success", message: "Transaction confirmed on-chain! Syncing data...", txHash });
+                    loadChainData(account);
+                    pollTxHistoryUntilNew(txHash);
                 }
             } else {
                 setModal({ type: "error", message: "BNB purchase transaction failed." });
             }
         } catch (error) {
-            // TX submitted but web3 timed out — rescue with txHash if available
-            if (error.txHash) {
-                enqueue({
-                    walletAddress: String(account), txHash: String(error.txHash),
-                    paymentToken: "BNB", bnbAmountRaw: String(bnbAmountWei ?? ""),
-                    bnbAmount: String(bnbAmount ?? ""),
-                    usdtAmount: String(bnbQuote?.usdtAmountRaw ?? "0"),
-                    tokenAmount: "0",
-                    quoteDeadline: String(bnbQuote?.deadline ?? ""),
-                    quoteDigest: String(bnbQuote?.digest ?? ""),
-                    presaleAddress: String(CONFIG.presaleAddress), vestingAddress: String(CONFIG.vestingAddress),
-                    blockNumber: null, chainId: String(CONFIG.chainId),
-                    networkName: String(CONFIG.networkName)
+            const txHashForError = capturedTxHashForUI || error.txHash;
+            if (txHashForError && isBlockTimeoutError(error)) {
+                setModal({
+                    type: "error",
+                    message: "Transaction timeout: your transaction was not confirmed within 600 blocks. It may still be pending — check BSCScan for your wallet address.",
+                    txHash: txHashForError,
                 });
-                setBuyMessage("Transaction submitted. Data will sync automatically when you return to this page.");
+            } else if (txHashForError) {
+                // TX was broadcast — already in rescue queue from onHashCaptured
+                setBuyMessage("Transaction submitted. Your purchase will be recorded automatically.");
             } else {
-                setBuyMessage(classifyTxError(error, "BNB"));
+                const code = error?.code;
+                const msg  = String(error?.message || "").toLowerCase();
+                const isUserCancel = code === 4001 || code === "ACTION_REJECTED" ||
+                    msg.includes("user denied") || msg.includes("user rejected") ||
+                    msg.includes("metamask tx signature") || msg.includes("cancelled by user");
+                if (isUserCancel) {
+                    setModal({ type: "cancelled", message: "You cancelled the transaction in your wallet. The page will reload." });
+                } else if (isMetaMaskTimeoutError(error)) {
+                    // MetaMask popup was not confirmed within 10 min — auto-expire the buy flow
+                    setModal({ type: "cancelled", message: "Transaction request expired after 10 minutes. The page will reload." });
+                } else {
+                    setBuyMessage(classifyTxError(error, "BNB"));
+                }
             }
         } finally {
             setIsBuying(false);
+            // Retry any pending rescue queue entries immediately after buy completes
+            setTimeout(() => flushRescueQueue(), 3000);
         }
     }
 
     async function handleFetchBnbQuote(inputBnbAmount) {
+        // Snapshot mutable refs BEFORE any await — prevents stale-closure race when
+        // the user types quickly and multiple calls overlap in-flight.
+        const usdtTargetSnapshot = bnbUsdtTargetRef.current;
+        const editedFieldSnapshot = lastEditedBnbFieldRef.current;
         try {
             setBnbQuoteMessage(""); setBnbQuote(null);
             const trimmedAmount = String(inputBnbAmount ?? "").trim();
@@ -330,10 +401,13 @@ function PresalePage() {
             if (!isNaN(usdtVal) && numericAmount > 0) {
                 const price = usdtVal / numericAmount;
                 setLastBnbPrice(price);
-                // If user was typing THK with no prior price, recalculate the correct BNB amount
-                if (lastEditedBnbFieldRef.current === "thk" && bnbUsdtTargetRef.current != null) {
-                    const correctBnb = (bnbUsdtTargetRef.current / price).toFixed(8);
+                // If user was typing THK with no prior price, recalculate the correct BNB amount.
+                // Only act on the target that was set at call-time (usdtTargetSnapshot) to avoid
+                // using a stale value from a concurrent call that updated the ref mid-flight.
+                if (editedFieldSnapshot === "thk" && usdtTargetSnapshot != null &&
+                    bnbUsdtTargetRef.current === usdtTargetSnapshot) {
                     bnbUsdtTargetRef.current = null;
+                    const correctBnb = (usdtTargetSnapshot / price).toFixed(8);
                     setBnbAmount(correctBnb); // triggers debounce again for the accurate quote
                 }
             }
@@ -391,9 +465,11 @@ function PresalePage() {
 
     async function handleBuyWithUsdt() {
         if (isBuying) return;
+        let capturedTxHashForUI = null;
         try {
             setIsBuying(true); setBuyMessage("");
             const usdtAmountRaw = parseUsdtToRaw(usdtAmount);
+            const tokenAmountRaw = getTokenAmountRawFromUsdtRaw(usdtAmountRaw);
 
             // ── Pre-flight: only check saleActive ─────────────────────────
             setBuyMessage("Checking presale status...");
@@ -412,10 +488,27 @@ function PresalePage() {
             }
 
             setBuyMessage("Step 2/2: Purchasing... Please confirm in wallet.");
-            const tokenAmountRaw = getTokenAmountRawFromUsdtRaw(usdtAmountRaw);
-            const { receipt, txHash } = await buyWithUsdt(account, usdtAmountRaw);
+
+            // Called immediately when the TX is broadcast (before mining).
+            // Enqueue right away so the rescue queue has the entry even if receipt never fires.
+            const onHashCaptured = (hash) => {
+                capturedTxHashForUI = hash;
+                enqueue({
+                    walletAddress: String(account), txHash: String(hash),
+                    paymentToken: "USDT", usdtAmount: String(usdtAmountRaw),
+                    tokenAmount: String(tokenAmountRaw),
+                    presaleAddress: String(CONFIG.presaleAddress), vestingAddress: String(CONFIG.vestingAddress),
+                    blockNumber: null, chainId: String(CONFIG.chainId),
+                    networkName: String(CONFIG.networkName)
+                });
+                setBuyMessage("Transaction submitted! Waiting for blockchain confirmation...");
+            };
+
+            const { receipt, txHash } = await buyWithUsdt(account, usdtAmountRaw, onHashCaptured);
 
             if (!receipt?.status) { setBuyMessage("USDT purchase transaction was not successful."); return; }
+
+            // Build full payload (blockNumber now known from receipt)
             const usdtPayload = {
                 walletAddress: String(account), txHash: String(txHash),
                 paymentToken: "USDT", usdtAmount: String(usdtAmountRaw), tokenAmount: String(tokenAmountRaw),
@@ -423,35 +516,53 @@ function PresalePage() {
                 blockNumber: String(receipt.blockNumber), chainId: String(CONFIG.chainId),
                 networkName: String(CONFIG.networkName)
             };
-            enqueue(usdtPayload);
-            const saveResult = await savePurchase(usdtPayload);
-            if (saveResult?.success) {
+
+            // Save to DB (item is already in rescue queue; on success we dequeue it)
+            let saveResult = null;
+            try { saveResult = await savePurchase(usdtPayload); } catch { /* stays in rescue queue */ }
+
+            if (saveResult?.success || saveResult?.message?.toLowerCase().includes("already saved")) {
                 dequeue(usdtPayload.txHash);
                 setUsdtAmount(""); setThkAmount(""); setBuyMessage("");
                 setModal({ type: "success", message: "Your THK tokens have been reserved!", txHash });
                 loadChainData(account);
-                loadTxHistory();
+                pollTxHistoryUntilNew(txHash);
             } else {
-                setModal({ type: "error", message: "Purchase confirmed on-chain. Data will be saved automatically when you return." });
+                // Transaction confirmed on-chain — rescue queue will retry the DB save
+                setModal({ type: "success", message: "Transaction confirmed on-chain! Syncing data...", txHash });
+                loadChainData(account);
+                pollTxHistoryUntilNew(txHash);
             }
         } catch (error) {
-            // TX was submitted but web3 timed out before receipt — rescue with txHash
-            if (error.txHash) {
-                const tokenAmountRaw = getTokenAmountRawFromUsdtRaw(parseUsdtToRaw(usdtAmount));
-                enqueue({
-                    walletAddress: String(account), txHash: String(error.txHash),
-                    paymentToken: "USDT", usdtAmount: String(parseUsdtToRaw(usdtAmount)),
-                    tokenAmount: String(tokenAmountRaw),
-                    presaleAddress: String(CONFIG.presaleAddress), vestingAddress: String(CONFIG.vestingAddress),
-                    blockNumber: null, chainId: String(CONFIG.chainId),
-                    networkName: String(CONFIG.networkName)
+            const txHashForError = capturedTxHashForUI || error.txHash;
+            if (txHashForError && isBlockTimeoutError(error)) {
+                setModal({
+                    type: "error",
+                    message: "Transaction timeout: your transaction was not confirmed within 600 blocks. It may still be pending — check BSCScan for your wallet address.",
+                    txHash: txHashForError,
                 });
-                setBuyMessage("Transaction submitted. Data will sync automatically when you return to this page.");
+            } else if (txHashForError) {
+                // TX was broadcast — already in rescue queue from onHashCaptured
+                setBuyMessage("Transaction submitted. Your purchase will be recorded automatically.");
             } else {
-                setBuyMessage(classifyTxError(error, "USDT"));
+                const code = error?.code;
+                const msg  = String(error?.message || "").toLowerCase();
+                const isUserCancel = code === 4001 || code === "ACTION_REJECTED" ||
+                    msg.includes("user denied") || msg.includes("user rejected") ||
+                    msg.includes("metamask tx signature") || msg.includes("cancelled by user");
+                if (isUserCancel) {
+                    setModal({ type: "cancelled", message: "You cancelled the transaction in your wallet. The page will reload." });
+                } else if (isMetaMaskTimeoutError(error)) {
+                    // MetaMask popup was not confirmed within 10 min — auto-expire the buy flow
+                    setModal({ type: "cancelled", message: "Transaction request expired after 10 minutes. The page will reload." });
+                } else {
+                    setBuyMessage(classifyTxError(error, "USDT"));
+                }
             }
         } finally {
             setIsBuying(false);
+            // Retry any pending rescue queue entries immediately after buy completes
+            setTimeout(() => flushRescueQueue(), 3000);
         }
     }
 
@@ -498,7 +609,16 @@ function PresalePage() {
                     return;
                 }
                 setAccount(currentAccount);
-                const chainId = await getCurrentChainId();
+                // Retry chain detection up to 10 times (MetaMask may still be in "Connecting" state)
+                let chainId = null;
+                for (let i = 0; i < 10; i++) {
+                    try {
+                        chainId = await getCurrentChainId();
+                        if (chainId) break;
+                    } catch { /* ignore, retry */ }
+                    await new Promise(r => setTimeout(r, 600));
+                }
+                setIsDetectingChain(false);
                 setCurrentChainId(chainId || "");
                 const correct = chainId && (String(chainId).toLowerCase() === CONFIG.chainHex.toLowerCase() || Number(chainId) === CONFIG.chainId);
                 setIsCorrectNetwork(!!correct);
@@ -507,7 +627,14 @@ function PresalePage() {
                     loadTxHistory();
                     flushRescueQueue();
                 }
-            } catch { await disconnectWalletConnect(); navigate("/"); }
+            } catch (err) {
+                // Only kick to landing page for session/account errors, not network errors
+                if (err?.message?.includes("session") || err?.message?.includes("account") || err?.message?.includes("wallet")) {
+                    await disconnectWalletConnect();
+                    navigate("/");
+                }
+                // Other errors (RPC timeout etc.) — stay on page, user can retry
+            }
             finally { setIsLoading(false); }
         }
         init();
@@ -536,14 +663,41 @@ function PresalePage() {
                     });
                 }
             }
+            // Fires when MetaMask finishes the "Connecting" approval flow
+            function handleConnect({ chainId }) {
+                if (!chainId) return;
+                setIsDetectingChain(false);
+                setCurrentChainId(chainId);
+                const correct = String(chainId).toLowerCase() === CONFIG.chainHex.toLowerCase() || Number(chainId) === CONFIG.chainId;
+                setIsCorrectNetwork(correct);
+                setSwitchNetworkMessage("");
+                if (correct) {
+                    getCurrentAccount().then((acc) => {
+                        if (acc) {
+                            setAccount(acc);
+                            loadChainData(acc);
+                            loadTxHistory();
+                            flushRescueQueue();
+                        }
+                    });
+                }
+            }
             ethereum.on("accountsChanged", handleAccountsChanged);
             ethereum.on("chainChanged", handleChainChanged);
+            ethereum.on("connect", handleConnect);
             return () => {
                 ethereum.removeListener("accountsChanged", handleAccountsChanged);
                 ethereum.removeListener("chainChanged", handleChainChanged);
+                ethereum.removeListener("connect", handleConnect);
             };
         }
-    }, [loadChainData, loadTxHistory, flushRescueQueue]);
+    }, [loadChainData, loadTxHistory, flushRescueQueue, pollTxHistoryUntilNew]);
+
+    // Retry rescue queue every 30 s while on the page (catches failed saves without requiring a refresh)
+    useEffect(() => {
+        const interval = setInterval(() => flushRescueQueue(), 30000);
+        return () => clearInterval(interval);
+    }, [flushRescueQueue]);
 
     useEffect(() => {
         if (!account) { setBnbQuote(null); setBnbQuoteMessage(""); return; }
@@ -559,16 +713,29 @@ function PresalePage() {
 
     // ── Session hard-expires after 30 min — fully disconnect wallet on expiry ──
     useEffect(() => {
-        const createdAt = Number(localStorage.getItem("hyk_session_created_at") ?? 0);
-        if (!createdAt) return;
-        const remaining = createdAt + 30 * 60 * 1000 - Date.now();
+        const SESSION_TTL_MS = 30 * 60 * 1000;
+
+        function getRemaining() {
+            // Always re-read from localStorage so a fresh login resets the timer
+            const createdAt = Number(localStorage.getItem("hyk_session_created_at") ?? 0);
+            if (!createdAt) return -1;
+            return createdAt + SESSION_TTL_MS - Date.now();
+        }
 
         async function expireSession() {
+            // Double-check: session may have been refreshed since the timer was set
+            if (getRemaining() > 0) return;
+            // Never interrupt an ongoing transaction — defer until it finishes
+            if (isBuyingRef.current) {
+                setTimeout(expireSession, 5000);
+                return;
+            }
             await destroySession();
             await disconnectWalletConnect();
             navigate("/", { state: { fromDashboard: true } });
         }
 
+        const remaining = getRemaining();
         if (remaining <= 0) {
             expireSession();
             return;
@@ -770,7 +937,7 @@ function PresalePage() {
                         )}
                     </div>
 
-                    {isCorrectNetwork && (
+                    {account && (
                         <div className="ps-wallet-pill" style={{
                             display: "flex", alignItems: "center", gap: "7px",
                             background: "rgba(20,20,40,0.85)", border: "1px solid rgba(255,255,255,0.07)",
@@ -781,7 +948,7 @@ function PresalePage() {
                             onClick={() => { navigator.clipboard?.writeText(account); }}
                             title="Copy address"
                         >
-                            <div style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#6AC645", boxShadow: "0 0 6px #6AC645" }} />
+                            <div style={{ width: "7px", height: "7px", borderRadius: "50%", background: isCorrectNetwork ? "#6AC645" : "#FF9F1C", boxShadow: `0 0 6px ${isCorrectNetwork ? "#6AC645" : "#FF9F1C"}` }} />
                             {shortAddr}
                         </div>
                     )}
@@ -824,8 +991,22 @@ function PresalePage() {
                     </div>
                 </div>
 
+                {/* Detecting network — shown while MetaMask is still in "Connecting" state */}
+                {isDetectingChain && !isCorrectNetwork && (
+                    <div style={{
+                        background: "rgba(255,216,77,0.06)", border: "1px solid rgba(255,216,77,0.2)",
+                        borderRadius: "16px", padding: "20px 24px",
+                        display: "flex", alignItems: "center", gap: "12px",
+                    }}>
+                        <div style={{ width: "16px", height: "16px", border: "2px solid #FFD84D", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
+                        <div style={{ fontSize: "14px", color: "#FFD84D", fontWeight: 600 }}>
+                            Mendeteksi jaringan... Harap selesaikan koneksi di MetaMask.
+                        </div>
+                    </div>
+                )}
+
                 {/* Wrong network banner */}
-                {!isCorrectNetwork && (
+                {!isDetectingChain && !isCorrectNetwork && (
                     <div style={{
                         background: "rgba(255,80,80,0.08)", border: "1px solid rgba(255,80,80,0.3)",
                         borderRadius: "16px", padding: "20px 24px",
@@ -833,28 +1014,54 @@ function PresalePage() {
                     }}>
                         <div>
                             <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "16px", color: "#ff6060", marginBottom: "4px" }}>⚠️ {t("wrongNetwork")}</div>
-                            <div style={{ fontSize: "13px", color: "#6666AA" }}>{t("connectedTo")} {currentChainId || "unknown"}. {t("switchTo")}</div>
+                            <div style={{ fontSize: "13px", color: "#6666AA" }}>{t("connectedTo")} {currentChainId ? `Chain ${Number(currentChainId) || "unknown"}` : t("unknownNetwork")}. {t("switchTo")}</div>
                             {switchNetworkMessage && <div style={{ fontSize: "12px", color: "#ff6060", marginTop: "6px" }}>{switchNetworkMessage}</div>}
                         </div>
-                        <button
-                            onClick={handleSwitchNetwork}
-                            disabled={isSwitchingNetwork}
-                            style={{
-                                padding: "11px 24px",
-                                background: "linear-gradient(135deg, #FFD84D, #FF9F1C)",
-                                color: "#06060F", border: "none", borderRadius: "100px",
-                                fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "13px",
-                                cursor: isSwitchingNetwork ? "not-allowed" : "pointer",
-                                opacity: isSwitchingNetwork ? 0.6 : 1,
-                                letterSpacing: "0.04em", whiteSpace: "nowrap",
-                            }}
-                        >
-                            {isSwitchingNetwork ? t("switching") : t("switchNetwork")}
-                        </button>
+                        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                            {/* Retry button — re-checks chainId without switching (for when MetaMask was still loading) */}
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const chainId = await getCurrentChainId();
+                                        if (!chainId) return;
+                                        setCurrentChainId(chainId);
+                                        const correct = String(chainId).toLowerCase() === CONFIG.chainHex.toLowerCase() || Number(chainId) === CONFIG.chainId;
+                                        setIsCorrectNetwork(correct);
+                                        if (correct) {
+                                            const acc = await getCurrentAccount();
+                                            if (acc) { setAccount(acc); loadChainData(acc); loadTxHistory(); flushRescueQueue(); }
+                                        }
+                                    } catch { /* ignore */ }
+                                }}
+                                style={{
+                                    padding: "11px 20px",
+                                    background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)",
+                                    color: "#F0F0FF", borderRadius: "100px",
+                                    fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "13px",
+                                    cursor: "pointer", whiteSpace: "nowrap",
+                                }}
+                            >↺ Retry</button>
+                            <button
+                                onClick={handleSwitchNetwork}
+                                disabled={isSwitchingNetwork}
+                                style={{
+                                    padding: "11px 24px",
+                                    background: "linear-gradient(135deg, #FFD84D, #FF9F1C)",
+                                    color: "#06060F", border: "none", borderRadius: "100px",
+                                    fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "13px",
+                                    cursor: isSwitchingNetwork ? "not-allowed" : "pointer",
+                                    opacity: isSwitchingNetwork ? 0.6 : 1,
+                                    letterSpacing: "0.04em", whiteSpace: "nowrap",
+                                }}
+                            >
+                                {isSwitchingNetwork ? t("switching") : t("switchNetwork")}
+                            </button>
+                        </div>
                     </div>
                 )}
 
-                {isCorrectNetwork && (
+                {/* Dashboard content — always visible; buy buttons disabled when wrong network */}
+                {account && (
                     <>
                         {/* ── Vesting stats row ── */}
                         <div className="ps-stats-row">
@@ -1128,8 +1335,8 @@ function PresalePage() {
                                         {usdtAmount && !isValidUsdtAmount(usdtAmount) && (
                                             <div style={{ fontSize: "11px", color: "#FF9F1C", textAlign: "center", marginBottom: "8px" }}>Minimum purchase is 10 USDT</div>
                                         )}
-                                        <button onClick={handleBuyWithUsdt} disabled={!isValidUsdtAmount(usdtAmount) || isBuying} style={btnBuyStyle(isValidUsdtAmount(usdtAmount) && !isBuying)}>
-                                            {isBuying ? `⏳ ${t("buying")}...` : t("buyNow")}
+                                        <button onClick={handleBuyWithUsdt} disabled={!isCorrectNetwork || !isValidUsdtAmount(usdtAmount) || isBuying} style={btnBuyStyle(isCorrectNetwork && isValidUsdtAmount(usdtAmount) && !isBuying)}>
+                                            {!isCorrectNetwork ? "⚠️ Switch Network First" : isBuying ? `⏳ ${t("buying")}...` : t("buyNow")}
                                         </button>
                                         {buyMessage && (
                                             <div style={{ marginTop: "10px", fontSize: "13px", color: buyMsgColor(buyMessage), textAlign: "center" }}>{buyMessage}</div>
@@ -1243,10 +1450,10 @@ function PresalePage() {
                                         )}
                                         <button
                                             onClick={handleBuyWithBnb}
-                                            disabled={!bnbAmount || !bnbQuote || isBuying || isFetchingBnbQuote}
-                                            style={btnBuyStyle(!!bnbAmount && !!bnbQuote && !isBuying && !isFetchingBnbQuote)}
+                                            disabled={!isCorrectNetwork || !bnbAmount || !bnbQuote || isBuying || isFetchingBnbQuote}
+                                            style={btnBuyStyle(isCorrectNetwork && !!bnbAmount && !!bnbQuote && !isBuying && !isFetchingBnbQuote)}
                                         >
-                                            {isBuying ? "⏳ Processing..." : "BUY NOW"}
+                                            {!isCorrectNetwork ? "⚠️ Switch Network First" : isBuying ? "⏳ Processing..." : "BUY NOW"}
                                         </button>
                                         {buyMessage && (
                                             <div style={{ marginTop: "10px", fontSize: "13px", color: buyMsgColor(buyMessage), textAlign: "center" }}>{buyMessage}</div>
@@ -1581,7 +1788,11 @@ function PresalePage() {
                 type={modal?.type}
                 message={modal?.message}
                 txHash={modal?.txHash}
-                onClose={() => setModal(null)}
+                onClose={() => {
+                    const shouldReload = modal?.type === "cancelled" || modal?.type === "success";
+                    setModal(null);
+                    if (shouldReload) window.location.reload();
+                }}
             />
         </div>
     );

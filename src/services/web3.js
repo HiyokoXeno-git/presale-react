@@ -1,11 +1,11 @@
 import Web3 from "web3";
 
-import { CONFIG } from "../config/config";
-import { modal } from "../config/appkit.js";
-import { USDT_ABI } from "../abi/usdtAbi";
 import { PRESALE_ABI } from "../abi/presaleAbi";
-import { VESTING_ABI } from "../abi/vestingAbi";
 import { TOKEN_ABI } from "../abi/tokenAbi";
+import { USDT_ABI } from "../abi/usdtAbi";
+import { VESTING_ABI } from "../abi/vestingAbi";
+import { modal } from "../config/appkit.js";
+import { CONFIG } from "../config/config";
 
 // ── WalletConnect provider (persisted across calls) ──────────────────────────
 let _wcProvider = null;
@@ -50,7 +50,10 @@ function extractRevertReason(err) {
 
 export function getPresaleContract() {
   const web3 = getWeb3();
-  return new web3.eth.Contract(PRESALE_ABI, CONFIG.presaleAddress);
+  const contract = new web3.eth.Contract(PRESALE_ABI, CONFIG.presaleAddress);
+  contract.transactionBlockTimeout = 600;
+  contract.transactionPollingTimeout = 600 * 1000;
+  return contract;
 }
 
 // Returns an optimal gasPrice string (current + 10% buffer) for reliable inclusion
@@ -65,11 +68,32 @@ async function getOptimalGasPrice() {
 }
 
 // Sends a buy transaction and returns { receipt, txHash }.
-// txHash is set as soon as the TX is submitted (before confirmation),
-// so callers can rescue the payload even if web3 times out waiting for the receipt.
-export async function buyWithUsdt(account, usdtAmountRaw) {
+// onHashCaptured(hash) is called as soon as the TX is broadcast (before mining),
+// so callers can enqueue the rescue payload immediately — before waiting for receipt.
+//
+// Two-phase timeout strategy:
+//  Phase 1 — MetaMask confirmation timeout (METAMASK_CONFIRM_MS):
+//    Starts when tx.send() is called. If no transactionHash arrives within the
+//    window (user hasn't confirmed MetaMask yet), the Promise is rejected with
+//    err.isMetaMaskTimeout = true. The MetaMask popup is still open; the caller
+//    shows a "cancelled"-type modal which reloads the page, giving the user a
+//    clean state. Web3's own transactionBlockTimeout is disabled (set to 99999)
+//    so it never fires and races with this timer.
+//  Phase 2 — Receipt timeout (RECEIPT_WAIT_MS):
+//    Starts only after transactionHash fires (tx is already in the mempool).
+//    If no receipt arrives, the Promise is rejected with err.txHash set so the
+//    rescue queue entry (created in onHashCaptured) is preserved and the caller
+//    can show a BSCScan link.
+const METAMASK_CONFIRM_MS = 10 * 60 * 1000; // 10 min — matches old transactionPollingTimeout
+const RECEIPT_WAIT_MS     = 10 * 60 * 1000; // 10 min after broadcast
+
+export async function buyWithUsdt(account, usdtAmountRaw, onHashCaptured) {
   if (!account) throw new Error("Wallet is not connected.");
   const presaleContract = getPresaleContract();
+  // Disable web3's own timeout — our two-phase timers take over.
+  presaleContract.transactionBlockTimeout = 99999;
+  presaleContract.transactionPollingTimeout = 99999 * 1000;
+
   const gasPrice = await getOptimalGasPrice();
   const tx = presaleContract.methods.buy(usdtAmountRaw);
   let gas;
@@ -81,13 +105,64 @@ export async function buyWithUsdt(account, usdtAmountRaw) {
 
   return new Promise((resolve, reject) => {
     let capturedTxHash = null;
+    let settled = false;
+    let metamaskTimeoutId = null;
+    let receiptTimeoutId  = null;
+
+    const settle = (fn) => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(metamaskTimeoutId);
+        clearTimeout(receiptTimeoutId);
+        fn();
+      }
+    };
+
+    // Phase 1: auto-expire if user never confirms MetaMask
+    metamaskTimeoutId = setTimeout(() => {
+      if (!capturedTxHash) {
+        const err = new Error("MetaMask confirmation timed out after 10 minutes.");
+        err.isMetaMaskTimeout = true;
+        settle(() => reject(err));
+      }
+    }, METAMASK_CONFIRM_MS);
+
     tx.send({ from: account, gas, ...(gasPrice && { gasPrice }) })
-      .on("transactionHash", (hash) => { capturedTxHash = hash; })
-      .on("receipt", (receipt) => resolve({ receipt, txHash: capturedTxHash ?? receipt.transactionHash }))
+      .on("transactionHash", (hash) => {
+        capturedTxHash = hash;
+        if (typeof onHashCaptured === "function") onHashCaptured(hash);
+        // Phase 2: start receipt countdown only after tx is in the mempool
+        if (!settled) {
+          receiptTimeoutId = setTimeout(() => {
+            const err = new Error("Transaction not mined within 600 blocks, please check BSCScan.");
+            err.txHash = capturedTxHash;
+            settle(() => reject(err));
+          }, RECEIPT_WAIT_MS);
+        }
+      })
+      .on("receipt", (receipt) => settle(() =>
+        resolve({ receipt, txHash: capturedTxHash ?? receipt.transactionHash })
+      ))
       .on("error", (err) => {
-        const error = new Error(extractRevertReason(err));
-        error.txHash = capturedTxHash; // attach even on error so caller can rescue
-        reject(error);
+        const rawMsg = String(err?.message || err?.cause?.message || "").toLowerCase();
+        const isCancel = err?.code === 4001 ||
+          rawMsg.includes("user denied") || rawMsg.includes("user rejected") ||
+          rawMsg.includes("denied transaction signature");
+        const error = new Error(isCancel ? (err?.message || "User cancelled") : extractRevertReason(err));
+        error.code = isCancel ? 4001 : err?.code;
+        error.txHash = capturedTxHash;
+        settle(() => reject(error));
+      })
+      .catch((err) => {
+        // Safety: catch direct PromiEvent Promise rejection (web3 v4 may not fire .on("error"))
+        const rawMsg = String(err?.message || err?.cause?.message || "").toLowerCase();
+        const isCancel = err?.code === 4001 ||
+          rawMsg.includes("user denied") || rawMsg.includes("user rejected") ||
+          rawMsg.includes("denied transaction signature");
+        const error = new Error(isCancel ? (err?.message || "User cancelled") : extractRevertReason(err));
+        error.code = isCancel ? 4001 : err?.code;
+        error.txHash = capturedTxHash;
+        settle(() => reject(error));
       });
   });
 }
@@ -108,7 +183,10 @@ export async function getUsdtAllowance(account) {
 
 export function getUsdtContract() {
   const web3 = getWeb3();
-  return new web3.eth.Contract(USDT_ABI, CONFIG.usdtAddress);
+  const contract = new web3.eth.Contract(USDT_ABI, CONFIG.usdtAddress);
+  contract.transactionBlockTimeout = 600;
+  contract.transactionPollingTimeout = 600 * 1000;
+  return contract;
 }
 
 // Cache decimals so we only call it once per session
@@ -131,7 +209,11 @@ export async function approveUsdt(account) {
   const gasPrice = await getOptimalGasPrice();
   const tx = usdtContract.methods.approve(CONFIG.presaleAddress, maxUint);
   let gas;
-  try { gas = await tx.estimateGas({ from: account }); } catch { gas = 100000; }
+  try {
+    gas = await tx.estimateGas({ from: account });
+  } catch (err) {
+    throw new Error(extractRevertReason(err));
+  }
   return await tx.send({ from: account, gas, ...(gasPrice && { gasPrice }) });
 }
 
@@ -208,8 +290,8 @@ export function getWeb3() {
   const web3 = new Web3(ethereum);
   // Set a high block timeout so web3's internal timer never fires before
   // our own withTimeout (30 s). 200 blocks ≈ 10 min on BSC Testnet.
-  web3.eth.transactionBlockTimeout = 200;
-  web3.eth.transactionPollingTimeout = 600; // 10 min max polling
+  web3.eth.transactionBlockTimeout = 600;
+  web3.eth.transactionPollingTimeout = 600 * 1000; // 10 min max polling
   return web3;
 }
 
@@ -298,8 +380,12 @@ export async function getTokenAmount(usdtAmountRaw) {
   return result;
 }
 
-export async function buyWithBnb(account, bnbAmountWei, usdtAmountRaw, deadline, signature) {
+export async function buyWithBnb(account, bnbAmountWei, usdtAmountRaw, deadline, signature, onHashCaptured) {
   const contract = getPresaleContract();
+  // Disable web3's own timeout — two-phase timers (same as buyWithUsdt) take over.
+  contract.transactionBlockTimeout = 99999;
+  contract.transactionPollingTimeout = 99999 * 1000;
+
   const gasPrice = await getOptimalGasPrice();
   const tx = contract.methods.buyWithBnb(
     String(bnbAmountWei), String(usdtAmountRaw), String(deadline), signature
@@ -313,25 +399,82 @@ export async function buyWithBnb(account, bnbAmountWei, usdtAmountRaw, deadline,
 
   return new Promise((resolve, reject) => {
     let capturedTxHash = null;
+    let settled = false;
+    let metamaskTimeoutId = null;
+    let receiptTimeoutId  = null;
+
+    const settle = (fn) => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(metamaskTimeoutId);
+        clearTimeout(receiptTimeoutId);
+        fn();
+      }
+    };
+
+    // Phase 1: auto-expire if user never confirms MetaMask
+    metamaskTimeoutId = setTimeout(() => {
+      if (!capturedTxHash) {
+        const err = new Error("MetaMask confirmation timed out after 10 minutes.");
+        err.isMetaMaskTimeout = true;
+        settle(() => reject(err));
+      }
+    }, METAMASK_CONFIRM_MS);
+
     tx.send({ from: account, value: String(bnbAmountWei), gas, ...(gasPrice && { gasPrice }) })
-      .on("transactionHash", (hash) => { capturedTxHash = hash; })
-      .on("receipt", (receipt) => resolve({ receipt, txHash: capturedTxHash ?? receipt.transactionHash }))
+      .on("transactionHash", (hash) => {
+        capturedTxHash = hash;
+        if (typeof onHashCaptured === "function") onHashCaptured(hash);
+        // Phase 2: start receipt countdown only after tx is in the mempool
+        if (!settled) {
+          receiptTimeoutId = setTimeout(() => {
+            const err = new Error("Transaction not mined within 600 blocks, please check BSCScan.");
+            err.txHash = capturedTxHash;
+            settle(() => reject(err));
+          }, RECEIPT_WAIT_MS);
+        }
+      })
+      .on("receipt", (receipt) => settle(() =>
+        resolve({ receipt, txHash: capturedTxHash ?? receipt.transactionHash })
+      ))
       .on("error", (err) => {
-        const error = new Error(extractRevertReason(err));
+        const rawMsg = String(err?.message || err?.cause?.message || "").toLowerCase();
+        const isCancel = err?.code === 4001 ||
+          rawMsg.includes("user denied") || rawMsg.includes("user rejected") ||
+          rawMsg.includes("denied transaction signature");
+        const error = new Error(isCancel ? (err?.message || "User cancelled") : extractRevertReason(err));
+        error.code = isCancel ? 4001 : err?.code;
         error.txHash = capturedTxHash;
-        reject(error);
+        settle(() => reject(error));
+      })
+      .catch((err) => {
+        // Safety: catch direct PromiEvent Promise rejection (web3 v4 may not fire .on("error"))
+        const rawMsg = String(err?.message || err?.cause?.message || "").toLowerCase();
+        const isCancel = err?.code === 4001 ||
+          rawMsg.includes("user denied") || rawMsg.includes("user rejected") ||
+          rawMsg.includes("denied transaction signature");
+        const error = new Error(isCancel ? (err?.message || "User cancelled") : extractRevertReason(err));
+        error.code = isCancel ? 4001 : err?.code;
+        error.txHash = capturedTxHash;
+        settle(() => reject(error));
       });
   });
 }
 
 export function getVestingContract() {
   const web3 = getWeb3();
-  return new web3.eth.Contract(VESTING_ABI, CONFIG.vestingAddress);
+  const contract = new web3.eth.Contract(VESTING_ABI, CONFIG.vestingAddress);
+  contract.transactionBlockTimeout = 600;
+  contract.transactionPollingTimeout = 600 * 1000;
+  return contract;
 }
 
 export function getTokenContract() {
   const web3 = getWeb3();
-  return new web3.eth.Contract(TOKEN_ABI, CONFIG.tokenAddress);
+  const contract = new web3.eth.Contract(TOKEN_ABI, CONFIG.tokenAddress);
+  contract.transactionBlockTimeout = 600;
+  contract.transactionPollingTimeout = 600 * 1000;
+  return contract;
 }
 
 export async function getPresaleStats() {

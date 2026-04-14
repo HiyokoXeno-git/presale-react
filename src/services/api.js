@@ -48,9 +48,11 @@ export async function validateSession() {
   }
 
   try {
-    const res = await fetch(
-      `${CONFIG.presaleApiBaseUrl}/session.php?token=${encodeURIComponent(token)}&wallet=${encodeURIComponent(wallet)}`
-    );
+    const res = await fetch(`${CONFIG.presaleApiBaseUrl}/session.php`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, wallet, action: "validate" }),
+    });
     const data = await res.json();
     return !!data?.valid;
   } catch {
@@ -77,6 +79,7 @@ export async function fetchBnbQuote(walletAddress, bnbAmount) {
     headers: {
       "Content-Type": "application/json"
     },
+    signal: AbortSignal.timeout(10000),
     body: JSON.stringify({
       walletAddress,
       bnbAmount
@@ -109,10 +112,11 @@ export async function getPresaleStats() {
 }
 
 export async function getUserTransactions(walletAddress) {
+  const bust = `_t=${Date.now()}`;
   const url = walletAddress
-    ? `${CONFIG.adminApiBaseUrl}/getUsers.php?wallet=${encodeURIComponent(walletAddress)}`
-    : `${CONFIG.adminApiBaseUrl}/getUsers.php`;
-  const response = await fetch(url);
+    ? `${CONFIG.adminApiBaseUrl}/getUsers.php?wallet=${encodeURIComponent(walletAddress)}&${bust}`
+    : `${CONFIG.adminApiBaseUrl}/getUsers.php?${bust}`;
+  const response = await fetch(url, { cache: "no-store" });
   const text = await response.text();
   if (!text) return [];
   try {

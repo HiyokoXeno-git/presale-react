@@ -19,7 +19,7 @@ export const CONFIG = {
 
   // BSCScan Testnet API
   bscscanApiUrl: "https://api-testnet.bscscan.com/api",
-  bscscanApiKey: "YourApiKeyToken", // free tier — works without a real key on testnet
+  bscscanApiKey: import.meta.env.VITE_BSCSCAN_API_KEY ?? "YourApiKeyToken",
 
   // Presale end date — May 1 2026 07:00 WIB = 2026-05-01T00:00:00Z (UTC)
   presaleEndDate: "2026-05-01T00:00:00Z",

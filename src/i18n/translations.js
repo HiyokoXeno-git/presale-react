@@ -24,6 +24,7 @@ export const TRANSLATIONS = {
     // Network
     wrongNetwork: "Wrong Network",
     connectedTo: "Connected to",
+    unknownNetwork: "unknown network",
     switchTo: "Switch to BSC Testnet (0x61).",
     switchNetwork: "Switch to BSC Testnet",
     switching: "Switching...",
@@ -234,6 +235,7 @@ export const TRANSLATIONS = {
     availableAfter: "Tersedia setelah",
     wrongNetwork: "Jaringan Salah",
     connectedTo: "Terhubung ke",
+    unknownNetwork: "jaringan tidak dikenal",
     switchTo: "Ganti ke BSC Testnet (0x61).",
     switchNetwork: "Ganti ke BSC Testnet",
     switching: "Mengganti...",
@@ -439,6 +441,7 @@ export const TRANSLATIONS = {
     availableAfter: "以降に受取可能",
     wrongNetwork: "ネットワークエラー",
     connectedTo: "接続中",
+    unknownNetwork: "不明なネットワーク",
     switchTo: "BSCテストネット (0x61) に切り替えてください。",
     switchNetwork: "BSCテストネットに切替",
     switching: "切替中...",

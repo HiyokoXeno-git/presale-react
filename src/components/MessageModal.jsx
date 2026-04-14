@@ -1,7 +1,21 @@
 export default function MessageModal({ type, message, txHash, onClose }) {
   if (!message) return null;
 
-  const isSuccess = type === "success";
+  const isSuccess   = type === "success";
+  const isCancelled = type === "cancelled";
+
+  const accentColor = isSuccess ? "#6AC645" : isCancelled ? "#FF9F1C" : "#ff5050";
+  const glowColor   = isSuccess ? "rgba(106,198,69,0.1)" : isCancelled ? "rgba(255,159,28,0.1)" : "rgba(255,80,80,0.1)";
+  const borderColor = isSuccess ? "rgba(106,198,69,0.3)" : isCancelled ? "rgba(255,159,28,0.3)" : "rgba(255,80,80,0.3)";
+  const icon        = isSuccess ? "✅" : isCancelled ? "⚠️" : "❌";
+  const title       = isSuccess ? "Purchase Successful" : isCancelled ? "Transaction Cancelled" : "Transaction Failed";
+  const btnLabel    = isSuccess ? "Done" : isCancelled ? "OK" : "Close";
+  const btnBg       = isSuccess
+    ? "linear-gradient(135deg, #6AC645, #4ade80)"
+    : isCancelled
+      ? "linear-gradient(135deg, #FF9F1C, #f59e0b)"
+      : "rgba(255,255,255,0.08)";
+  const btnColor    = (isSuccess || isCancelled) ? "#06060F" : "#F0F0FF";
 
   return (
     <div style={{
@@ -13,13 +27,13 @@ export default function MessageModal({ type, message, txHash, onClose }) {
     }}>
       <div style={{
         background: "#0C0C18",
-        border: `1px solid ${isSuccess ? "rgba(106,198,69,0.3)" : "rgba(255,80,80,0.3)"}`,
+        border: `1px solid ${borderColor}`,
         borderRadius: "20px",
         padding: "32px 28px",
         maxWidth: "400px",
         width: "100%",
         textAlign: "center",
-        boxShadow: `0 0 40px ${isSuccess ? "rgba(106,198,69,0.1)" : "rgba(255,80,80,0.1)"}`,
+        boxShadow: `0 0 40px ${glowColor}`,
         position: "relative",
       }}>
         {/* Top accent line */}
@@ -28,22 +42,22 @@ export default function MessageModal({ type, message, txHash, onClose }) {
           borderRadius: "20px 20px 0 0",
           background: isSuccess
             ? "linear-gradient(90deg, #6AC645, #4ade80)"
-            : "linear-gradient(90deg, #ff5050, #ff9050)",
+            : isCancelled
+              ? "linear-gradient(90deg, #FF9F1C, #f59e0b)"
+              : "linear-gradient(90deg, #ff5050, #ff9050)",
         }} />
 
         {/* Icon */}
-        <div style={{ fontSize: "48px", marginBottom: "16px" }}>
-          {isSuccess ? "✅" : "❌"}
-        </div>
+        <div style={{ fontSize: "48px", marginBottom: "16px" }}>{icon}</div>
 
         {/* Title */}
         <div style={{
           fontFamily: "'Outfit', sans-serif",
           fontWeight: 800, fontSize: "18px",
-          color: isSuccess ? "#6AC645" : "#ff6060",
+          color: accentColor,
           marginBottom: "10px",
         }}>
-          {isSuccess ? "Purchase Successful" : "Transaction Failed"}
+          {title}
         </div>
 
         {/* Message */}
@@ -76,15 +90,13 @@ export default function MessageModal({ type, message, txHash, onClose }) {
           </div>
         )}
 
-        {/* Close button */}
+        {/* Close / OK button */}
         <button
           onClick={onClose}
           style={{
             padding: "12px 32px",
-            background: isSuccess
-              ? "linear-gradient(135deg, #6AC645, #4ade80)"
-              : "rgba(255,255,255,0.08)",
-            color: isSuccess ? "#06060F" : "#F0F0FF",
+            background: btnBg,
+            color: btnColor,
             border: "none", borderRadius: "100px",
             fontFamily: "'Outfit', sans-serif",
             fontWeight: 800, fontSize: "14px",
@@ -92,7 +104,7 @@ export default function MessageModal({ type, message, txHash, onClose }) {
             letterSpacing: "0.04em",
           }}
         >
-          {isSuccess ? "Done" : "Close"}
+          {btnLabel}
         </button>
       </div>
     </div>
