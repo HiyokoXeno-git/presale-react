@@ -151,6 +151,15 @@ export async function buyWithUsdt(account, usdtAmountRaw, onHashCaptured) {
         const error = new Error(isCancel ? (err?.message || "User cancelled") : extractRevertReason(err));
         error.code = isCancel ? 4001 : err?.code;
         error.txHash = capturedTxHash;
+        // If web3's internal timeout fires before MetaMask was confirmed (no txHash),
+        // classify it as a MetaMask confirmation timeout so the caller shows the correct modal.
+        if (!capturedTxHash && !isCancel && (
+          rawMsg.includes("not mined within") || rawMsg.includes("transaction was not mined") ||
+          rawMsg.includes("poll timeout") || rawMsg.includes("timeout") ||
+          rawMsg.includes("600 blocks") || rawMsg.includes("50 blocks")
+        )) {
+          error.isMetaMaskTimeout = true;
+        }
         settle(() => reject(error));
       })
       .catch((err) => {
@@ -162,6 +171,13 @@ export async function buyWithUsdt(account, usdtAmountRaw, onHashCaptured) {
         const error = new Error(isCancel ? (err?.message || "User cancelled") : extractRevertReason(err));
         error.code = isCancel ? 4001 : err?.code;
         error.txHash = capturedTxHash;
+        if (!capturedTxHash && !isCancel && (
+          rawMsg.includes("not mined within") || rawMsg.includes("transaction was not mined") ||
+          rawMsg.includes("poll timeout") || rawMsg.includes("timeout") ||
+          rawMsg.includes("600 blocks") || rawMsg.includes("50 blocks")
+        )) {
+          error.isMetaMaskTimeout = true;
+        }
         settle(() => reject(error));
       });
   });
@@ -445,6 +461,13 @@ export async function buyWithBnb(account, bnbAmountWei, usdtAmountRaw, deadline,
         const error = new Error(isCancel ? (err?.message || "User cancelled") : extractRevertReason(err));
         error.code = isCancel ? 4001 : err?.code;
         error.txHash = capturedTxHash;
+        if (!capturedTxHash && !isCancel && (
+          rawMsg.includes("not mined within") || rawMsg.includes("transaction was not mined") ||
+          rawMsg.includes("poll timeout") || rawMsg.includes("timeout") ||
+          rawMsg.includes("600 blocks") || rawMsg.includes("50 blocks")
+        )) {
+          error.isMetaMaskTimeout = true;
+        }
         settle(() => reject(error));
       })
       .catch((err) => {
@@ -456,6 +479,13 @@ export async function buyWithBnb(account, bnbAmountWei, usdtAmountRaw, deadline,
         const error = new Error(isCancel ? (err?.message || "User cancelled") : extractRevertReason(err));
         error.code = isCancel ? 4001 : err?.code;
         error.txHash = capturedTxHash;
+        if (!capturedTxHash && !isCancel && (
+          rawMsg.includes("not mined within") || rawMsg.includes("transaction was not mined") ||
+          rawMsg.includes("poll timeout") || rawMsg.includes("timeout") ||
+          rawMsg.includes("600 blocks") || rawMsg.includes("50 blocks")
+        )) {
+          error.isMetaMaskTimeout = true;
+        }
         settle(() => reject(error));
       });
   });
