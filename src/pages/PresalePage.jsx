@@ -701,7 +701,7 @@ function PresalePage() {
         return () => clearInterval(interval);
     }, [flushRescueQueue]);
 
-    // Live BNB price — fetch on mount, then refresh every 30 s
+    // Live BNB price — fetch on mount, then refresh every 15 s
     useEffect(() => {
         async function loadPrice() {
             const data = await fetchBnbPrice();
@@ -711,7 +711,7 @@ function PresalePage() {
             }
         }
         loadPrice();
-        const interval = setInterval(loadPrice, 30000);
+        const interval = setInterval(loadPrice, 15000);
         return () => clearInterval(interval);
     }, []);
 
@@ -1363,44 +1363,25 @@ function PresalePage() {
                                 {/* ── BNB TAB ── */}
                                 {paymentTab === "BNB" && (
                                     <>
-                                        {/* Live BNB price ticker */}
-                                        <div style={{
-                                            display: "flex", alignItems: "center", justifyContent: "center",
-                                            gap: "8px", marginBottom: "12px",
-                                            background: "rgba(255,216,77,0.07)", border: "1px solid rgba(255,216,77,0.18)",
-                                            borderRadius: "10px", padding: "8px 14px",
-                                        }}>
-                                            {/* Pulsing live dot */}
-                                            <span style={{
-                                                width: "7px", height: "7px", borderRadius: "50%",
-                                                background: liveBnbPrice ? "#4cff91" : "#555",
-                                                display: "inline-block", flexShrink: 0,
-                                                boxShadow: liveBnbPrice ? "0 0 6px #4cff91" : "none",
-                                                animation: liveBnbPrice ? "bnbPulse 2s infinite" : "none",
-                                            }} />
-                                            <span style={{ fontSize: "12px", color: "#A0A0CC" }}>BNB/USD</span>
+                                        {/* BNB Market Price — above balance, same text style */}
+                                        <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "2px", textAlign: "right" }}>
+                                            BNB Price:{" "}
                                             {liveBnbPrice ? (
                                                 <>
-                                                    <span style={{ fontSize: "15px", fontWeight: 700, color: "#FFD84D", letterSpacing: "0.02em" }}>
+                                                    <span style={{ color: "#F0F0FF" }}>
                                                         ${liveBnbPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     </span>
                                                     {liveBnbChange !== null && (
-                                                        <span style={{
-                                                            fontSize: "11px", fontWeight: 600,
-                                                            color: liveBnbChange >= 0 ? "#4cff91" : "#ff6060",
-                                                            background: liveBnbChange >= 0 ? "rgba(76,255,145,0.1)" : "rgba(255,96,96,0.1)",
-                                                            borderRadius: "5px", padding: "2px 6px",
-                                                        }}>
-                                                            {liveBnbChange >= 0 ? "▲" : "▼"} {Math.abs(liveBnbChange).toFixed(2)}%
+                                                        <span style={{ marginLeft: "4px", color: liveBnbChange >= 0 ? "#4cff91" : "#ff6060" }}>
+                                                            {liveBnbChange >= 0 ? "▲" : "▼"}{Math.abs(liveBnbChange).toFixed(2)}%
                                                         </span>
                                                     )}
                                                 </>
                                             ) : (
-                                                <span style={{ fontSize: "13px", color: "#555588" }}>Loading...</span>
+                                                <span style={{ color: "#555588" }}>...</span>
                                             )}
                                         </div>
-                                        <style>{`@keyframes bnbPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
-                                        {/* BNB balance + min row */}
+                                        {/* BNB balance */}
                                         {userStats?.bnbBalance !== undefined && (
                                             <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px", textAlign: "right" }}>
                                                 Balance: <span style={{ color: "#F0F0FF" }}>{formatNumber(formatUnits(userStats.bnbBalance, 18), 4)} BNB</span>
