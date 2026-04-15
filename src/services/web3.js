@@ -35,8 +35,9 @@ function extractRevertReason(err) {
     [/insufficient.*allowance/i, "USDT allowance insufficient. Please try again."],
     [/ERC20.*allowance/i, "USDT allowance insufficient. Please try again."],
     [/insufficient.*balance/i, "Insufficient USDT balance."],
-    [/execution reverted/i, "Transaction rejected by the contract. The presale may not be active or your balance is insufficient."],
-    [/Internal JSON-RPC/i, "Transaction rejected by the contract. The presale may not be active or your balance is insufficient."],
+    [/sale.*not.*active|not.*active/i, "The presale is not active. Please wait for the presale to be activated."],
+    [/execution reverted/i, "Transaction rejected by the contract. The presale may not be active yet — please contact the team."],
+    [/Internal JSON-RPC/i, "Transaction rejected by the contract. The presale may not be active yet — please contact the team."],
     [/revert/i, "Transaction rejected by the contract."],
   ];
 

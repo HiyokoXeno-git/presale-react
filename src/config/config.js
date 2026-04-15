@@ -7,7 +7,7 @@ export const CONFIG = {
   walletConnectProjectId: "e518620b775fc7327c5c9c6b8f9282f6",
 
   presaleAddress: "0x881b9c3095a33B954126FfAC029fD451Aa224eB9",
-  vestingAddress: "0xf8e81D47203A594245E36C48e151709F0C19fBe8",
+  vestingAddress: "0x232AD44dD91Fdd7E61aB7c13adD25eD7ed63214e",
   tokenAddress: "0xC171c790aBc13e368775f7112A1554708D52CD03",
   usdtAddress: "0xD0D47E5C93448CA0A30953dDD7db3350362C5Fb9",
 
