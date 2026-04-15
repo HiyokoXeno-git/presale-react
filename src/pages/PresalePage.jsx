@@ -1388,24 +1388,6 @@ function PresalePage() {
                                 {/* ── BNB TAB ── */}
                                 {paymentTab === "BNB" && (
                                     <>
-                                        {/* BNB Market Price — above balance, same text style */}
-                                        <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "2px", textAlign: "right" }}>
-                                            BNB Price:{" "}
-                                            {liveBnbPrice ? (
-                                                <>
-                                                    <span style={{ color: "#F0F0FF" }}>
-                                                        ${liveBnbPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                    </span>
-                                                    {liveBnbChange !== null && (
-                                                        <span style={{ marginLeft: "4px", color: liveBnbChange >= 0 ? "#4cff91" : "#ff6060" }}>
-                                                            {liveBnbChange >= 0 ? "▲" : "▼"}{Math.abs(liveBnbChange).toFixed(2)}%
-                                                        </span>
-                                                    )}
-                                                </>
-                                            ) : (
-                                                <span style={{ color: "#555588" }}>...</span>
-                                            )}
-                                        </div>
                                         {/* BNB balance */}
                                         {userStats?.bnbBalance !== undefined && (
                                             <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px", textAlign: "right" }}>
