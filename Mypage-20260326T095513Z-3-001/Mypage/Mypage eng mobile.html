@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>HIYOKO — My Dashboard (Mobile)</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --yellow: #FFD84D;
+  --orange: #FF9F1C;
+  --cyan:   #00E5FF;
+  --bg:     #06060F;
+  --card:   rgba(14,14,28,0.9);
+  --card2:  rgba(20,20,40,0.85);
+  --border: rgba(255,255,255,0.07);
+  --text:   #F0F0FF;
+  --muted:  #6666AA;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── SPACE BG ── */
+.space-bg {
+  position: fixed; inset: 0; z-index: -2;
+  background:
+    radial-gradient(ellipse 70% 55% at 10% 15%, rgba(255,140,0,0.14) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 65% at 88% 80%, rgba(0,180,230,0.13) 0%, transparent 55%),
+    radial-gradient(ellipse 45% 45% at 60% 35%, rgba(100,50,200,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 30% 30% at 30% 70%, rgba(255,216,77,0.06) 0%, transparent 50%),
+    #06060F;
+}
+.nebula {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 8% 12%, rgba(255,255,255,.9) 0%, transparent 100%),
+    radial-gradient(1px 1px at 14% 44%, rgba(255,255,255,.6) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 22% 7%, rgba(255,255,255,.95) 0%, transparent 100%),
+    radial-gradient(1px 1px at 31% 28%, rgba(0,229,255,.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 37% 62%, rgba(255,255,255,.5) 0%, transparent 100%),
+    radial-gradient(2px 2px at 43% 85%, rgba(255,216,77,.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 51% 18%, rgba(255,255,255,.8) 0%, transparent 100%),
+    radial-gradient(1px 1px at 58% 47%, rgba(255,255,255,.55) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 65% 74%, rgba(255,255,255,.85) 0%, transparent 100%),
+    radial-gradient(1px 1px at 72% 30%, rgba(0,229,255,.5) 0%, transparent 100%),
+    radial-gradient(2px 2px at 79% 56%, rgba(255,255,255,.9) 0%, transparent 100%),
+    radial-gradient(1px 1px at 85% 15%, rgba(255,255,255,.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 68%, rgba(255,216,77,.5) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 96% 40%, rgba(255,255,255,.8) 0%, transparent 100%),
+    radial-gradient(1px 1px at 4% 78%, rgba(255,255,255,.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 46% 35%, rgba(255,255,255,.7) 0%, transparent 100%),
+    radial-gradient(2px 2px at 62% 90%, rgba(255,255,255,.85) 0%, transparent 100%),
+    radial-gradient(1px 1px at 76% 8%, rgba(255,255,255,.65) 0%, transparent 100%),
+    radial-gradient(1px 1px at 93% 55%, rgba(255,255,255,.7) 0%, transparent 100%),
+    radial-gradient(2.5px 2.5px at 69% 14%, rgba(255,255,255,1) 0%, transparent 100%);
+}
+.shooting-star {
+  position: fixed; top: 12%; left: -5%; z-index: -1;
+  width: 160px; height: 1.5px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+  transform: rotate(-20deg);
+  animation: shoot 8s linear infinite; opacity: 0;
+}
+.shooting-star:nth-child(2) { top: 28%; animation-delay: 3.5s; width: 120px; }
+.shooting-star:nth-child(3) { top: 55%; animation-delay: 6s;   width: 90px; }
+@keyframes shoot {
+  0%   { left:-10%; opacity:0; }
+  5%   { opacity:0.8; }
+  30%  { left:110%; opacity:0; }
+  100% { left:110%; opacity:0; }
+}
+
+/* ── HEADER ── */
+header {
+  position: fixed; top:0; left:0; right:0; z-index:200;
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 0 48px; height: 70px;
+  background: rgba(6,6,15,0.7);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.logo { display:flex; align-items:center; gap:10px; text-decoration:none; }
+.logo-icon {
+  width:38px; height:38px;
+  background: linear-gradient(135deg, var(--yellow), var(--orange));
+  border-radius:10px; display:flex; align-items:center; justify-content:center;
+  font-size:20px; box-shadow: 0 0 16px rgba(255,216,77,0.3);
+}
+.logo-text {
+  font-family:'Outfit',sans-serif; font-weight:900; font-size:22px;
+  color:var(--yellow); letter-spacing:0.04em;
+  text-shadow:0 0 20px rgba(255,216,77,0.4);
+}
+.header-right { display:flex; align-items:center; gap:12px; }
+.lang-select {
+  background:var(--card2); border:1px solid var(--border);
+  border-radius:8px; color:var(--text);
+  font-family:'DM Sans',sans-serif; font-size:13px; padding:6px 12px;
+  cursor:pointer; outline:none; appearance:none;
+}
+.wallet-pill {
+  display:flex; align-items:center; gap:7px;
+  background:var(--card2); border:1px solid var(--border);
+  border-radius:100px; padding:7px 14px;
+  font-family:'Courier New',monospace; font-size:12px; color:var(--muted);
+  cursor:pointer; transition:border-color 0.2s, color 0.2s;
+}
+.wallet-pill:hover { border-color:var(--orange); color:var(--text); }
+.wallet-dot {
+  width:7px; height:7px; border-radius:50%;
+  background:#6AC645; box-shadow:0 0 6px #6AC645;
+  animation:wdot 2s infinite;
+}
+@keyframes wdot { 0%,100%{box-shadow:0 0 6px #6AC645} 50%{box-shadow:0 0 12px #6AC645} }
+.connect-btn {
+  display:flex; align-items:center; gap:7px;
+  padding:9px 18px;
+  background:linear-gradient(135deg, var(--yellow), var(--orange));
+  color:#06060F; border:none; border-radius:100px;
+  font-family:'Outfit',sans-serif; font-weight:700; font-size:13px;
+  cursor:pointer; transition:all 0.25s;
+  box-shadow:0 0 20px rgba(255,216,77,0.3); flex-shrink:0;
+}
+.connect-btn:hover { transform:translateY(-1px); box-shadow:0 0 32px rgba(255,216,77,0.5); }
+
+/* ── PAGE ── */
+.page {
+  max-width:1280px; margin:0 auto;
+  padding:90px 48px 60px;
+  display:flex; flex-direction:column; gap:22px;
+}
+
+/* ── LIVE BADGE ── */
+.live-badge {
+  display:inline-flex; align-items:center; gap:7px;
+  padding:5px 14px;
+  background:rgba(255,159,28,0.12);
+  border:1px solid rgba(255,159,28,0.35);
+  border-radius:100px;
+  font-size:11px; font-weight:700; color:var(--orange);
+  letter-spacing:0.1em; text-transform:uppercase; width:fit-content;
+}
+.live-dot {
+  width:7px; height:7px; background:var(--orange); border-radius:50%;
+  box-shadow:0 0 8px var(--orange); animation:blink 1.8s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.page-title {
+  font-family:'Outfit',sans-serif;
+  font-weight:900; font-size:38px;
+  letter-spacing:-0.02em; line-height:1.08; margin-top:10px;
+}
+.page-title .y { color:var(--yellow); text-shadow:0 0 30px rgba(255,216,77,0.4); }
+
+/* ═══════════════════════════════════════════
+   TOP GRID
+   左: Buy Card (コンパクト) + 右: TX History
+   比率 1 : 1 の横並び
+═══════════════════════════════════════════ */
+.top-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 20px;
+  align-items: stretch;  /* 高さを揃える */
+}
+
+/* ── BUY CARD ── */
+.buy-card {
+  background: #0C0C18;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 22px;
+  padding: 22px 24px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.04);
+  position: relative; overflow: hidden;
+}
+.buy-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, var(--orange), var(--yellow), var(--cyan));
+}
+
+/* 価格ヘッダー */
+.price-top {
+  display:flex; align-items:flex-start; justify-content:space-between;
+  margin-bottom: 14px;
+}
+.price-label {
+  font-size:9px; text-transform:uppercase; letter-spacing:0.12em;
+  color:var(--muted); margin-bottom:3px; font-weight:600;
+}
+.price-main {
+  font-family:'Outfit',sans-serif;
+  font-size: 32px;
+  font-weight:900;
+  color:var(--yellow); line-height:1;
+  text-shadow:0 0 30px rgba(255,216,77,0.5);
+}
+.price-unit { font-size:12px; color:var(--muted); font-weight:400; }
+
+.progress-block { text-align:right; }
+.progress-sold { font-size:10px; color:var(--muted); margin-bottom:4px; }
+.progress-track {
+  width: 130px; height:4px;
+  background:rgba(255,255,255,0.08);
+  border-radius:100px; overflow:hidden;
+}
+.progress-fill {
+  height:100%;
+  background: linear-gradient(90deg, var(--orange) 0%, var(--yellow) 100%);
+  border-radius:100px;
+  box-shadow:0 0 10px rgba(255,216,77,0.6);
+  transition:width 2s cubic-bezier(0.4,0,0.2,1);
+}
+.progress-pct {
+  font-family:'Outfit',sans-serif; font-size:11px; font-weight:700;
+  color:var(--orange); margin-top:4px;
+}
+
+.divider { height:1px; background:rgba(255,255,255,0.06); margin:14px 0; }
+
+.sec-label {
+  font-size:9px; text-transform:uppercase; letter-spacing:0.12em;
+  color:var(--muted); font-weight:700; margin-bottom:8px;
+}
+
+/* 通貨タブ — 画像準拠: activeのみボーダー+黄色、他はフラット */
+.currency-row { display:flex; gap:6px; margin-bottom:14px; }
+.ctab {
+  flex:1; padding:7px 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius:100px;
+  font-family:'Outfit',sans-serif; font-weight:700; font-size:12px;
+  color:var(--muted); cursor:pointer; transition:all 0.2s; text-align:center;
+  letter-spacing:0.04em;
+}
+.ctab:hover { color:var(--text); border-color:rgba(255,255,255,0.15); }
+.ctab.active {
+  background: transparent;
+  border-color: var(--yellow);
+  color: var(--yellow);
+}
+
+/* 入力エリア */
+.input-label-row {
+  display:flex; justify-content:space-between;
+  font-size:11px; color:var(--muted); margin-bottom:6px;
+}
+.input-label-row span:last-child { color:rgba(255,255,255,0.7); }
+.input-wrap {
+  display:flex; align-items:center;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius:12px; overflow:hidden;
+  transition:border-color 0.2s; margin-bottom:10px;
+}
+.input-wrap:focus-within { border-color:rgba(255,216,77,0.4); }
+.input-wrap input {
+  flex:1; background:none; border:none; outline:none;
+  color:var(--muted);
+  font-family:'Outfit',sans-serif;
+  font-size: 16px; font-weight:400;
+  padding: 11px 14px;
+}
+.input-wrap input::placeholder { color:rgba(102,102,170,0.4); font-size:15px; }
+
+/* MAX ボタン — 画像準拠: 濃い背景に黄色テキスト */
+.btn-max {
+  background: rgba(255,216,77,0.18);
+  border: none; cursor:pointer;
+  color: var(--yellow);
+  font-family:'Outfit',sans-serif; font-weight:800; font-size:10px;
+  padding:5px 10px; border-radius:6px; margin-right:6px;
+  transition:background 0.15s; letter-spacing:0.06em;
+}
+.btn-max:hover { background:rgba(255,216,77,0.28); }
+.input-currency {
+  padding:0 14px;
+  font-family:'Outfit',sans-serif; font-weight:700; font-size:12px;
+  color:rgba(255,255,255,0.5);
+  border-left:1px solid rgba(255,255,255,0.07); height:100%;
+  display:flex; align-items:center;
+}
+
+/* HYK受取行 — 画像準拠: 背景なしシンプル */
+.hyk-worth-row {
+  display:flex; align-items:center; justify-content:space-between;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius:10px; padding:9px 14px; margin-bottom:10px;
+}
+.hyk-worth-label { font-size:11px; color:var(--muted); display:flex; align-items:center; gap:5px; }
+.hyk-worth-val {
+  font-family:'Outfit',sans-serif;
+  font-size:14px; font-weight:900; color:var(--yellow);
+  text-shadow:0 0 10px rgba(255,216,77,0.3);
+}
+.min-note { font-size:10px; color:var(--muted); text-align:center; margin-bottom:12px; }
+
+/* BUY ボタン — 画像完全準拠 */
+.btn-flow {
+  width:100%; display:flex; align-items:center; justify-content:center;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius:100px; overflow:hidden;
+  font-family:'Outfit',sans-serif; font-size:13px; font-weight:800;
+  cursor:pointer; transition:all 0.25s;
+}
+.btn-flow:hover { border-color:rgba(255,216,77,0.4); box-shadow:0 0 20px rgba(255,216,77,0.15); }
+.btn-flow-buy  { padding:13px 20px; color:var(--yellow); white-space:nowrap; letter-spacing:0.04em; }
+.btn-flow-arrow{ padding:13px 8px; color:rgba(255,255,255,0.3); font-size:14px; }
+.btn-flow-wallet {
+  padding:11px 20px;
+  background: var(--yellow);
+  color: #06060F;
+  white-space:nowrap; font-weight:800;
+  border-radius:100px; margin:3px;
+  letter-spacing:0.02em;
+}
+
+/* ── BUY NOW (ウォレット接続済み用) ── */
+.btn-buy-now {
+  width: 100%; padding: 15px;
+  background: linear-gradient(135deg, var(--yellow), var(--orange));
+  color: #06060F; border: none; border-radius: 100px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 900; font-size: 16px; letter-spacing: 0.06em;
+  cursor: pointer; transition: all 0.25s;
+  box-shadow: 0 0 24px rgba(255,216,77,0.3);
+}
+.btn-buy-now:hover { transform: translateY(-2px); box-shadow: 0 0 36px rgba(255,216,77,0.5); }
+
+/* ── TX PANEL ── */
+.tx-panel {
+  background: #111120;
+  border:1px solid rgba(255,255,255,0.09);
+  border-radius:22px;
+  box-shadow:0 12px 50px rgba(0,0,0,0.5);
+  overflow:hidden; display:flex; flex-direction:column;
+  height: 100%;
+}
+.panel-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 22px; border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.panel-title { font-family:'Outfit',sans-serif; font-size:16px; font-weight:800; color:var(--text); }
+.tab-row { display:flex; gap:4px; }
+.ttab {
+  font-size:11px; font-weight:700; letter-spacing:0.04em;
+  padding:5px 14px; border-radius:100px;
+  cursor:pointer; border:1px solid transparent; background:none;
+  color:var(--muted); transition:all 0.15s;
+}
+.ttab:hover { border-color:rgba(255,255,255,0.15); color:var(--text); }
+.ttab.active {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.12);
+  color:var(--text);
+}
+
+.tx-list { flex:1; overflow-y:auto; }
+.tx-item {
+  display:flex; align-items:center; gap:14px;
+  padding:14px 22px; border-bottom:1px solid rgba(255,255,255,0.05);
+  transition:background 0.15s; cursor:pointer;
+}
+.tx-item:hover { background:rgba(255,255,255,0.025); }
+.tx-item:last-child { border-bottom:none; }
+.tx-icon {
+  width:38px; height:38px; border-radius:10px;
+  background:rgba(255,255,255,0.06);
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; flex-shrink:0;
+}
+.tx-info { flex:1; min-width:0; }
+.tx-name { font-size:14px; font-weight:600; color:var(--text); }
+.tx-date { font-size:11px; color:var(--muted); margin-top:3px; }
+.tx-right { text-align:right; }
+/* HYK金額: 画像準拠で大きく・右寄せ */
+.tx-hyk {
+  font-family:'Outfit',sans-serif;
+  font-size:15px; font-weight:900; color:var(--yellow);
+  letter-spacing:0.02em;
+}
+.tx-usd { font-size:11px; color:var(--muted); margin-top:2px; }
+/* ステータスバッジ: 画像準拠で塗りつぶし */
+.tx-status {
+  display:inline-block; font-size:10px; font-weight:800;
+  padding:3px 9px; border-radius:6px;
+  letter-spacing:0.07em; text-transform:uppercase; margin-top:4px;
+}
+.s-confirmed { background:#1E5C2A; color:#4ADE80; }
+.s-pending   { background:#4A3800; color:var(--yellow); }
+
+.tx-total {
+  padding:14px 22px; border-top:1px solid rgba(255,255,255,0.06);
+  display:flex; justify-content:space-between; align-items:center;
+  background:rgba(255,255,255,0.01);
+}
+.tx-total-label { font-size:13px; color:var(--muted); }
+.tx-total-val { font-family:'Outfit',sans-serif; font-size:16px; font-weight:900; color:var(--yellow); }
+
+/* ── VESTING STATS ── */
+.vstat-row { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.vstat-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:16px; padding:20px 22px;
+  backdrop-filter:blur(10px); transition:all 0.25s;
+  position:relative; overflow:hidden;
+}
+.vstat-card:hover { transform:translateY(-3px); border-color:rgba(255,255,255,0.12); }
+.vstat-card::after {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  border-radius:16px 16px 0 0; opacity:0.7;
+}
+.vo::after { background:linear-gradient(90deg, var(--orange), transparent); }
+.vc::after { background:linear-gradient(90deg, var(--cyan),   transparent); }
+.vy::after { background:linear-gradient(90deg, var(--yellow), transparent); }
+.vg::after { background:linear-gradient(90deg, #6AC645, transparent); }
+
+.vstat-icon { font-size:22px; margin-bottom:12px; display:block; }
+.vstat-label { font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:6px; }
+.vstat-val { font-family:'Outfit',sans-serif; font-size:20px; font-weight:800; line-height:1.1; }
+.vo .vstat-val { color:var(--orange); }
+.vc .vstat-val { color:var(--cyan); }
+.vy .vstat-val { color:var(--yellow); }
+.vg .vstat-val { color:#6AC645; }
+.vstat-sub { font-size:11px; color:var(--muted); margin-top:5px; }
+.vbar-track { height:4px; background:rgba(255,255,255,0.07); border-radius:100px; overflow:hidden; margin-top:10px; }
+.vbar-fill { height:100%; border-radius:100px; transition:width 1.5s cubic-bezier(0.4,0,0.2,1); }
+.vo .vbar-fill { background:linear-gradient(90deg, var(--orange), var(--yellow)); }
+.vg .vbar-fill { background:#6AC645; }
+
+/* ── CLAIM BAR (全幅・1段下) ── */
+.claim-bar {
+  background: var(--card);
+  border: 1px solid rgba(106,198,69,0.2);
+  border-radius: 16px;
+  padding: 18px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 24px;
+  position: relative; overflow: hidden;
+  backdrop-filter: blur(10px);
+  transition: border-color 0.25s;
+}
+.claim-bar::after {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, #6AC645, transparent); opacity:0.7;
+  border-radius:16px 16px 0 0;
+}
+.claim-bar:hover { border-color: rgba(106,198,69,0.35); }
+
+.claim-bar-left { display:flex; align-items:center; gap:28px; flex:1; flex-wrap:wrap; }
+
+.claim-stat { }
+.claim-stat-icon { font-size:20px; margin-bottom:6px; display:block; }
+.claim-stat-label { font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:4px; }
+.claim-stat-val { font-family:'Outfit',sans-serif; font-size:20px; font-weight:800; color:#6AC645; line-height:1.1; }
+.claim-stat-sub  { font-size:11px; color:var(--muted); margin-top:3px; }
+
+.claim-divider-v {
+  width:1px; height:48px;
+  background: rgba(255,255,255,0.07);
+  flex-shrink:0;
+}
+
+.claim-bar-right { flex-shrink:0; }
+
+.btn-claim {
+  display: flex; align-items: center; gap: 8px;
+  padding: 13px 28px;
+  background: linear-gradient(135deg, #6AC645, #4ade80);
+  color: #06060F;
+  border: none; border-radius: 100px;
+  font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 14px;
+  cursor: pointer; transition: all 0.25s;
+  box-shadow: 0 0 20px rgba(106,198,69,0.25);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.btn-claim:hover { transform: translateY(-1px); box-shadow: 0 0 32px rgba(106,198,69,0.4); }
+.btn-claim:disabled {
+  opacity: 0.35; cursor: not-allowed;
+  transform: none; box-shadow: none;
+  background: rgba(255,255,255,0.1); color: var(--muted);
+}
+
+.claim-lock-note {
+  font-size:11px; color:var(--muted);
+  display:flex; align-items:center; gap:5px; margin-top:6px;
+  justify-content: flex-end;
+}
+
+
+/* ── VESTING CARD (全幅・横並び版) ── */
+.vesting-card {
+  background: #111120;
+  border:1px solid rgba(255,255,255,0.09);
+  border-radius:22px; overflow:hidden;
+}
+.lock-badge {
+  display:flex; align-items:center; gap:6px;
+  background:rgba(255,216,77,0.08); border:1px solid rgba(255,216,77,0.2);
+  border-radius:8px; padding:4px 10px;
+  font-size:11px; font-weight:700; color:var(--yellow); letter-spacing:0.04em;
+}
+
+/* 横並びステップリスト */
+.vd-body { padding:20px 24px; }
+
+.vd-steps-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+
+/* 各ステップカード */
+.vd-step-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 14px 14px 12px;
+  position: relative;
+  transition: border-color 0.2s, transform 0.2s;
+  overflow: hidden;
+}
+.vd-step-card::before {
+  content:'';
+  position:absolute; top:0; left:0; right:0; height:2px;
+  border-radius:14px 14px 0 0;
+}
+.vd-step-card.done   { border-color: rgba(106,198,69,0.25); }
+.vd-step-card.active { border-color: rgba(255,159,28,0.35); box-shadow: 0 0 16px rgba(255,159,28,0.08); }
+.vd-step-card.done::before   { background: #6AC645; }
+.vd-step-card.active::before { background: var(--orange); }
+.vd-step-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.15); }
+
+/* ステータスアイコン */
+.vd-card-icon {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+.vd-step-card.done   .vd-card-icon { background: rgba(106,198,69,0.15); }
+.vd-step-card.active .vd-card-icon { background: rgba(255,159,28,0.15); animation: pstep 1.5s infinite; }
+.vd-step-card        .vd-card-icon { background: rgba(255,255,255,0.06); }
+
+@keyframes pstep { 0%,100%{box-shadow:0 0 0 transparent} 50%{box-shadow:0 0 10px rgba(255,159,28,0.4)} }
+
+/* テキスト */
+.vd-card-date {
+  font-size: 10px; color: var(--muted);
+  letter-spacing: 0.04em; margin-bottom: 4px;
+}
+.vd-card-name {
+  font-family:'Outfit',sans-serif;
+  font-size: 13px; font-weight: 700;
+  line-height: 1.2; margin-bottom: 8px;
+}
+.vd-card-val {
+  font-family:'Outfit',sans-serif;
+  font-size: 13px; font-weight: 800;
+}
+.vd-step-card.done   .vd-card-val { color: #6AC645; }
+.vd-step-card.active .vd-card-val { color: var(--orange); }
+.vd-step-card        .vd-card-val { color: var(--muted); }
+.vd-step-card:last-child .vd-card-val { color: var(--yellow); }
+.vd-card-sub {
+  font-size: 10px; color: var(--muted);
+  margin-top: 2px; line-height: 1.4;
+}
+
+/* ── ANNOUNCEMENTS (全幅) ── */
+.announce-card {
+  background: #111120;
+  border:1px solid rgba(255,255,255,0.09);
+  border-radius:22px; overflow:hidden;
+}
+.a-badge {
+  width:20px; height:20px; border-radius:50%;
+  background:var(--orange); color:#06060F;
+  font-size:10px; font-weight:900;
+  display:flex; align-items:center; justify-content:center;
+}
+.a-list { padding:8px 0; }
+.a-item {
+  display:flex; align-items:flex-start; gap:12px;
+  padding:13px 20px; border-bottom:1px solid var(--border);
+  cursor:pointer; transition:background 0.15s;
+}
+.a-item:hover { background:rgba(255,255,255,0.02); }
+.a-item:last-child { border-bottom:none; }
+.a-icon {
+  width:32px; height:32px; border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; flex-shrink:0; margin-top:2px;
+}
+.ai-o { background:rgba(255,159,28,0.12); }
+.ai-y { background:rgba(255,216,77,0.1);  }
+.ai-c { background:rgba(0,229,255,0.08);  }
+.ai-g { background:rgba(106,198,69,0.1);  }
+.a-title { font-size:13px; font-weight:600; line-height:1.4; margin-bottom:3px; }
+.a-body  { font-size:12px; color:var(--muted); line-height:1.5; }
+.a-time  { font-size:11px; color:rgba(102,102,170,0.6); margin-top:4px; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.08); border-radius:4px; }
+
+/* ── FADE IN ── */
+.fi { opacity:0; transform:translateY(14px); animation:fi 0.5s ease forwards; }
+.fi1{animation-delay:.05s} .fi2{animation-delay:.1s}
+.fi3{animation-delay:.15s} .fi4{animation-delay:.2s} .fi5{animation-delay:.25s}
+@keyframes fi { to{opacity:1;transform:translateY(0)} }
+
+/* ══════════════════════════════════════════
+   MOBILE FIXED LAYOUT (〜767px)
+══════════════════════════════════════════ */
+
+/* デスクトップ設定を全上書き */
+header { padding:0 16px !important; height:56px !important; }
+.logo-icon { width:30px !important; height:30px !important; font-size:16px !important; border-radius:8px !important; }
+.logo-text { font-size:17px !important; }
+.wallet-pill { display:none !important; }
+.lang-select { font-size:12px !important; padding:5px 9px !important; }
+.connect-btn { padding:7px 12px !important; font-size:11px !important; gap:4px !important; }
+
+.page {
+  max-width: 100% !important;
+  padding: 70px 14px 36px !important;
+  gap: 14px !important;
+}
+.page-title { font-size:22px !important; }
+.live-badge { font-size:10px !important; padding:4px 10px !important; }
+
+/* Top グリッド: 縦積み */
+.top-grid { grid-template-columns:1fr !important; gap:14px !important; }
+
+/* Buy card */
+.buy-card { padding:16px 14px !important; border-radius:16px !important; }
+.price-main { font-size:22px !important; }
+.price-unit { font-size:11px !important; }
+.progress-track { width:80px !important; height:3px !important; }
+.progress-sold { font-size:9px !important; }
+.progress-pct  { font-size:10px !important; }
+.divider { margin:10px 0 !important; }
+.sec-label { font-size:9px !important; }
+.currency-row { gap:6px !important; margin-bottom:10px !important; }
+.ctab { padding:7px 4px !important; font-size:12px !important; }
+.input-label-row { font-size:10px !important; margin-bottom:5px !important; }
+.input-wrap input { font-size:15px !important; padding:10px 12px !important; }
+.btn-max { font-size:9px !important; padding:4px 7px !important; }
+.input-currency { padding:0 10px !important; font-size:11px !important; }
+.hyk-worth-row { padding:8px 12px !important; border-radius:8px !important; margin-bottom:8px !important; }
+.hyk-worth-label { font-size:10px !important; }
+.hyk-worth-val   { font-size:13px !important; }
+.min-note { font-size:9px !important; margin-bottom:10px !important; }
+.btn-buy-now { font-size:13px !important; padding:12px !important; }
+
+/* TX panel */
+.tx-panel { border-radius:16px !important; height:auto !important; }
+.panel-header { padding:12px 14px !important; }
+.panel-title  { font-size:13px !important; }
+.ttab { padding:4px 9px !important; font-size:10px !important; }
+.tx-item { padding:10px 14px !important; gap:10px !important; }
+.tx-icon { width:30px !important; height:30px !important; font-size:13px !important; border-radius:8px !important; }
+.tx-name { font-size:12px !important; }
+.tx-date { font-size:10px !important; }
+.tx-hyk  { font-size:12px !important; }
+.tx-usd  { font-size:10px !important; }
+.tx-status { font-size:9px !important; padding:2px 6px !important; }
+.tx-total { padding:10px 14px !important; }
+.tx-total-label { font-size:11px !important; }
+.tx-total-val   { font-size:13px !important; }
+
+/* Vesting stats: 2列 */
+.vstat-row { grid-template-columns:repeat(2,1fr) !important; gap:10px !important; }
+.vstat-card { padding:14px 12px !important; border-radius:12px !important; }
+.vstat-icon  { font-size:16px !important; margin-bottom:7px !important; }
+.vstat-label { font-size:9px !important; }
+.vstat-val   { font-size:15px !important; }
+.vstat-sub   { font-size:9px !important; }
+
+/* Claim bar: 縦積み */
+.claim-bar { flex-direction:column !important; align-items:flex-start !important; gap:14px !important; padding:14px 16px !important; }
+.claim-bar-left { flex-direction:column !important; gap:10px !important; width:100% !important; }
+.claim-divider-v { display:none !important; }
+.claim-stat-val { font-size:17px !important; }
+.claim-bar-right { width:100% !important; }
+.btn-claim { width:100% !important; justify-content:center !important; font-size:13px !important; padding:11px !important; }
+.claim-lock-note { text-align:center !important; font-size:10px !important; }
+
+/* Vesting schedule: 1列 */
+.vd-steps-row { grid-template-columns:1fr !important; gap:8px !important; }
+.vd-step-card { padding:11px 14px !important; border-radius:12px !important; }
+.vd-card-icon { width:24px !important; height:24px !important; font-size:12px !important; margin-bottom:7px !important; }
+.vd-card-date { font-size:9px !important; }
+.vd-card-name { font-size:12px !important; }
+.vd-card-val  { font-size:12px !important; }
+.vd-card-sub  { font-size:9px !important; }
+
+/* Panel共通 */
+.vesting-card  { border-radius:14px !important; }
+.announce-card { border-radius:14px !important; }
+.panel-header  { padding:12px 14px !important; }
+.vd-body { padding:12px 14px !important; }
+.lock-badge { font-size:9px !important; padding:3px 7px !important; }
+
+/* Announcements */
+.a-item  { padding:10px 14px !important; gap:10px !important; }
+.a-icon  { width:26px !important; height:26px !important; font-size:12px !important; border-radius:7px !important; }
+.a-title { font-size:12px !important; }
+.a-body  { font-size:11px !important; }
+.a-time  { font-size:10px !important; }
+.a-badge { width:16px !important; height:16px !important; font-size:8px !important; }
+
+/* 流れ星非表示 */
+.shooting-star { display:none !important; }
+
+/* 以下のmediaクエリは無効化（全幅固定） */
+@media(max-width:9999px){
+@media(max-width:1099px){
+  /* ヘッダー */
+  header { padding:0 24px; height:62px; }
+  .logo-text { font-size:19px; }
+  .wallet-pill { display:none; }          /* アドレス非表示 */
+
+  /* ページ */
+  .page { padding:80px 24px 48px; gap:18px; }
+  .page-title { font-size:30px; }
+
+  /* Top グリッド: 縦積み */
+  .top-grid { grid-template-columns:1fr; }
+
+  /* Vesting stats: 3列維持 */
+  .vstat-row { grid-template-columns:repeat(3,1fr); gap:12px; }
+  .vstat-val { font-size:17px; }
+  .vstat-icon { font-size:18px; margin-bottom:8px; }
+
+  /* Claim bar */
+  .claim-bar-left { gap:18px; }
+  .claim-stat-val { font-size:17px; }
+
+  /* Vesting schedule */
+  .vd-steps-row { grid-template-columns:repeat(3,1fr); gap:8px; }
+  .vd-card-name { font-size:12px; }
+
+  /* Announcements */
+  .a-title { font-size:13px; }
+}
+
+/* ══════════════════════════════════════════
+   MOBILE  〜767px
+══════════════════════════════════════════ */
+@media(max-width:767px){
+  /* ヘッダー */
+  header { padding:0 16px; height:56px; }
+  .logo-icon { width:30px; height:30px; font-size:16px; border-radius:8px; }
+  .logo-text { font-size:17px; }
+  .wallet-pill { display:none; }
+  .lang-select { font-size:12px; padding:5px 9px; }
+  .connect-btn { padding:7px 12px; font-size:11px; gap:4px; }
+
+  /* ページ */
+  .page { padding:70px 14px 36px; gap:14px; }
+  .page-title { font-size:24px; }
+  .live-badge { font-size:10px; padding:4px 10px; }
+
+  /* Top グリッド: 縦積み */
+  .top-grid { grid-template-columns:1fr; gap:14px; }
+
+  /* Buy card */
+  .buy-card { padding:18px 16px; border-radius:18px; }
+  .price-main { font-size:24px; }
+  .price-unit { font-size:11px; }
+  .progress-track { width:90px; height:3px; }
+  .progress-sold { font-size:9px; }
+  .progress-pct  { font-size:10px; }
+  .divider { margin:12px 0; }
+  .sec-label { font-size:9px; }
+  .currency-row { gap:6px; margin-bottom:12px; }
+  .ctab { padding:8px 4px; font-size:12px; }
+  .input-label-row { font-size:10px; margin-bottom:5px; }
+  .input-wrap input { font-size:15px; padding:10px 12px; }
+  .btn-max { font-size:9px; padding:4px 8px; }
+  .input-currency { padding:0 10px; font-size:11px; }
+  .hyk-worth-row { padding:8px 12px; border-radius:8px; margin-bottom:8px; }
+  .hyk-worth-label { font-size:10px; }
+  .hyk-worth-val   { font-size:13px; }
+  .min-note { font-size:9px; margin-bottom:10px; }
+  .btn-buy-now { font-size:14px; padding:13px; }
+
+  /* TX panel */
+  .tx-panel { border-radius:18px; }
+  .panel-header { padding:13px 16px; }
+  .panel-title  { font-size:14px; }
+  .ttab { padding:4px 10px; font-size:10px; }
+  .tx-item { padding:11px 14px; gap:10px; }
+  .tx-icon { width:32px; height:32px; font-size:14px; border-radius:8px; }
+  .tx-name { font-size:12px; }
+  .tx-date { font-size:10px; }
+  .tx-hyk  { font-size:13px; }
+  .tx-usd  { font-size:10px; }
+  .tx-status { font-size:9px; padding:2px 7px; }
+  .tx-total { padding:11px 14px; }
+  .tx-total-label { font-size:11px; }
+  .tx-total-val   { font-size:13px; }
+
+  /* Vesting stats: 2列 */
+  .vstat-row { grid-template-columns:repeat(2,1fr); gap:10px; }
+  .vstat-card { padding:16px 14px; border-radius:14px; }
+  .vstat-icon  { font-size:18px; margin-bottom:8px; }
+  .vstat-label { font-size:10px; }
+  .vstat-val   { font-size:16px; }
+  .vstat-sub   { font-size:10px; }
+
+  /* Claim bar: 縦積み */
+  .claim-bar { flex-direction:column; align-items:flex-start; gap:14px; padding:16px; }
+  .claim-bar-left { flex-direction:column; gap:12px; width:100%; }
+  .claim-divider-v { display:none; }
+  .claim-stat-val { font-size:18px; }
+  .claim-bar-right { width:100%; }
+  .btn-claim { width:100%; justify-content:center; }
+  .claim-lock-note { text-align:center; }
+
+  /* Vesting schedule: 縦積み */
+  .vd-steps-row { grid-template-columns:1fr; gap:8px; }
+  .vd-step-card { padding:12px 14px; }
+  .vd-card-name { font-size:13px; }
+  .vd-card-date { font-size:10px; }
+  .vd-card-val  { font-size:13px; }
+
+  /* Vesting/Announce card */
+  .vesting-card  { border-radius:16px; }
+  .announce-card { border-radius:16px; }
+  .panel-header  { padding:13px 16px; }
+  .vd-body { padding:14px 16px; }
+  .lock-badge { font-size:9px; padding:3px 8px; white-space:nowrap; }
+
+  /* Announcements */
+  .a-item  { padding:11px 14px; gap:10px; }
+  .a-icon  { width:28px; height:28px; font-size:13px; border-radius:7px; }
+  .a-title { font-size:12px; }
+  .a-body  { font-size:11px; }
+  .a-time  { font-size:10px; }
+  .a-badge { width:18px; height:18px; font-size:9px; }
+
+  /* 流れ星は非表示（軽量化） */
+  .shooting-star { display:none; }
+}
+</style>
+</head>
+<body>
+
+<div class="space-bg"></div>
+<div class="nebula"></div>
+<div class="shooting-star"></div>
+<div class="shooting-star"></div>
+<div class="shooting-star"></div>
+
+<!-- HEADER -->
+<header>
+  <a href="#" class="logo">
+    <div class="logo-icon">🐣</div>
+    <span class="logo-text">HIYOKO</span>
+  </a>
+  <div class="header-right">
+    <select class="lang-select">
+      <option value="en">🌐 EN</option>
+      <option value="id">🇮🇩 ID</option>
+    </select>
+    <div class="wallet-pill" onclick="copyWallet(this)">
+      <span class="wallet-dot"></span>
+      <span class="wallet-addr">0x3f4A...8Bc2</span>
+    </div>
+    <button class="connect-btn">🔗 Connected</button>
+  </div>
+</header>
+
+<!-- PAGE -->
+<div class="page">
+
+  <!-- ① Title -->
+  <div class="fi">
+    <div class="live-badge"><span class="live-dot"></span>Presale Live</div>
+    <div class="page-title" style="margin-top:10px">My <span class="y">Dashboard</span></div>
+  </div>
+
+  <!-- ② VESTING STATS 3枚（Vesting Status削除） -->
+  <div class="vstat-row">
+    <div class="vstat-card vc fi fi1">
+      <span class="vstat-icon">📦</span>
+      <div class="vstat-label">Total Allocation</div>
+      <div class="vstat-val" id="totalAlloc">5,500 HYK</div>
+      <div class="vstat-sub">≈ $82.50 at presale price</div>
+    </div>
+    <div class="vstat-card vy fi fi2">
+      <span class="vstat-icon">📅</span>
+      <div class="vstat-label">Daily Allocation</div>
+      <div class="vstat-val">18.33 HYK</div>
+      <div class="vstat-sub">After vesting starts</div>
+    </div>
+    <div class="vstat-card vg fi fi3">
+      <span class="vstat-icon">✅</span>
+      <div class="vstat-label">Already Claimed</div>
+      <div class="vstat-val">0 HYK</div>
+      <div class="vstat-sub">Provided: 0 HYK</div>
+    </div>
+  </div>
+
+  <!-- ② Claim Bar（全幅・Now Claimable + Claim Button） -->
+  <div class="claim-bar fi fi4">
+    <div class="claim-bar-left">
+      <div class="claim-stat">
+        <div class="claim-stat-label">Now Claimable</div>
+        <div class="claim-stat-val" style="color:var(--muted)">0 HYK</div>
+        <div class="claim-stat-sub">🔒 Locked until Aug 1, 2026</div>
+      </div>
+    </div>
+    <div class="claim-bar-right">
+      <button class="btn-claim" disabled id="claimBtn">
+        🎁 Claim Tokens
+      </button>
+      <div class="claim-lock-note">Available after Aug 1, 2026</div>
+    </div>
+  </div>
+
+  <!-- ③ Buy Card (left) + TX History (right) 横並び -->
+  <div class="top-grid">
+
+    <!-- BUY CARD -->
+    <div class="buy-card fi fi1">
+      <div class="price-top">
+        <div>
+          <div class="price-label">Presale Price</div>
+          <div class="price-main">$0.015 <span class="price-unit">USDT / HYK</span></div>
+        </div>
+        <div class="progress-block">
+          <div class="progress-sold">24,500,000 HYK sold</div>
+          <div class="progress-track">
+            <div class="progress-fill" id="pFill" style="width:0%"></div>
+          </div>
+          <div class="progress-pct">24.5% Sold</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="sec-label">Select Currency</div>
+      <div class="currency-row">
+        <div class="ctab active" onclick="setCurrency(this,'USDT')">USDT</div>
+        <div class="ctab" onclick="setCurrency(this,'BNB')">BNB</div>
+      </div>
+
+      <div class="input-label-row">
+        <span>Amount to spend</span>
+        <span>Balance: <span>0.00 <span id="balCur">USDT</span></span></span>
+      </div>
+      <div class="input-wrap">
+        <input type="number" id="amtInput" placeholder="0.00" min="10" oninput="calcHYK()" />
+        <button class="btn-max" onclick="setMax()">MAX</button>
+        <div class="input-currency" id="inputCur">USDT</div>
+      </div>
+
+      <div class="hyk-worth-row">
+        <span class="hyk-worth-label">🐣 HYK you will receive</span>
+        <span class="hyk-worth-val" id="hykWorth">— HYK</span>
+      </div>
+
+      <div class="min-note">Minimum: 10 USDT · BSC (BEP-20) network</div>
+
+      <button class="btn-buy-now" onclick="alert('Processing purchase...')">
+        BUY NOW
+      </button>
+    </div>
+
+    <!-- TX PANEL -->
+    <div class="tx-panel fi fi2">
+      <div class="panel-header">
+        <div class="panel-title">Transaction History</div>
+        <div class="tab-row">
+          <button class="ttab active" onclick="switchTab(this)">My Tx</button>
+          <button class="ttab" onclick="switchTab(this)">All</button>
+        </div>
+      </div>
+      <div class="tx-list">
+        <div class="tx-item">
+          <div class="tx-icon">🛒</div>
+          <div class="tx-info">
+            <div class="tx-name">Purchase HYK</div>
+            <div class="tx-date">March 18 · 17:41</div>
+          </div>
+          <div class="tx-right">
+            <div class="tx-hyk">+1,500 HYK</div>
+            <div class="tx-usd">$22.50</div>
+            <span class="tx-status s-confirmed">Confirmed</span>
+          </div>
+        </div>
+        <div class="tx-item">
+          <div class="tx-icon">🛒</div>
+          <div class="tx-info">
+            <div class="tx-name">Purchase HYK</div>
+            <div class="tx-date">March 15 · 09:12</div>
+          </div>
+          <div class="tx-right">
+            <div class="tx-hyk">+3,333 HYK</div>
+            <div class="tx-usd">$50.00</div>
+            <span class="tx-status s-confirmed">Confirmed</span>
+          </div>
+        </div>
+        <div class="tx-item">
+          <div class="tx-icon">⏳</div>
+          <div class="tx-info">
+            <div class="tx-name">Purchase HYK</div>
+            <div class="tx-date">March 10 · 14:55</div>
+          </div>
+          <div class="tx-right">
+            <div class="tx-hyk">+667 HYK</div>
+            <div class="tx-usd">$10.00</div>
+            <span class="tx-status s-pending">Pending</span>
+          </div>
+        </div>
+      </div>
+      <div class="tx-total">
+        <span class="tx-total-label">Total Transaction Amount</span>
+        <span class="tx-total-val">$82.50</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- VESTING SCHEDULE (横並びカード) -->
+  <div class="vesting-card fi fi3">
+    <div class="panel-header">
+      <div class="panel-title">🔒 Vesting Schedule</div>
+      <div class="lock-badge">🔒 Locked until July 31, 2026</div>
+    </div>
+    <div class="vd-body">
+      <div class="vd-steps-row">
+
+        <div class="vd-step-card done">
+          <div class="vd-card-icon">✓</div>
+          <div class="vd-card-date">Now — June 2026</div>
+          <div class="vd-card-name">🐣 Presale Active</div>
+          <div class="vd-card-val">Active</div>
+          <div class="vd-card-sub">Buy at $0.015</div>
+        </div>
+
+        <div class="vd-step-card active">
+          <div class="vd-card-icon">🔒</div>
+          <div class="vd-card-date">Until July 31, 2026</div>
+          <div class="vd-card-name">🔒 Lock Period</div>
+          <div class="vd-card-val">In Progress</div>
+          <div class="vd-card-sub">All tokens locked</div>
+        </div>
+
+        <div class="vd-step-card">
+          <div class="vd-card-icon">🔓</div>
+          <div class="vd-card-date">August 1, 2026</div>
+          <div class="vd-card-name">🔓 Vesting Starts</div>
+          <div class="vd-card-val">Upcoming</div>
+          <div class="vd-card-sub">10% × 10 months</div>
+        </div>
+
+        <div class="vd-step-card">
+          <div class="vd-card-icon">📅</div>
+          <div class="vd-card-date">Aug 2026 — May 2027</div>
+          <div class="vd-card-name">📅 Monthly Release</div>
+          <div class="vd-card-val" id="monthlyHyk">550 HYK</div>
+          <div class="vd-card-sub">per month</div>
+        </div>
+
+        <div class="vd-step-card">
+          <div class="vd-card-icon">🎉</div>
+          <div class="vd-card-date">May 2027</div>
+          <div class="vd-card-name">🎉 Fully Vested</div>
+          <div class="vd-card-val" id="finalHyk">5,500 HYK</div>
+          <div class="vd-card-sub">100% received</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ANNOUNCEMENTS (全幅) -->
+  <div class="announce-card fi fi4">
+    <div class="panel-header">
+      <div class="panel-title" style="display:flex;align-items:center;gap:8px">
+        📢 Announcements
+        <div class="a-badge">4</div>
+      </div>
+    </div>
+    <div class="a-list">
+      <div class="a-item">
+        <div class="a-icon ai-o">🚀</div>
+        <div>
+          <div class="a-title">Presale is Now Live</div>
+          <div class="a-body">Buy HYK at $0.015 before exchange listing.</div>
+          <div class="a-time">March 18, 2026</div>
+        </div>
+      </div>
+      <div class="a-item">
+        <div class="a-icon ai-y">🏥</div>
+        <div>
+          <div class="a-title">Vitalis Tester Recruitment</div>
+          <div class="a-body">50,000 spots. Pre-orders surpassed 36,000.</div>
+          <div class="a-time">February 2026</div>
+        </div>
+      </div>
+      <div class="a-item">
+        <div class="a-icon ai-c">🚗</div>
+        <div>
+          <div class="a-title">Happy Chick In-Car Launch</div>
+          <div class="a-body">Deploying in-vehicle with Great Wall Motors.</div>
+          <div class="a-time">March 2026</div>
+        </div>
+      </div>
+      <div class="a-item">
+        <div class="a-icon ai-g">📅</div>
+        <div>
+          <div class="a-title">Exchange Listing Scheduled</div>
+          <div class="a-body">HYK targeting exchange listing June 2026.</div>
+          <div class="a-time">Coming Soon</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+setTimeout(() => {
+  const f = document.getElementById('pFill');
+  if (f) f.style.width = '24.5%';
+}, 400);
+
+function calcHYK() {
+  const amt = parseFloat(document.getElementById('amtInput').value) || 0;
+  document.getElementById('hykWorth').textContent =
+    amt > 0 ? (amt / 0.015).toLocaleString('en',{maximumFractionDigits:0}) + ' HYK' : '— HYK';
+  if (amt > 0) {
+    const t = Math.round(amt / 0.015);
+    document.getElementById('totalAlloc').textContent  = t.toLocaleString() + ' HYK';
+    document.getElementById('monthlyHyk').textContent  = Math.round(t/10).toLocaleString() + ' HYK';
+    document.getElementById('finalHyk').textContent    = t.toLocaleString() + ' HYK';
+  }
+}
+function setMax() { document.getElementById('amtInput').value = 100; calcHYK(); }
+function setCurrency(el, cur) {
+  document.querySelectorAll('.ctab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('inputCur').textContent = cur;
+  document.getElementById('balCur').textContent = cur;
+}
+function switchTab(el) {
+  document.querySelectorAll('.ttab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+function copyWallet(el) {
+  navigator.clipboard.writeText('0x3f4A8Bc2d1E9').then(() => {
+    const a = el.querySelector('.wallet-addr');
+    const orig = a.textContent;
+    a.textContent = 'Copied!';
+    setTimeout(() => a.textContent = orig, 1500);
+  });
+}
+</script>
+</body>
+</html>

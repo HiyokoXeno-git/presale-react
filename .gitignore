@@ -1,3 +1,19 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build output
+dist/
+dist-ssr/
+dist-ssr/
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+*.env
+*.local
+
 # Logs
 logs
 *.log
@@ -7,18 +23,27 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
+# Editor
 .vscode/*
 !.vscode/extensions.json
 .idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# PHP cache
+*.cache
+
+# SSH / SSL keys
+*.pem
+*.key
+*.p12
+*.pfx
+hykpresale.pem/
+
+# Claude Flow internal
+.claude-flow/
