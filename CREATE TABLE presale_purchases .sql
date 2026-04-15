@@ -1,0 +1,22 @@
+CREATE TABLE presale_purchases (
+    id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    wallet_address VARCHAR(42) NOT NULL,
+    tx_hash VARCHAR(66) NOT NULL,
+    payment_token VARCHAR(10) NOT NULL,
+    bnb_amount_raw VARCHAR(100) DEFAULT NULL,
+    bnb_amount DECIMAL(30,18) DEFAULT NULL,
+    usdt_amount_raw VARCHAR(50) NOT NULL,
+    token_amount_raw VARCHAR(80) NOT NULL,
+    usdt_amount DECIMAL(30,6) NOT NULL,
+    token_amount DECIMAL(30,18) NOT NULL,
+    quote_deadline BIGINT(20) DEFAULT NULL,
+    quote_digest VARCHAR(66) DEFAULT NULL,
+    presale_address VARCHAR(42) NOT NULL,
+    vesting_address VARCHAR(42) NOT NULL,
+    block_number BIGINT(20) UNSIGNED NOT NULL,
+    chain_id VARCHAR(20) NOT NULL,
+    network_name VARCHAR(50) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_tx_hash (tx_hash)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
