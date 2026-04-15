@@ -76,15 +76,15 @@ export async function destroySession() {
 export async function fetchBnbPrice() {
   try {
     const response = await fetch(
-      "https://api.binance.com/api/v3/ticker/24hr?symbol=BNBUSDT",
-      { signal: AbortSignal.timeout(5000) }
+      `${CONFIG.presaleApiBaseUrl}/getbnbprice.php`,
+      { signal: AbortSignal.timeout(8000) }
     );
     const data = await response.json();
-    if (!data?.lastPrice) return null;
+    if (!data?.success || !data?.price) return null;
     return {
       success: true,
-      price: parseFloat(data.lastPrice),
-      percentChange24h: parseFloat(data.priceChangePercent),
+      price: parseFloat(data.price),
+      percentChange24h: parseFloat(data.percentChange24h ?? 0),
     };
   } catch {
     return null;
