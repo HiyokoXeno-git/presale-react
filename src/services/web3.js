@@ -12,8 +12,15 @@ let _wcProvider = null;
 
 // Extracts a readable revert reason from a web3/ethers error object
 function extractRevertReason(err) {
-  // Collect all candidate message strings, from most specific to least
+  // web3 v4 stores revert reasons across multiple nested paths — collect them all
   const candidates = [
+    // web3 v4: cause.data.message contains the actual reason string
+    err?.cause?.data?.message,
+    err?.cause?.cause?.data?.message,
+    // inner errors
+    err?.cause?.innerError?.message,
+    err?.cause?.cause?.innerError?.message,
+    // standard chains
     err?.cause?.cause?.message,
     err?.cause?.message,
     err?.data?.message,
@@ -21,23 +28,43 @@ function extractRevertReason(err) {
     err?.message,
   ].filter(Boolean).map(String);
 
+  // Also include errorArgs from custom Solidity errors (web3 v4)
+  const customErrArgs = err?.cause?.errorArgs ?? err?.cause?.cause?.errorArgs;
+  if (Array.isArray(customErrArgs) && customErrArgs.length) {
+    candidates.unshift(customErrArgs.join(" "));
+  }
+
+  // Log full error to console for debugging
+  console.error("[extractRevertReason] raw error:", err);
+  console.error("[extractRevertReason] candidates:", candidates);
+
   const fullText = candidates.join(" ");
 
   // Common contract revert patterns → friendly messages
+  // NOTE: specific patterns first, broad "execution reverted" last so it never
+  // swallows a meaningful reason string that appears alongside it.
   const patterns = [
     [/Sale is not active/i, "The presale is not currently active."],
     [/sale.*not.*active/i, "The presale is not currently active."],
+    [/not.*active/i, "The presale is not currently active."],
     [/Sale cap reached/i, "The presale cap has been reached."],
     [/Below minimum/i, "Amount is below the minimum purchase (10 USDT)."],
     [/Exceeds maximum/i, "Amount exceeds the maximum purchase limit."],
     [/exceeds.*max/i, "Amount exceeds the maximum purchase limit."],
-    [/transfer.*failed/i, "USDT transfer failed. Check your balance."],
-    [/insufficient.*allowance/i, "USDT allowance insufficient. Please try again."],
-    [/ERC20.*allowance/i, "USDT allowance insufficient. Please try again."],
+    [/Exceeds.*cap/i, "The presale cap has been reached."],
+    [/transfer.*failed/i, "USDT transfer failed. Check your balance and allowance."],
+    [/insufficient.*allowance/i, "USDT allowance insufficient. Please approve USDT first."],
+    [/ERC20.*allowance/i, "USDT allowance insufficient. Please approve USDT first."],
+    [/allowance/i, "USDT allowance insufficient. Please approve USDT first."],
     [/insufficient.*balance/i, "Insufficient USDT balance."],
-    [/sale.*not.*active|not.*active/i, "The presale is not active. Please wait for the presale to be activated."],
-    [/execution reverted/i, "Transaction rejected by the contract. The presale may not be active yet — please contact the team."],
-    [/Internal JSON-RPC/i, "Transaction rejected by the contract. The presale may not be active yet — please contact the team."],
+    [/invalid.*signature/i, "Invalid price signature. Please refresh and try again."],
+    [/Signature.*expired/i, "Price quote expired. Please refresh and try again."],
+    [/expired/i, "Price quote expired. Please refresh and try again."],
+    [/already.*used/i, "This price quote has already been used. Please refresh."],
+    [/Invalid signer/i, "Price signer not configured on contract. Please contact the team."],
+    // broad fallbacks — only reached if no specific reason was found
+    [/Internal JSON-RPC/i, "Transaction rejected by the contract."],
+    [/execution reverted/i, "Transaction rejected by the contract."],
     [/revert/i, "Transaction rejected by the contract."],
   ];
 
@@ -45,8 +72,9 @@ function extractRevertReason(err) {
     if (regex.test(fullText)) return friendly;
   }
 
-  // Return the most specific real message we have
-  return candidates[0] || "Transaction failed. Please try again.";
+  // Return the most specific real message we have, stripped of JSON-RPC noise
+  const best = candidates.find(c => !c.match(/^(execution reverted|Internal JSON-RPC error)$/i));
+  return best || candidates[0] || "Transaction failed. Please try again.";
 }
 
 export function getPresaleContract() {
@@ -101,6 +129,7 @@ export async function buyWithUsdt(account, usdtAmountRaw, onHashCaptured) {
   try {
     gas = await tx.estimateGas({ from: account });
   } catch (err) {
+    console.error("[buyWithUsdt] estimateGas failed:", err);
     throw new Error(extractRevertReason(err));
   }
 
@@ -411,6 +440,7 @@ export async function buyWithBnb(account, bnbAmountWei, usdtAmountRaw, deadline,
   try {
     gas = await tx.estimateGas({ from: account, value: String(bnbAmountWei) });
   } catch (err) {
+    console.error("[buyWithBnb] estimateGas failed:", err);
     throw new Error(extractRevertReason(err));
   }
 
@@ -518,6 +548,7 @@ export async function getPresaleStats() {
     contract.methods.RATE().call(),
     contract.methods.MIN_PURCHASE().call(),
     contract.methods.MAX_PURCHASE().call(),
+    contract.methods.priceSigner().call(),
   ]);
 
   const val = (r, fallback = "0") => r.status === "fulfilled" ? r.value : fallback;
@@ -530,6 +561,7 @@ export async function getPresaleStats() {
     rate:             val(results[4]),
     minPurchase:      val(results[5]),
     maxPurchase:      val(results[6]),
+    priceSigner:      val(results[7], null),
   };
 }
 

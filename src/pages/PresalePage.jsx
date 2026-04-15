@@ -271,6 +271,19 @@ function PresalePage() {
             const trimmedBnbAmount = String(bnbAmount ?? "").trim();
             if (!trimmedBnbAmount) { setBuyMessage("Please enter BNB amount."); return; }
 
+            // Pre-flight: check priceSigner is configured on the contract
+            const bnbPreflightStats = await getPresaleStats();
+            console.log("[handleBuyWithBnb] presaleStats:", bnbPreflightStats);
+            if (!bnbPreflightStats.saleActive) {
+                setBuyMessage("The presale is not currently active.");
+                return;
+            }
+            const zeroAddr = /^0x0+$/i;
+            if (!bnbPreflightStats.priceSigner || zeroAddr.test(bnbPreflightStats.priceSigner)) {
+                setBuyMessage("Contract error: priceSigner is not configured on the presale contract. Please contact the team.");
+                return;
+            }
+
             let quote = bnbQuote;
             if (!quote) {
                 quote = await fetchBnbQuote(account, trimmedBnbAmount);
@@ -473,18 +486,30 @@ function PresalePage() {
             const usdtAmountRaw = parseUsdtToRaw(usdtAmount);
             const tokenAmountRaw = getTokenAmountRawFromUsdtRaw(usdtAmountRaw);
 
-            // ── Pre-flight: only check saleActive ─────────────────────────
+            // ── Pre-flight checks ─────────────────────────────────────────
             setBuyMessage("Checking presale status...");
             const freshStats = await getPresaleStats();
+            console.log("[handleBuyWithUsdt] freshStats:", freshStats);
             if (!freshStats.saleActive) {
                 setBuyMessage("The presale is not currently active.");
+                return;
+            }
+
+            // Check USDT balance
+            const freshUserStats = await getUserStats(account);
+            console.log("[handleBuyWithUsdt] freshUserStats:", freshUserStats);
+            const usdtBal = BigInt(freshUserStats.usdtBalance ?? "0");
+            const usdtRawBig = BigInt(usdtAmountRaw);
+            if (usdtBal < usdtRawBig) {
+                setBuyMessage(`Insufficient USDT balance. You have ${(Number(usdtBal) / 1e6).toFixed(2)} USDT, need ${usdtAmount} USDT.`);
                 return;
             }
             // ──────────────────────────────────────────────────────────────
 
             // Auto-approve if allowance is insufficient
             const allowance = await getUsdtAllowance(account);
-            if (BigInt(allowance) < BigInt(usdtAmountRaw)) {
+            console.log("[handleBuyWithUsdt] allowance:", allowance, "needed:", usdtAmountRaw);
+            if (BigInt(allowance) < usdtRawBig) {
                 setBuyMessage("Step 1/2: Approving USDT... Please confirm in wallet.");
                 await approveUsdt(account);
             }
