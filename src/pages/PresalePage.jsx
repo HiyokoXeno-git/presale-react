@@ -1470,6 +1470,9 @@ function PresalePage() {
                                 <div style={{ marginTop: "14px", fontSize: "10px", color: "#6666AA", textAlign: "center" }}>
                                     {t("minimum")}
                                 </div>
+                                <div style={{ marginTop: "6px", fontSize: "10px", color: "#555588", textAlign: "center", fontStyle: "italic" }}>
+                                    {t("priceDisclaimer")}
+                                </div>
                             </div>
 
                             {/* ── TX HISTORY PANEL ── */}
