@@ -241,10 +241,13 @@ export async function getUsdtDecimals() {
   if (_usdtDecimals !== null) return _usdtDecimals;
   try {
     const dec = await getUsdtContract().methods.decimals().call();
-    _usdtDecimals = Number(dec);
+    const parsed = Number(dec);
+    // Sanity check: USDT always uses 6 decimals on BSC; reject out-of-range values
+    _usdtDecimals = (parsed >= 0 && parsed <= 18) ? parsed : CONFIG.usdtDecimals;
   } catch {
-    _usdtDecimals = 6; // fallback
+    _usdtDecimals = CONFIG.usdtDecimals; // fallback to config
   }
+  console.log("[getUsdtDecimals] resolved:", _usdtDecimals);
   return _usdtDecimals;
 }
 
@@ -549,9 +552,22 @@ export async function getPresaleStats() {
     contract.methods.MIN_PURCHASE().call(),
     contract.methods.MAX_PURCHASE().call(),
     contract.methods.priceSigner().call(),
+    contract.methods.vesting().call(),
   ]);
 
   const val = (r, fallback = "0") => r.status === "fulfilled" ? r.value : fallback;
+
+  const vestingOnChain = val(results[8], null);
+
+  // Warn in console if presale is pointing to wrong vesting
+  if (vestingOnChain && CONFIG.vestingAddress &&
+      vestingOnChain.toLowerCase() !== CONFIG.vestingAddress.toLowerCase()) {
+    console.warn(
+      "[getPresaleStats] vesting mismatch!",
+      "\n  contract vesting :", vestingOnChain,
+      "\n  config vesting   :", CONFIG.vestingAddress
+    );
+  }
 
   return {
     saleActive:       val(results[0], false),
@@ -562,6 +578,7 @@ export async function getPresaleStats() {
     minPurchase:      val(results[5]),
     maxPurchase:      val(results[6]),
     priceSigner:      val(results[7], null),
+    vestingOnChain,
   };
 }
 
