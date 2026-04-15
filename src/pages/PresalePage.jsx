@@ -1397,6 +1397,12 @@ function PresalePage() {
                                                 display: "flex", alignItems: "center",
                                             }}>BNB</div>
                                         </div>
+                                        {/* BNB live price */}
+                                        {lastBnbPrice && (
+                                            <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px", textAlign: "right" }}>
+                                                1 BNB ≈ <span style={{ color: "#FFD84D" }}>${lastBnbPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD</span>
+                                            </div>
+                                        )}
                                         {/* USDT equivalent — read-only, computed from BNB/THK */}
                                         <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>≈ USDT value {isFetchingBnbQuote && <span style={{ color: "#FF9F1C" }}>⏳</span>}</div>
                                         <div style={{
