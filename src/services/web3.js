@@ -509,17 +509,27 @@ export function getTokenContract() {
 
 export async function getPresaleStats() {
   const contract = getPresaleContract();
-  const [saleActive, totalSold, saleCap, remainingForSale, rate, minPurchase, maxPurchase] =
-    await Promise.all([
-      contract.methods.saleActive().call(),
-      contract.methods.totalSold().call(),
-      contract.methods.SALE_CAP().call(),
-      contract.methods.remainingForSale().call(),
-      contract.methods.RATE().call(),
-      contract.methods.MIN_PURCHASE().call(),
-      contract.methods.MAX_PURCHASE().call(),
-    ]);
-  return { saleActive, totalSold, saleCap, remainingForSale, rate, minPurchase, maxPurchase };
+  const results = await Promise.allSettled([
+    contract.methods.saleActive().call(),
+    contract.methods.totalSold().call(),
+    contract.methods.SALE_CAP().call(),
+    contract.methods.remainingForSale().call(),
+    contract.methods.RATE().call(),
+    contract.methods.MIN_PURCHASE().call(),
+    contract.methods.MAX_PURCHASE().call(),
+  ]);
+
+  const val = (r, fallback = "0") => r.status === "fulfilled" ? r.value : fallback;
+
+  return {
+    saleActive:       val(results[0], false),
+    totalSold:        val(results[1]),
+    saleCap:          val(results[2]),
+    remainingForSale: val(results[3]),
+    rate:             val(results[4]),
+    minPurchase:      val(results[5]),
+    maxPurchase:      val(results[6]),
+  };
 }
 
 export async function getUserStats(account) {
@@ -528,29 +538,47 @@ export async function getUserStats(account) {
   const vesting = getVestingContract();
   const web3 = getWeb3();
 
-  const [usdtBalance, userTokenPurchased, userUsdtSpent, userRemainingUsdt, claimable, usdtDecimals, bnbBalance] =
-    await Promise.all([
-      usdt.methods.balanceOf(account).call(),
-      presale.methods.userTokenPurchased(account).call(),
-      presale.methods.userUsdtSpent(account).call(),
-      presale.methods.userRemainingUsdt(account).call(),
-      vesting.methods.claimable(account).call(),
-      getUsdtDecimals(),
-      web3.eth.getBalance(account),
-    ]);
-  return { usdtBalance, userTokenPurchased, userUsdtSpent, userRemainingUsdt, claimable, usdtDecimals, bnbBalance };
+  const results = await Promise.allSettled([
+    usdt.methods.balanceOf(account).call(),
+    presale.methods.userTokenPurchased(account).call(),
+    presale.methods.userUsdtSpent(account).call(),
+    presale.methods.userRemainingUsdt(account).call(),
+    vesting.methods.claimable(account).call(),
+    getUsdtDecimals(),
+    web3.eth.getBalance(account),
+  ]);
+
+  const val = (r, fallback = "0") => r.status === "fulfilled" ? r.value : fallback;
+
+  return {
+    usdtBalance:       val(results[0]),
+    userTokenPurchased: val(results[1]),
+    userUsdtSpent:     val(results[2]),
+    userRemainingUsdt: val(results[3]),
+    claimable:         val(results[4]),
+    usdtDecimals:      val(results[5], 6),
+    bnbBalance:        val(results[6]),
+  };
 }
 
 export async function getVestingInfo(account) {
   const vesting = getVestingContract();
 
-  const [tgeTimestamp, cliffDuration, vestingDuration, vestingData] = await Promise.all([
+  const results = await Promise.allSettled([
     vesting.methods.tgeTimestamp().call(),
     vesting.methods.CLIFF_DURATION().call(),
     vesting.methods.VESTING_DURATION().call(),
     vesting.methods.vestings(account).call(),
   ]);
-  return { tgeTimestamp, cliffDuration, vestingDuration, vestingData };
+
+  const val = (r, fallback = "0") => r.status === "fulfilled" ? r.value : fallback;
+
+  return {
+    tgeTimestamp:    val(results[0]),
+    cliffDuration:   val(results[1]),
+    vestingDuration: val(results[2]),
+    vestingData:     val(results[3], null),
+  };
 }
 
 export async function claimTokens(account) {
