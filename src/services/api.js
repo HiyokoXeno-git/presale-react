@@ -73,6 +73,24 @@ export async function destroySession() {
   } catch { /* ignore */ }
 }
 
+export async function fetchBnbPrice() {
+  try {
+    const response = await fetch(
+      "https://api.binance.com/api/v3/ticker/24hr?symbol=BNBUSDT",
+      { signal: AbortSignal.timeout(5000) }
+    );
+    const data = await response.json();
+    if (!data?.lastPrice) return null;
+    return {
+      success: true,
+      price: parseFloat(data.lastPrice),
+      percentChange24h: parseFloat(data.priceChangePercent),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchBnbQuote(walletAddress, bnbAmount) {
   const response = await fetch(`${CONFIG.presaleApiBaseUrl}/signBnbQuote.php`, {
     method: "POST",

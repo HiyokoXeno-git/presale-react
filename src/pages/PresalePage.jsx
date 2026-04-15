@@ -4,7 +4,7 @@ import MessageModal from "../components/MessageModal";
 import { CONFIG } from "../config/config";
 import { useLanguage } from "../hooks/useLanguage";
 import { SUPPORTED_LANGS } from "../i18n/translations";
-import { destroySession, fetchBnbQuote, getAnnouncements, getUserTransactions, savePurchase, validateSession } from "../services/api";
+import { destroySession, fetchBnbPrice, fetchBnbQuote, getAnnouncements, getUserTransactions, savePurchase, validateSession } from "../services/api";
 import { dequeue, enqueue, getPending } from "../services/rescueQueue";
 import { formatDate, formatNumber, formatUnits } from "../services/format";
 import {
@@ -43,6 +43,8 @@ function PresalePage() {
     const [bnbUsdtDisplay, setBnbUsdtDisplay] = useState("");  // read-only USDT in BNB tab
     const [bnbThkDisplay, setBnbThkDisplay] = useState("");    // editable THK in BNB tab
     const [lastBnbPrice, setLastBnbPrice] = useState(null);    // BNB/USDT rate from last quote
+    const [liveBnbPrice, setLiveBnbPrice] = useState(null);    // live BNB/USD price (polled)
+    const [liveBnbChange, setLiveBnbChange] = useState(null);  // 24h % change
     const [bnbQuote, setBnbQuote] = useState(null);
     const [bnbQuoteMessage, setBnbQuoteMessage] = useState("");
     const [isFetchingBnbQuote, setIsFetchingBnbQuote] = useState(false);
@@ -699,6 +701,20 @@ function PresalePage() {
         return () => clearInterval(interval);
     }, [flushRescueQueue]);
 
+    // Live BNB price — fetch on mount, then refresh every 15 s
+    useEffect(() => {
+        async function loadPrice() {
+            const data = await fetchBnbPrice();
+            if (data?.price) {
+                setLiveBnbPrice(data.price);
+                setLiveBnbChange(data.percentChange24h ?? null);
+            }
+        }
+        loadPrice();
+        const interval = setInterval(loadPrice, 15000);
+        return () => clearInterval(interval);
+    }, []);
+
     useEffect(() => {
         if (!account) { setBnbQuote(null); setBnbQuoteMessage(""); return; }
         const trimmedAmount = String(bnbAmount ?? "").trim();
@@ -1347,7 +1363,25 @@ function PresalePage() {
                                 {/* ── BNB TAB ── */}
                                 {paymentTab === "BNB" && (
                                     <>
-                                        {/* BNB balance + min row */}
+                                        {/* BNB Market Price — above balance, same text style */}
+                                        <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "2px", textAlign: "right" }}>
+                                            BNB Price:{" "}
+                                            {liveBnbPrice ? (
+                                                <>
+                                                    <span style={{ color: "#F0F0FF" }}>
+                                                        ${liveBnbPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </span>
+                                                    {liveBnbChange !== null && (
+                                                        <span style={{ marginLeft: "4px", color: liveBnbChange >= 0 ? "#4cff91" : "#ff6060" }}>
+                                                            {liveBnbChange >= 0 ? "▲" : "▼"}{Math.abs(liveBnbChange).toFixed(2)}%
+                                                        </span>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <span style={{ color: "#555588" }}>...</span>
+                                            )}
+                                        </div>
+                                        {/* BNB balance */}
                                         {userStats?.bnbBalance !== undefined && (
                                             <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px", textAlign: "right" }}>
                                                 Balance: <span style={{ color: "#F0F0FF" }}>{formatNumber(formatUnits(userStats.bnbBalance, 18), 4)} BNB</span>
@@ -1397,6 +1431,12 @@ function PresalePage() {
                                                 display: "flex", alignItems: "center",
                                             }}>BNB</div>
                                         </div>
+                                        {/* BNB live price */}
+                                        {lastBnbPrice && (
+                                            <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px", textAlign: "right" }}>
+                                                1 BNB ≈ <span style={{ color: "#FFD84D" }}>${lastBnbPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD</span>
+                                            </div>
+                                        )}
                                         {/* USDT equivalent — read-only, computed from BNB/THK */}
                                         <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>≈ USDT value {isFetchingBnbQuote && <span style={{ color: "#FF9F1C" }}>⏳</span>}</div>
                                         <div style={{
@@ -1463,6 +1503,9 @@ function PresalePage() {
 
                                 <div style={{ marginTop: "14px", fontSize: "10px", color: "#6666AA", textAlign: "center" }}>
                                     {t("minimum")}
+                                </div>
+                                <div style={{ marginTop: "6px", fontSize: "10px", color: "#555588", textAlign: "center", fontStyle: "italic" }}>
+                                    {t("priceDisclaimer")}
                                 </div>
                             </div>
 
