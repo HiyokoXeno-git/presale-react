@@ -73,6 +73,19 @@ export async function destroySession() {
   } catch { /* ignore */ }
 }
 
+export async function fetchBnbPrice() {
+  try {
+    const response = await fetch(`${CONFIG.presaleApiBaseUrl}/getbnbprice.php`, {
+      signal: AbortSignal.timeout(10000),
+    });
+    const data = await response.json();
+    if (data?.success && data.price) return data;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchBnbQuote(walletAddress, bnbAmount) {
   const response = await fetch(`${CONFIG.presaleApiBaseUrl}/signBnbQuote.php`, {
     method: "POST",

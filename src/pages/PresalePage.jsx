@@ -4,7 +4,7 @@ import MessageModal from "../components/MessageModal";
 import { CONFIG } from "../config/config";
 import { useLanguage } from "../hooks/useLanguage";
 import { SUPPORTED_LANGS } from "../i18n/translations";
-import { destroySession, fetchBnbQuote, getAnnouncements, getUserTransactions, savePurchase, validateSession } from "../services/api";
+import { destroySession, fetchBnbPrice, fetchBnbQuote, getAnnouncements, getUserTransactions, savePurchase, validateSession } from "../services/api";
 import { dequeue, enqueue, getPending } from "../services/rescueQueue";
 import { formatDate, formatNumber, formatUnits } from "../services/format";
 import {
@@ -43,6 +43,8 @@ function PresalePage() {
     const [bnbUsdtDisplay, setBnbUsdtDisplay] = useState("");  // read-only USDT in BNB tab
     const [bnbThkDisplay, setBnbThkDisplay] = useState("");    // editable THK in BNB tab
     const [lastBnbPrice, setLastBnbPrice] = useState(null);    // BNB/USDT rate from last quote
+    const [liveBnbPrice, setLiveBnbPrice] = useState(null);    // live BNB/USD price (polled)
+    const [liveBnbChange, setLiveBnbChange] = useState(null);  // 24h % change
     const [bnbQuote, setBnbQuote] = useState(null);
     const [bnbQuoteMessage, setBnbQuoteMessage] = useState("");
     const [isFetchingBnbQuote, setIsFetchingBnbQuote] = useState(false);
@@ -699,6 +701,20 @@ function PresalePage() {
         return () => clearInterval(interval);
     }, [flushRescueQueue]);
 
+    // Live BNB price — fetch on mount, then refresh every 30 s
+    useEffect(() => {
+        async function loadPrice() {
+            const data = await fetchBnbPrice();
+            if (data?.price) {
+                setLiveBnbPrice(data.price);
+                setLiveBnbChange(data.percentChange24h ?? null);
+            }
+        }
+        loadPrice();
+        const interval = setInterval(loadPrice, 30000);
+        return () => clearInterval(interval);
+    }, []);
+
     useEffect(() => {
         if (!account) { setBnbQuote(null); setBnbQuoteMessage(""); return; }
         const trimmedAmount = String(bnbAmount ?? "").trim();
@@ -1347,6 +1363,43 @@ function PresalePage() {
                                 {/* ── BNB TAB ── */}
                                 {paymentTab === "BNB" && (
                                     <>
+                                        {/* Live BNB price ticker */}
+                                        <div style={{
+                                            display: "flex", alignItems: "center", justifyContent: "center",
+                                            gap: "8px", marginBottom: "12px",
+                                            background: "rgba(255,216,77,0.07)", border: "1px solid rgba(255,216,77,0.18)",
+                                            borderRadius: "10px", padding: "8px 14px",
+                                        }}>
+                                            {/* Pulsing live dot */}
+                                            <span style={{
+                                                width: "7px", height: "7px", borderRadius: "50%",
+                                                background: liveBnbPrice ? "#4cff91" : "#555",
+                                                display: "inline-block", flexShrink: 0,
+                                                boxShadow: liveBnbPrice ? "0 0 6px #4cff91" : "none",
+                                                animation: liveBnbPrice ? "bnbPulse 2s infinite" : "none",
+                                            }} />
+                                            <span style={{ fontSize: "12px", color: "#A0A0CC" }}>BNB/USD</span>
+                                            {liveBnbPrice ? (
+                                                <>
+                                                    <span style={{ fontSize: "15px", fontWeight: 700, color: "#FFD84D", letterSpacing: "0.02em" }}>
+                                                        ${liveBnbPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </span>
+                                                    {liveBnbChange !== null && (
+                                                        <span style={{
+                                                            fontSize: "11px", fontWeight: 600,
+                                                            color: liveBnbChange >= 0 ? "#4cff91" : "#ff6060",
+                                                            background: liveBnbChange >= 0 ? "rgba(76,255,145,0.1)" : "rgba(255,96,96,0.1)",
+                                                            borderRadius: "5px", padding: "2px 6px",
+                                                        }}>
+                                                            {liveBnbChange >= 0 ? "▲" : "▼"} {Math.abs(liveBnbChange).toFixed(2)}%
+                                                        </span>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <span style={{ fontSize: "13px", color: "#555588" }}>Loading...</span>
+                                            )}
+                                        </div>
+                                        <style>{`@keyframes bnbPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
                                         {/* BNB balance + min row */}
                                         {userStats?.bnbBalance !== undefined && (
                                             <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px", textAlign: "right" }}>
