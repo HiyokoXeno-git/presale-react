@@ -1671,15 +1671,15 @@ function PresalePage() {
                                                 date: cliffEnd > 0 ? formatDate(cliffEnd) : "Aug 1, 2026",
                                                 name: t("step3name"),
                                                 val: stepStates[2] === "done" ? "Unlocked" : stepStates[2] === "active" ? "Vesting Started" : "Not Started",
-                                                sub: "10% × 10 months",
+                                                sub: "Linear · 7 days",
                                                 valColor: "#00E5FF",
                                             },
                                             {
                                                 icon: "📅",
-                                                date: cliffEnd > 0 && vestEnd > 0 ? `${formatDate(cliffEnd)} — ${formatDate(vestEnd)}` : "Aug 2026 — May 2027",
+                                                date: cliffEnd > 0 && vestEnd > 0 ? `${formatDate(cliffEnd)} — ${formatDate(vestEnd)}` : "TGE + 1h — +7 days",
                                                 name: t("step4name"),
                                                 val: dailyAlloc !== "—" ? `${dailyAlloc} THK` : "—",
-                                                sub: "per month",
+                                                sub: "per day",
                                                 valColor: "#6AC645",
                                             },
                                             {
