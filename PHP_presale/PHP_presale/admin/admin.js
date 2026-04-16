@@ -74,6 +74,7 @@ async function connectWallet() {
         await loadUsers();
         await loadVestingStatus();
         await loadWithdrawableExcess();
+        await loadContractConfig();
 
     } catch (err) {
         alert(err.message);
@@ -121,12 +122,25 @@ async function loadVestingStatus() {
         const vestingTgeEl = document.getElementById("vestingTge");
         const vestingBalanceEl = document.getElementById("vestingBalance");
 
-        const tge = await vestingContract.methods
-            .tgeTimestamp()
-            .call();
+        const [tge, cliffSec, vestingSec] = await Promise.all([
+            vestingContract.methods.tgeTimestamp().call(),
+            vestingContract.methods.CLIFF_DURATION().call(),
+            vestingContract.methods.VESTING_DURATION().call()
+        ]);
 
         if (vestingTgeEl) {
             vestingTgeEl.innerText = formatTimestampToDateTime(tge);
+        }
+
+        const cliffEl = document.getElementById("vestingCliff");
+        const durationEl = document.getElementById("vestingDuration");
+
+        if (cliffEl) {
+            cliffEl.innerText = formatDuration(Number(cliffSec));
+        }
+
+        if (durationEl) {
+            durationEl.innerText = formatDuration(Number(vestingSec));
         }
 
         if (tokenContract && vestingBalanceEl) {
@@ -139,6 +153,13 @@ async function loadVestingStatus() {
     } catch (err) {
         console.error("loadVestingStatus error:", err);
     }
+}
+
+function formatDuration(seconds) {
+    if (!seconds || seconds <= 0) return 'Not set';
+    if (seconds < 3600) return `${Math.round(seconds / 60)} minute(s)`;
+    if (seconds < 86400) return `${Math.round(seconds / 3600)} hour(s)`;
+    return `${Math.round(seconds / 86400)} day(s)`;
 }
 
 function formatTimestampToDateTime(timestamp) {
@@ -319,6 +340,185 @@ async function setTGE() {
 
     } catch (err) {
         alert(err.message);
+    }
+}
+
+async function loadContractConfig() {
+    try {
+        if (!presaleContract) {
+            alert("Connect admin wallet first");
+            return;
+        }
+
+        const [vestingAddr, signer, treasury, usdtAddr] = await Promise.all([
+            presaleContract.methods.vesting().call(),
+            presaleContract.methods.priceSigner().call(),
+            presaleContract.methods.treasuryWallet().call(),
+            presaleContract.methods.usdt().call()
+        ]);
+
+        const vestingEl  = document.getElementById("onchainVesting");
+        const signerEl   = document.getElementById("onchainSigner");
+        const treasuryEl = document.getElementById("onchainTreasury");
+        const usdtEl     = document.getElementById("onchainUsdt");
+
+        const expectedVesting = CONFIG.vestingAddress.toLowerCase();
+
+        if (vestingEl) {
+            vestingEl.innerText = vestingAddr || "(not set)";
+            const match = vestingAddr && vestingAddr.toLowerCase() === expectedVesting;
+            vestingEl.style.color = match ? "#16a34a" : "#dc2626";
+            vestingEl.title = match ? "Matches config" : "MISMATCH — config expects " + CONFIG.vestingAddress;
+        }
+
+        if (signerEl) {
+            signerEl.innerText = signer || "(not set)";
+            const isZero = !signer || signer === "0x0000000000000000000000000000000000000000";
+            signerEl.style.color = isZero ? "#dc2626" : "#16a34a";
+        }
+
+        if (treasuryEl) treasuryEl.innerText = treasury || "(not set)";
+
+        if (usdtEl) {
+            usdtEl.innerText = usdtAddr || "(not set)";
+            const matchUsdt = usdtAddr && usdtAddr.toLowerCase() === CONFIG.usdtAddress.toLowerCase();
+            usdtEl.style.color = matchUsdt ? "#16a34a" : "#dc2626";
+            usdtEl.title = matchUsdt ? "Matches config" : "MISMATCH — config expects " + CONFIG.usdtAddress;
+        }
+
+    } catch (err) {
+        console.error("loadContractConfig error:", err);
+        alert(err.message);
+    }
+}
+
+async function setVesting() {
+    try {
+        if (!presaleContract) {
+            alert("Connect admin wallet first");
+            return;
+        }
+
+        const addr = document.getElementById("vestingAddressInput").value.trim();
+        if (!addr) {
+            alert("Enter vesting address");
+            return;
+        }
+
+        const statusEl = document.getElementById("vestingSetStatus");
+        if (statusEl) statusEl.innerText = "Sending transaction...";
+
+        await presaleContract.methods
+            .setVesting(addr)
+            .send({ from: account });
+
+        if (statusEl) {
+            statusEl.innerText = "Done! Vesting set to: " + addr;
+            statusEl.style.color = "#16a34a";
+        }
+
+        await loadContractConfig();
+
+    } catch (err) {
+        const statusEl = document.getElementById("vestingSetStatus");
+        if (statusEl) {
+            statusEl.innerText = "Error: " + err.message;
+            statusEl.style.color = "#dc2626";
+        }
+        console.error("setVesting error:", err);
+    }
+}
+
+async function loadServerSigner() {
+    const serverEl = document.getElementById("serverSigner");
+    const matchEl  = document.getElementById("signerMatchStatus");
+    const inputEl  = document.getElementById("signerAddressInput");
+
+    if (serverEl) serverEl.innerText = "Checking...";
+    if (matchEl)  matchEl.innerText  = "";
+
+    try {
+        const res  = await fetch('./api/checkSigner.php');
+        const data = await res.json();
+
+        if (!data.success) {
+            if (serverEl) serverEl.innerText = "Error: " + data.message;
+            return;
+        }
+
+        // Recover signer address in-browser using web3 ecrecover
+        const recovered = web3.eth.accounts.recover(data.testMsg, data.signature);
+        const recoveredLow = recovered.toLowerCase();
+
+        if (serverEl) {
+            serverEl.innerText = recovered;
+            serverEl.style.color = "#16a34a";
+        }
+
+        // Auto-fill the input field for convenience
+        if (inputEl && !inputEl.value) {
+            inputEl.value = recovered;
+        }
+
+        // Compare with on-chain signer
+        const onchainEl = document.getElementById("onchainSigner");
+        const onchainVal = onchainEl ? onchainEl.innerText.toLowerCase() : "";
+
+        if (onchainVal && onchainVal !== "-" && onchainVal !== "(not set)") {
+            const match = onchainVal === recoveredLow;
+            if (matchEl) {
+                matchEl.innerText  = match
+                    ? "✅ priceSigner matches — BNB purchase signatures will be valid."
+                    : "❌ MISMATCH — On-chain priceSigner does not match the server key. BNB purchases will fail. Call Set Price Signer with the address above.";
+                matchEl.style.color = match ? "#16a34a" : "#dc2626";
+            }
+        } else {
+            if (matchEl) {
+                matchEl.innerText  = "⚠️ On-chain priceSigner not loaded yet. Click Refresh Contract Config first.";
+                matchEl.style.color = "#d97706";
+            }
+        }
+
+    } catch (err) {
+        if (serverEl) serverEl.innerText = "Error: " + err.message;
+        console.error("loadServerSigner error:", err);
+    }
+}
+
+async function setPriceSigner() {
+    try {
+        if (!presaleContract) {
+            alert("Connect admin wallet first");
+            return;
+        }
+
+        const addr = document.getElementById("signerAddressInput").value.trim();
+        if (!addr) {
+            alert("Enter price signer address");
+            return;
+        }
+
+        const statusEl = document.getElementById("signerSetStatus");
+        if (statusEl) statusEl.innerText = "Sending transaction...";
+
+        await presaleContract.methods
+            .setPriceSigner(addr)
+            .send({ from: account });
+
+        if (statusEl) {
+            statusEl.innerText = "Done! Price signer set to: " + addr;
+            statusEl.style.color = "#16a34a";
+        }
+
+        await loadContractConfig();
+
+    } catch (err) {
+        const statusEl = document.getElementById("signerSetStatus");
+        if (statusEl) {
+            statusEl.innerText = "Error: " + err.message;
+            statusEl.style.color = "#dc2626";
+        }
+        console.error("setPriceSigner error:", err);
     }
 }
 

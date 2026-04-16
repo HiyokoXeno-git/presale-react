@@ -124,6 +124,8 @@
         <div class="title">Vesting Status</div>
 
         <div class="stat">TGE: <span id="vestingTge">-</span></div>
+        <div class="stat">Cliff Duration: <span id="vestingCliff">-</span></div>
+        <div class="stat">Vesting Duration: <span id="vestingDuration">-</span></div>
         <div class="stat">Current Vesting Wallet Balance: <span id="vestingBalance">-</span></div>
 
         <br>
@@ -262,6 +264,42 @@
 
     <div class="card">
 
+        <div class="title">Contract Config (On-chain)</div>
+
+        <div class="stat">Vesting Address (on presale contract): <span id="onchainVesting" style="font-family:monospace;">-</span></div>
+        <div class="stat">
+            Price Signer (on-chain):&nbsp; <span id="onchainSigner" style="font-family:monospace;">-</span>
+        </div>
+        <div class="stat">
+            Price Signer (server key): <span id="serverSigner" style="font-family:monospace;">-</span>
+            <button onclick="loadServerSigner()" style="padding:4px 10px; font-size:12px; margin-left:8px;">Check</button>
+        </div>
+        <div id="signerMatchStatus" style="margin-top:6px; font-size:13px; font-weight:bold;"></div>
+        <div class="stat">Treasury Wallet: <span id="onchainTreasury" style="font-family:monospace;">-</span></div>
+        <div class="stat">USDT Address (on presale contract): <span id="onchainUsdt" style="font-family:monospace;">-</span></div>
+
+        <br>
+        <button onclick="loadContractConfig()">Refresh Contract Config</button>
+
+        <hr style="margin:20px 0; border:none; border-top:1px solid #e5e7eb;">
+
+        <b>Set Vesting Address</b><br><br>
+        <input id="vestingAddressInput" placeholder="New vesting address" style="width:380px;">
+        <button onclick="setVesting()">Set Vesting</button>
+        <div id="vestingSetStatus" style="margin-top:8px; font-size:13px; color:#666;"></div>
+
+        <br>
+
+        <b>Set Price Signer</b><br><br>
+        <small style="color:#888;">Enter the server signer address (shown above after clicking Check), then click Set Price Signer.</small><br><br>
+        <input id="signerAddressInput" placeholder="New price signer address" style="width:380px;">
+        <button onclick="setPriceSigner()">Set Price Signer</button>
+        <div id="signerSetStatus" style="margin-top:8px; font-size:13px; color:#666;"></div>
+
+    </div>
+
+    <div class="card">
+
         <div class="title">Admin Controls</div>
 
         <button onclick="toggleSale()">Start / Stop Sale</button>
@@ -307,9 +345,9 @@
 
 </div>
 
-<script src="../presale/js/config.js"></script>
-<script src="../presale/js/abi.js"></script>
-<script src="./admin.js"></script>
+<script src="../presale/js/config.js?v=<?php echo filemtime(__DIR__.'/../presale/js/config.js'); ?>"></script>
+<script src="../presale/js/abi.js?v=<?php echo filemtime(__DIR__.'/../presale/js/abi.js'); ?>"></script>
+<script src="./admin.js?v=<?php echo filemtime(__DIR__.'/admin.js'); ?>"></script>
 
 </body>
 </html>

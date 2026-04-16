@@ -1,53 +1,73 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: *');
 
-$url = "https://api.binance.com/api/v3/ticker/bookTicker?symbol=BNBUSDT";
+$cacheFile = sys_get_temp_dir() . '/bnb_price_cache.json';
+$cacheTtl  = 20; // seconds
+
+// Serve from cache if fresh
+if (file_exists($cacheFile)) {
+    $cached = json_decode(file_get_contents($cacheFile), true);
+    if ($cached && isset($cached['_ts']) && (time() - $cached['_ts']) < $cacheTtl) {
+        unset($cached['_ts']);
+        $cached['cached'] = true;
+        echo json_encode($cached, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+}
+
+// Fetch fresh from CoinMarketCap
+$apiKey = getenv('HDT_CMC_API_KEY') ?: 'e60442c7-9fea-4371-87b6-795385771da2';
+$url    = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=BNB&convert=USD';
 
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, $url);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Accepts: application/json',
+    'X-CMC_PRO_API_KEY: ' . $apiKey,
+]);
 
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
 if (curl_errno($ch)) {
-    echo json_encode([
-        "success" => false,
-        "message" => "cURL error: " . curl_error($ch)
-    ], JSON_UNESCAPED_UNICODE);
     curl_close($ch);
+    // Return stale cache if available rather than an error
+    if (file_exists($cacheFile)) {
+        $stale = json_decode(file_get_contents($cacheFile), true);
+        if ($stale) { unset($stale['_ts']); $stale['stale'] = true; echo json_encode($stale, JSON_UNESCAPED_UNICODE); exit; }
+    }
+    echo json_encode(['success' => false, 'message' => 'cURL error'], JSON_UNESCAPED_UNICODE);
     exit;
 }
-
 curl_close($ch);
 
 if ($httpCode !== 200) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Binance API HTTP error",
-        "httpCode" => $httpCode,
-        "raw" => $response
-    ], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['success' => false, 'message' => 'CMC HTTP error', 'httpCode' => $httpCode], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 $data = json_decode($response, true);
-
-if (!isset($data['bidPrice'])) {
-    echo json_encode([
-        "success" => false,
-        "message" => "bidPrice not found",
-        "raw" => $data
-    ], JSON_UNESCAPED_UNICODE);
+if (!isset($data['data']['BNB']['quote']['USD']['price'])) {
+    echo json_encode(['success' => false, 'message' => 'BNB price not found'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-echo json_encode([
-    "success" => true,
-    "symbol" => $data['symbol'] ?? 'BNBUSDT',
-    "bidPrice" => $data['bidPrice'],
-    "askPrice" => $data['askPrice'] ?? null
-], JSON_UNESCAPED_UNICODE);
+$quote  = $data['data']['BNB']['quote']['USD'];
+$result = [
+    'success'          => true,
+    'price'            => (float)$quote['price'],
+    'percentChange24h' => isset($quote['percent_change_24h']) ? round((float)$quote['percent_change_24h'], 2) : null,
+    'updatedAt'        => time(),
+    '_ts'              => time(),
+];
+
+// Write cache
+@file_put_contents($cacheFile, json_encode($result));
+
+unset($result['_ts']);
+echo json_encode($result, JSON_UNESCAPED_UNICODE);
 ?>
