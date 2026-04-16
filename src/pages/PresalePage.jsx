@@ -36,6 +36,7 @@ function PresalePage() {
     const [usdtAmount, setUsdtAmount] = useState("");
     const [thkAmount, setThkAmount] = useState("");  // bidirectional THK input
     const [isBuying, setIsBuying] = useState(false);
+    const [usdtAllowance, setUsdtAllowance] = useState(null); // null=loading, "0"=needs approve, else approved
     // Keep ref in sync so session timer always sees current value (avoids stale closure)
     useEffect(() => { isBuyingRef.current = isBuying; }, [isBuying]);
     const [buyMessage, setBuyMessage] = useState("");
@@ -76,6 +77,15 @@ function PresalePage() {
     const langSwitcherRef = useRef(null);
 
     // ── Data loaders ──────────────────────────────────────────────
+    const refreshUsdtAllowance = useCallback(async (walletAddress) => {
+        try {
+            const allowance = await getUsdtAllowance(walletAddress);
+            setUsdtAllowance(String(allowance));
+        } catch {
+            setUsdtAllowance("0");
+        }
+    }, []);
+
     const loadChainData = useCallback(async (walletAddress) => {
         const [statsResult, userResult, vestingResult] = await Promise.allSettled([
             getPresaleStats(),
@@ -167,11 +177,13 @@ function PresalePage() {
                 setClaimMessage("Claim transaction failed.");
             }
         } catch (err) {
-            if (err?.code === 4001) {
-                setClaimMessage("Claim was cancelled.");
-            } else {
+            const rawMsg = String(err?.message || "").toLowerCase();
+            const cancelled = err?.code === 4001 ||
+                rawMsg.includes("user denied") || rawMsg.includes("user rejected");
+            if (!cancelled) {
                 setClaimMessage(err?.message || "Claim failed.");
             }
+            // User cancelled — no message needed
         } finally {
             setIsClaiming(false);
         }
@@ -427,7 +439,12 @@ function PresalePage() {
                 }
             }
         } catch (error) {
-            setBnbQuote(null); setBnbQuoteMessage(error.message || "Failed to fetch BNB quote.");
+            setBnbQuote(null);
+            const rawMsg = String(error?.message || "").toLowerCase();
+            const friendlyMsg = (rawMsg.includes("failed to fetch") || rawMsg.includes("networkerror") || rawMsg.includes("aborted") || rawMsg.includes("timed out"))
+                ? "Unable to fetch BNB price. Please check your connection and try again."
+                : (error?.message || "Failed to fetch BNB quote.");
+            setBnbQuoteMessage(friendlyMsg);
         } finally {
             setIsFetchingBnbQuote(false);
         }
@@ -478,6 +495,23 @@ function PresalePage() {
         return (raw * 66n * 1000000000000n).toString();
     }
 
+    async function handleApproveUsdt() {
+        if (isBuying) return;
+        try {
+            setIsBuying(true);
+            setBuyMessage("Approving USDT... Please confirm in your wallet.");
+            await approveUsdt(account);
+            await refreshUsdtAllowance(account);
+            setBuyMessage("");
+        } catch (err) {
+            const rawMsg = String(err?.message || "").toLowerCase();
+            const cancelled = err?.code === 4001 || rawMsg.includes("user denied") || rawMsg.includes("user rejected");
+            setBuyMessage(cancelled ? "Approval cancelled." : (err?.message || "Approval failed."));
+        } finally {
+            setIsBuying(false);
+        }
+    }
+
     async function handleBuyWithUsdt() {
         if (isBuying) return;
         let capturedTxHashForUI = null;
@@ -506,15 +540,7 @@ function PresalePage() {
             }
             // ──────────────────────────────────────────────────────────────
 
-            // Auto-approve if allowance is insufficient
-            const allowance = await getUsdtAllowance(account);
-            console.log("[handleBuyWithUsdt] allowance:", allowance, "needed:", usdtAmountRaw);
-            if (BigInt(allowance) < usdtRawBig) {
-                setBuyMessage("Step 1/2: Approving USDT... Please confirm in wallet.");
-                await approveUsdt(account);
-            }
-
-            setBuyMessage("Step 2/2: Purchasing... Please confirm in wallet.");
+            setBuyMessage("Purchasing... Please confirm in your wallet.");
 
             // Called immediately when the TX is broadcast (before mining).
             // Enqueue right away so the rescue queue has the entry even if receipt never fires.
@@ -553,11 +579,13 @@ function PresalePage() {
                 setUsdtAmount(""); setThkAmount(""); setBuyMessage("");
                 setModal({ type: "success", message: "Your THK tokens have been reserved!", txHash });
                 loadChainData(account);
+                refreshUsdtAllowance(account);
                 pollTxHistoryUntilNew(txHash);
             } else {
                 // Transaction confirmed on-chain — rescue queue will retry the DB save
                 setModal({ type: "success", message: "Transaction confirmed on-chain! Syncing data...", txHash });
                 loadChainData(account);
+                refreshUsdtAllowance(account);
                 pollTxHistoryUntilNew(txHash);
             }
         } catch (error) {
@@ -747,6 +775,13 @@ function PresalePage() {
         const timer = setTimeout(() => handleFetchBnbQuote(trimmedAmount), 300);
         return () => clearTimeout(timer);
     }, [account, bnbAmount]);
+
+    // Refresh USDT allowance whenever account connects or user switches to USDT tab
+    useEffect(() => {
+        if (!account || paymentTab !== "USDT") return;
+        setUsdtAllowance(null); // show loading state while fetching
+        refreshUsdtAllowance(account);
+    }, [account, paymentTab, refreshUsdtAllowance]);
 
     useEffect(() => {
         getAnnouncements().then(data => { if (data.length > 0) setAnnouncements(data); });
@@ -1308,82 +1343,112 @@ function PresalePage() {
                                 </div>
 
                                 {/* ── USDT TAB ── */}
-                                {paymentTab === "USDT" && (
-                                    <>
-                                        {userStats?.usdtBalance !== undefined && (
-                                            <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px", textAlign: "right" }}>
-                                                Balance: <span style={{ color: "#F0F0FF" }}>{formatNumber(formatUnits(userStats.usdtBalance, userStats?.usdtDecimals ?? 6), 2)} USDT</span>
-                                            </div>
-                                        )}
-                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>
-                                            <span>{t("amountToSpend")}</span>
-                                            <span style={{ color: "rgba(255,255,255,0.7)" }}>Min: 10 USDT</span>
-                                        </div>
-                                        <div style={{
-                                            display: "flex", alignItems: "center",
-                                            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
-                                            borderRadius: "12px", overflow: "hidden", marginBottom: "10px",
-                                        }}>
-                                            <input
-                                                type="text" placeholder="0.00" value={usdtAmount}
-                                                onChange={(e) => handleSpendChange(e.target.value)}
-                                                style={{
-                                                    flex: 1, background: "none", border: "none", outline: "none",
-                                                    color: "#F0F0FF", fontFamily: "'Outfit', sans-serif",
-                                                    fontSize: "16px", fontWeight: 400, padding: "11px 14px",
-                                                }}
-                                            />
-                                            {userStats?.usdtBalance && (
-                                                <button
-                                                    onClick={() => handleSpendChange(formatUnits(userStats.usdtBalance, userStats?.usdtDecimals ?? 6))}
-                                                    style={{
-                                                        background: "rgba(255,216,77,0.18)", border: "none", cursor: "pointer",
-                                                        color: "#FFD84D", fontFamily: "'Outfit', sans-serif",
-                                                        fontWeight: 800, fontSize: "10px", padding: "5px 10px",
-                                                        borderRadius: "6px", marginRight: "6px", letterSpacing: "0.06em",
-                                                    }}
-                                                >MAX</button>
+                                {paymentTab === "USDT" && (() => {
+                                    const isApproved = usdtAllowance !== null && BigInt(usdtAllowance) > 0n;
+                                    const isLoadingAllowance = usdtAllowance === null;
+                                    return (
+                                        <>
+                                            {userStats?.usdtBalance !== undefined && (
+                                                <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px", textAlign: "right" }}>
+                                                    Balance: <span style={{ color: "#F0F0FF" }}>{formatNumber(formatUnits(userStats.usdtBalance, userStats?.usdtDecimals ?? 6), 2)} USDT</span>
+                                                </div>
                                             )}
-                                            <div style={{
-                                                padding: "0 14px", fontFamily: "'Outfit', sans-serif",
-                                                fontWeight: 700, fontSize: "12px", color: "rgba(255,255,255,0.5)",
-                                                borderLeft: "1px solid rgba(255,255,255,0.07)", height: "100%",
-                                                display: "flex", alignItems: "center",
-                                            }}>USDT</div>
-                                        </div>
-                                        <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>🐣 {t("hykYouReceive")}</div>
-                                        <div style={{
-                                            display: "flex", alignItems: "center",
-                                            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,216,77,0.15)",
-                                            borderRadius: "12px", overflow: "hidden", marginBottom: "10px",
-                                        }}>
-                                            <input
-                                                type="text" placeholder="0" value={thkAmount}
-                                                onChange={(e) => handleThkChange(e.target.value)}
-                                                style={{
-                                                    flex: 1, background: "none", border: "none", outline: "none",
-                                                    color: "#FFD84D", fontFamily: "'Outfit', sans-serif",
-                                                    fontSize: "16px", fontWeight: 700, padding: "11px 14px",
-                                                }}
-                                            />
-                                            <div style={{
-                                                padding: "0 14px", fontFamily: "'Outfit', sans-serif",
-                                                fontWeight: 700, fontSize: "12px", color: "#FFD84D",
-                                                borderLeft: "1px solid rgba(255,216,77,0.15)", height: "100%",
-                                                display: "flex", alignItems: "center",
-                                            }}>THK</div>
-                                        </div>
-                                        {usdtAmount && !isValidUsdtAmount(usdtAmount) && (
-                                            <div style={{ fontSize: "11px", color: "#FF9F1C", textAlign: "center", marginBottom: "8px" }}>Minimum purchase is 10 USDT</div>
-                                        )}
-                                        <button onClick={handleBuyWithUsdt} disabled={!isCorrectNetwork || !isValidUsdtAmount(usdtAmount) || isBuying} style={btnBuyStyle(isCorrectNetwork && isValidUsdtAmount(usdtAmount) && !isBuying)}>
-                                            {!isCorrectNetwork ? "⚠️ Switch Network First" : isBuying ? `⏳ ${t("buying")}...` : t("buyNow")}
-                                        </button>
-                                        {buyMessage && (
-                                            <div style={{ marginTop: "10px", fontSize: "13px", color: buyMsgColor(buyMessage), textAlign: "center" }}>{buyMessage}</div>
-                                        )}
-                                    </>
-                                )}
+
+                                            {/* ── Step 1: Approve (no amount input) ── */}
+                                            {!isApproved && (
+                                                <>
+                                                    <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", textAlign: "center", marginBottom: "14px", lineHeight: 1.5 }}>
+                                                        First, approve hUSDT spending so the presale contract can accept your payment.
+                                                    </div>
+                                                    <button
+                                                        onClick={handleApproveUsdt}
+                                                        disabled={!isCorrectNetwork || isBuying || isLoadingAllowance}
+                                                        style={btnBuyStyle(isCorrectNetwork && !isBuying && !isLoadingAllowance)}
+                                                    >
+                                                        {!isCorrectNetwork ? "⚠️ Switch Network First"
+                                                            : isLoadingAllowance ? "⏳ Checking allowance..."
+                                                            : isBuying ? "⏳ Approving..."
+                                                            : "Approve USDT"}
+                                                    </button>
+                                                </>
+                                            )}
+
+                                            {/* ── Step 2: Amount inputs + Buy (only after approval) ── */}
+                                            {isApproved && (
+                                                <>
+                                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>
+                                                        <span>{t("amountToSpend")}</span>
+                                                        <span style={{ color: "rgba(255,255,255,0.7)" }}>Min: 10 USDT</span>
+                                                    </div>
+                                                    <div style={{
+                                                        display: "flex", alignItems: "center",
+                                                        background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+                                                        borderRadius: "12px", overflow: "hidden", marginBottom: "10px",
+                                                    }}>
+                                                        <input
+                                                            type="text" placeholder="0.00" value={usdtAmount}
+                                                            onChange={(e) => handleSpendChange(e.target.value)}
+                                                            style={{
+                                                                flex: 1, background: "none", border: "none", outline: "none",
+                                                                color: "#F0F0FF", fontFamily: "'Outfit', sans-serif",
+                                                                fontSize: "16px", fontWeight: 400, padding: "11px 14px",
+                                                            }}
+                                                        />
+                                                        {userStats?.usdtBalance && (
+                                                            <button
+                                                                onClick={() => handleSpendChange(formatUnits(userStats.usdtBalance, userStats?.usdtDecimals ?? 6))}
+                                                                style={{
+                                                                    background: "rgba(255,216,77,0.18)", border: "none", cursor: "pointer",
+                                                                    color: "#FFD84D", fontFamily: "'Outfit', sans-serif",
+                                                                    fontWeight: 800, fontSize: "10px", padding: "5px 10px",
+                                                                    borderRadius: "6px", marginRight: "6px", letterSpacing: "0.06em",
+                                                                }}
+                                                            >MAX</button>
+                                                        )}
+                                                        <div style={{
+                                                            padding: "0 14px", fontFamily: "'Outfit', sans-serif",
+                                                            fontWeight: 700, fontSize: "12px", color: "rgba(255,255,255,0.5)",
+                                                            borderLeft: "1px solid rgba(255,255,255,0.07)", height: "100%",
+                                                            display: "flex", alignItems: "center",
+                                                        }}>USDT</div>
+                                                    </div>
+                                                    <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>🐣 {t("hykYouReceive")}</div>
+                                                    <div style={{
+                                                        display: "flex", alignItems: "center",
+                                                        background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,216,77,0.15)",
+                                                        borderRadius: "12px", overflow: "hidden", marginBottom: "10px",
+                                                    }}>
+                                                        <input
+                                                            type="text" placeholder="0" value={thkAmount}
+                                                            onChange={(e) => handleThkChange(e.target.value)}
+                                                            style={{
+                                                                flex: 1, background: "none", border: "none", outline: "none",
+                                                                color: "#FFD84D", fontFamily: "'Outfit', sans-serif",
+                                                                fontSize: "16px", fontWeight: 700, padding: "11px 14px",
+                                                            }}
+                                                        />
+                                                        <div style={{
+                                                            padding: "0 14px", fontFamily: "'Outfit', sans-serif",
+                                                            fontWeight: 700, fontSize: "12px", color: "#FFD84D",
+                                                            borderLeft: "1px solid rgba(255,216,77,0.15)", height: "100%",
+                                                            display: "flex", alignItems: "center",
+                                                        }}>THK</div>
+                                                    </div>
+                                                    {usdtAmount && !isValidUsdtAmount(usdtAmount) && (
+                                                        <div style={{ fontSize: "11px", color: "#FF9F1C", textAlign: "center", marginBottom: "8px" }}>Minimum purchase is 10 USDT</div>
+                                                    )}
+                                                    <button onClick={handleBuyWithUsdt} disabled={!isCorrectNetwork || !isValidUsdtAmount(usdtAmount) || isBuying} style={btnBuyStyle(isCorrectNetwork && isValidUsdtAmount(usdtAmount) && !isBuying)}>
+                                                        {!isCorrectNetwork ? "⚠️ Switch Network First" : isBuying ? `⏳ ${t("buying")}...` : t("buyNow")}
+                                                    </button>
+                                                </>
+                                            )}
+
+                                            {buyMessage && (
+                                                <div style={{ marginTop: "10px", fontSize: "13px", color: buyMsgColor(buyMessage), textAlign: "center" }}>{buyMessage}</div>
+                                            )}
+                                        </>
+                                    );
+                                })()}
 
                                 {/* ── BNB TAB ── */}
                                 {paymentTab === "BNB" && (
@@ -1820,8 +1885,8 @@ function PresalePage() {
                                             </div>
                                             <div>
                                                 <div style={{ fontSize: "13px", fontWeight: 600, color: item.color || item.text_color || "#F0F0FF", lineHeight: 1.4, marginBottom: "3px" }}>{item.title}</div>
-                                                <div style={{ fontSize: "12px", color: "#6666AA", lineHeight: 1.5 }}>{item.body}</div>
-                                                <div style={{ fontSize: "11px", color: "rgba(102,102,170,0.6)", marginTop: "4px" }}>{item.time_label}</div>
+                                                <div style={{ fontSize: "12px", color: "#B8B8D8", lineHeight: 1.5 }}>{item.body}</div>
+                                                <div style={{ fontSize: "11px", color: "rgba(180,180,220,0.75)", marginTop: "4px" }}>{item.time_label}</div>
                                             </div>
                                         </div>
                                     ));

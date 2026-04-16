@@ -2,10 +2,10 @@ const CONFIG = {
     chainId: 97,
     chainHex: "0x61",
 
-    tokenAddress: "0xC171c790aBc13e368775f7112A1554708D52CD03",
-    usdtAddress: "0xf6d414B01309c281413F8FB469a945C0e6A2a477",
-    vestingAddress: "0xb13E20759334f7a0653F77b419e6773921F9788d",
-    presaleAddress: "0x9221cF6A6fD022438F57443D3CC1eee20b830395",
+    tokenAddress: "0x17B40DBFc5B5f8db3a5878232a96F3Eed73B9423",
+    usdtAddress: "0xD0D47E5C93448CA0A30953dDD7db3350362C5Fb9",
+    vestingAddress: "0xCb19532b53D9e123F23c962e0c473a6473646ec6",
+    presaleAddress: "0x806B1FaA90535f22757B5F4fd43F692b4c4e78e6",
 
     usdtDecimals: 6,
     tokenDecimals: 18,
