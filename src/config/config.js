@@ -11,8 +11,8 @@ export const CONFIG = {
   tokenAddress: "0x17B40DBFc5B5f8db3a5878232a96F3Eed73B9423",
   usdtAddress: "0xD0D47E5C93448CA0A30953dDD7db3350362C5Fb9",
 
-  presaleApiBaseUrl: "http://presale.hiyoko.io/presale/api",
-  adminApiBaseUrl: "http://presale.hiyoko.io/admin/api",
+  presaleApiBaseUrl: "https://presale.hiyoko.io/presale/api",
+  adminApiBaseUrl: "https://presale.hiyoko.io/admin/api",
 
   usdtDecimals: 6,
   tokenDecimals: 18,

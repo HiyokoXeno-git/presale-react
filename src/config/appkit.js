@@ -28,7 +28,7 @@ export const modal = createAppKit({
   metadata: {
     name: "HIYOKO Presale",
     description: "Buy HYK tokens in the HIYOKO presale",
-    url: "http://presale.hiyoko.io",
+    url: "https://presale.hiyoko.io",
     icons: ["/HiyokoLogo.png"],
   },
   features: {
