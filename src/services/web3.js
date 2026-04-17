@@ -292,19 +292,45 @@ export async function connectWithWalletConnect() {
     const unsub = modal.subscribeState((state) => {
       if (state.open) return; // modal still open — keep waiting
       unsub();
-      const provider = modal.getWalletProvider();
-      if (!provider) {
+
+      // getWalletProvider() returns null for injected wallets (MetaMask extension).
+      // Fall back to window.ethereum in that case.
+      const provider = modal.getWalletProvider() || window.ethereum;
+      const address = modal.getAddress();
+
+      if (!provider && !address) {
         reject(new Error("Connection cancelled."));
         return;
       }
+
+      // If we have an address from AppKit but no provider, resolve directly
+      if (!provider && address) {
+        resolve(address);
+        return;
+      }
+
       provider.request({ method: "eth_accounts" }).then((accounts) => {
         if (!accounts || accounts.length === 0) {
-          reject(new Error("No account found."));
+          // Last resort: use address from AppKit modal state
+          if (address) {
+            _wcProvider = provider;
+            resolve(address);
+          } else {
+            reject(new Error("No account found."));
+          }
         } else {
           _wcProvider = provider;
           resolve(accounts[0]);
         }
-      }).catch(reject);
+      }).catch((err) => {
+        // eth_accounts failed but AppKit has the address — use it
+        if (address) {
+          _wcProvider = provider;
+          resolve(address);
+        } else {
+          reject(err);
+        }
+      });
     });
   });
 }

@@ -250,7 +250,7 @@ function OnePage() {
       try { await switchNetwork(); } catch { /* handled in PresalePage */ }
       const acc = await getCurrentAccount();
       await createSession(acc);
-      transitionTo("/presale");
+      transitionTo("/my-page");
     } catch (err) {
       if (err?.code === -32002) setConnectError("Pending request in MetaMask. Please check the extension.");
       else if (err?.code === 4001 || err?.message?.includes("User rejected")) setConnectError("Connection rejected.");
@@ -366,7 +366,7 @@ function OnePage() {
         {/* Desktop: wallet button */}
         <div className="header-wallet-desktop">
           {walletConnected ? (
-            <button onClick={() => transitionTo("/presale")} style={{
+            <button onClick={() => transitionTo("/my-page")} style={{
               display: "flex", alignItems: "center", gap: "8px", padding: "11px 24px",
               background: "linear-gradient(135deg, #FFD84D, #FF9F1C)",
               color: "#06060F", border: "none", borderRadius: "100px",
@@ -437,7 +437,7 @@ function OnePage() {
           </div>
           <div className="mobile-bottom">
             {walletConnected ? (
-              <button onClick={() => { transitionTo("/presale"); setMobileMenuOpen(false); }} style={{
+              <button onClick={() => { transitionTo("/my-page"); setMobileMenuOpen(false); }} style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
                 padding: "13px 24px", width: "100%",
                 background: "linear-gradient(135deg, #FFD84D, #FF9F1C)",

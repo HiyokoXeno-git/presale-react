@@ -43,7 +43,7 @@ function AnimatedRoutes() {
       <div key={location.pathname} className="page-enter">
         <Routes location={location}>
           <Route path="/" element={<OnePage />} />
-          <Route path="/presale" element={<PresalePage />} />
+          <Route path="/my-page" element={<PresalePage />} />
         </Routes>
       </div>
     </>
