@@ -1626,8 +1626,8 @@ function PresalePage() {
                                                     ? formatDate(Math.floor(new Date(tx.created_at).getTime() / 1000))
                                                     : "—";
                                                 const amountLabel = isBnb
-                                                    ? `${tx.bnb_amount ?? "—"} BNB`
-                                                    : `${tx.usdt_amount ?? "—"} USDT`;
+                                                    ? `${tx.bnb_amount != null ? parseFloat(tx.bnb_amount).toFixed(4) : "—"} BNB`
+                                                    : `${tx.usdt_amount != null ? parseFloat(tx.usdt_amount).toFixed(4) : "—"} USDT`;
                                                 return (
                                                     <div key={tx.tx_hash || i} style={{
                                                         background: "rgba(255,255,255,0.03)",
