@@ -172,7 +172,7 @@ function PresalePage() {
             if (receipt?.status) {
                 setClaimMessage("Tokens claimed successfully!");
                 await loadChainData(account);
-                setModal({ type: "success", message: "THK tokens claimed successfully!", txHash: receipt.transactionHash });
+                setModal({ type: "success", message: "HDT tokens claimed successfully!", txHash: receipt.transactionHash });
             } else {
                 setClaimMessage("Claim transaction failed.");
             }
@@ -356,7 +356,7 @@ function PresalePage() {
                 if (saveResult?.success || saveResult?.message?.toLowerCase().includes("already saved")) {
                     dequeue(bnbPayload.txHash);
                     setBnbAmount(""); setBnbUsdtDisplay(""); setBnbThkDisplay(""); setBnbQuote(null); setBuyMessage("");
-                    setModal({ type: "success", message: "Your THK tokens have been reserved!", txHash });
+                    setModal({ type: "success", message: "Your HDT tokens have been reserved!", txHash });
                     loadChainData(account);
                     pollTxHistoryUntilNew(txHash);
                 } else {
@@ -577,7 +577,7 @@ function PresalePage() {
             if (saveResult?.success || saveResult?.message?.toLowerCase().includes("already saved")) {
                 dequeue(usdtPayload.txHash);
                 setUsdtAmount(""); setThkAmount(""); setBuyMessage("");
-                setModal({ type: "success", message: "Your THK tokens have been reserved!", txHash });
+                setModal({ type: "success", message: "Your HDT tokens have been reserved!", txHash });
                 loadChainData(account);
                 refreshUsdtAllowance(account);
                 pollTxHistoryUntilNew(txHash);
@@ -1155,7 +1155,7 @@ function PresalePage() {
                                 </div>
                                 <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "6px" }}>Total Allocation</div>
                                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 800, color: "#00E5FF", lineHeight: 1.1 }}>
-                                    {totalAlloc === "—" ? "0 THK" : `${totalAlloc} THK`}
+                                    {totalAlloc === "—" ? "0 HDT" : `${totalAlloc} HDT`}
                                 </div>
                                 <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "5px" }}>
                                     {totalAlloc !== "—" ? `≈ $${formatNumber((parseFloat(totalAlloc.replace(/,/g, "")) * 0.015).toFixed(2), 2)} ${t("atPresalePrice")}` : t("noAllocationYet")}
@@ -1173,7 +1173,7 @@ function PresalePage() {
                                 <span style={{ fontSize: "22px", marginBottom: "12px", display: "block" }}>📅</span>
                                 <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "6px" }}>{t("dailyAllocation")}</div>
                                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 800, color: "#FFD84D", lineHeight: 1.1 }}>
-                                    {dailyAlloc === "—" ? "— THK" : `${dailyAlloc} THK`}
+                                    {dailyAlloc === "—" ? "— HDT" : `${dailyAlloc} HDT`}
                                 </div>
                                 <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "5px" }}>{t("afterVestingStarts")}</div>
                             </div>
@@ -1189,10 +1189,10 @@ function PresalePage() {
                                 <span style={{ fontSize: "22px", marginBottom: "12px", display: "block" }}>✅</span>
                                 <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "6px" }}>{t("alreadyClaimed")}</div>
                                 <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 800, color: "#6AC645", lineHeight: 1.1 }}>
-                                    {claimed === "—" ? "0 THK" : `${claimed} THK`}
+                                    {claimed === "—" ? "0 HDT" : `${claimed} HDT`}
                                 </div>
                                 <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "5px" }}>
-                                    {t("Provided")}: {claimed === "—" ? "0 THK" : `${claimed} THK`}
+                                    {t("Provided")}: {claimed === "—" ? "0 HDT" : `${claimed} HDT`}
                                 </div>
                             </div>
                         </div>
@@ -1211,7 +1211,7 @@ function PresalePage() {
                                 <div>
                                     <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "4px" }}>{t("claimableNow")}</div>
                                     <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 800, color: claimableRaw > 0n ? "#6AC645" : "#6666AA", lineHeight: 1.1 }}>
-                                        {claimableNow} THK
+                                        {claimableNow} HDT
                                     </div>
                                     <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "3px", display: "flex", alignItems: "center", gap: "4px" }}>
                                         🔒 {t("lockedUntil")} {lockUntilDate}
@@ -1266,10 +1266,10 @@ function PresalePage() {
                                     <div>
                                         <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.12em", color: "#6666AA", marginBottom: "3px", fontWeight: 600 }}>{t("presalePrice")}</div>
                                         <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "28px", fontWeight: 900, color: "#FFD84D", lineHeight: 1, textShadow: "0 0 30px rgba(255,216,77,0.5)" }}>
-                                            $0.015 <span style={{ fontSize: "13px", color: "#6666AA", fontWeight: 400 }}>USDT / THK</span>
+                                            $0.015 <span style={{ fontSize: "13px", color: "#6666AA", fontWeight: 400 }}>USDT / HDT</span>
                                         </div>
                                         <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "3px" }}>
-                                            {paymentTab === "USDT" ? "= 66 THK per USDT" : "≈ $0.015 per THK"}
+                                            {paymentTab === "USDT" ? "= 66 HDT per USDT" : "≈ $0.015 per HDT"}
                                         </div>
                                     </div>
                                     <div style={{ textAlign: "right" }}>
@@ -1282,8 +1282,8 @@ function PresalePage() {
                                 {presaleStats && (
                                     <div style={{ marginBottom: "14px" }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#6666AA", marginBottom: "5px" }}>
-                                            <span>Sold: <span style={{ color: "#F0F0FF" }}>{soldDisplay} THK</span></span>
-                                            <span>Cap: <span style={{ color: "#F0F0FF" }}>{capDisplay} THK</span></span>
+                                            <span>Sold: <span style={{ color: "#F0F0FF" }}>{soldDisplay} HDT</span></span>
+                                            <span>Cap: <span style={{ color: "#F0F0FF" }}>{capDisplay} HDT</span></span>
                                         </div>
                                         <div style={{ height: "6px", background: "rgba(255,255,255,0.06)", borderRadius: "100px", overflow: "hidden" }}>
                                             <div style={{
@@ -1301,9 +1301,9 @@ function PresalePage() {
                                         {/* Presale Stats */}
                                         <div style={{ display: "flex", gap: "6px", marginTop: "12px", flexWrap: "wrap" }}>
                                             {[
-                                                { label: "Total Sold", value: `${soldDisplay} HYK`, color: "#FFD84D" },
-                                                { label: "Hard Cap", value: `${capDisplay} HYK`, color: "#00E5FF" },
-                                                { label: "Remaining", value: `${remainingDisplay} HYK`, color: "#AA55FF" },
+                                                { label: "Total Sold", value: `${soldDisplay} HDT`, color: "#FFD84D" },
+                                                { label: "Hard Cap", value: `${capDisplay} HDT`, color: "#00E5FF" },
+                                                { label: "Remaining", value: `${remainingDisplay} HDT`, color: "#AA55FF" },
                                             ].map(({ label, value, color }) => (
                                                 <div key={label} style={{
                                                     flex: 1, minWidth: "90px",
@@ -1432,7 +1432,7 @@ function PresalePage() {
                                                             fontWeight: 700, fontSize: "12px", color: "#FFD84D",
                                                             borderLeft: "1px solid rgba(255,216,77,0.15)", height: "100%",
                                                             display: "flex", alignItems: "center",
-                                                        }}>THK</div>
+                                                        }}>HDT</div>
                                                     </div>
                                                     {usdtAmount && !isValidUsdtAmount(usdtAmount) && (
                                                         <div style={{ fontSize: "11px", color: "#FF9F1C", textAlign: "center", marginBottom: "8px" }}>Minimum purchase is 10 USDT</div>
@@ -1555,7 +1555,7 @@ function PresalePage() {
                                                 fontWeight: 700, fontSize: "12px", color: "#FFD84D",
                                                 borderLeft: "1px solid rgba(255,216,77,0.15)", height: "100%",
                                                 display: "flex", alignItems: "center",
-                                            }}>THK</div>
+                                            }}>HDT</div>
                                         </div>
                                         {bnbQuoteMessage && (
                                             <div style={{ fontSize: "12px", color: "#ff6060", textAlign: "center", marginBottom: "10px" }}>{bnbQuoteMessage}</div>
@@ -1662,7 +1662,7 @@ function PresalePage() {
                                                                 <>
                                                                     <span style={{ color: "#6666AA", fontSize: "11px", margin: "0 6px" }}>→</span>
                                                                     <span style={{ color: "#FFD84D", fontWeight: 700 }}>
-                                                                        {formatNumber(parseFloat(tx.token_amount), 2)} HYK
+                                                                        {formatNumber(parseFloat(tx.token_amount), 4)} HDT
                                                                     </span>
                                                                 </>
                                                             )}
@@ -1750,7 +1750,7 @@ function PresalePage() {
                                                 icon: "📅",
                                                 date: cliffEnd > 0 && vestEnd > 0 ? `${formatDate(cliffEnd)} — ${formatDate(vestEnd)}` : "TGE + 1h — +7 days",
                                                 name: t("step4name"),
-                                                val: dailyAlloc !== "—" ? `${dailyAlloc} THK` : "—",
+                                                val: dailyAlloc !== "—" ? `${dailyAlloc} HDT` : "—",
                                                 sub: "per day",
                                                 valColor: "#6AC645",
                                             },
@@ -1758,7 +1758,7 @@ function PresalePage() {
                                                 icon: "🎉",
                                                 date: vestEnd > 0 ? formatDate(vestEnd) : "May 2027",
                                                 name: t("step5name"),
-                                                val: totalAlloc !== "—" ? `${totalAlloc} THK` : "—",
+                                                val: totalAlloc !== "—" ? `${totalAlloc} HDT` : "—",
                                                 sub: "100% received",
                                                 valColor: "#a78bfa",
                                             },
