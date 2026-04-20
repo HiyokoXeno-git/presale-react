@@ -3,19 +3,19 @@ import { EthersAdapter } from "@reown/appkit-adapter-ethers";
 import { defineChain } from "@reown/appkit/networks";
 import { CONFIG } from "./config";
 
-const bscTestnet = defineChain({
+const bscMainnet = defineChain({
   id: CONFIG.chainId,
   caipNetworkId: `eip155:${CONFIG.chainId}`,
   chainNamespace: "eip155",
   name: CONFIG.networkName,
   nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
   rpcUrls: {
-    default: { http: ["https://data-seed-prebsc-1-s1.binance.org:8545/"] },
+    default: { http: ["https://bsc-dataseed.binance.org/"] },
   },
   blockExplorers: {
-    default: { name: "BscScan Testnet", url: "https://testnet.bscscan.com" },
+    default: { name: "BscScan", url: "https://bscscan.com" },
   },
-  testnet: true,
+  testnet: false,
 });
 
 const ethersAdapter = new EthersAdapter();
@@ -23,8 +23,8 @@ const ethersAdapter = new EthersAdapter();
 export const modal = createAppKit({
   adapters: [ethersAdapter],
   projectId: CONFIG.walletConnectProjectId,
-  networks: [bscTestnet],
-  defaultNetwork: bscTestnet,
+  networks: [bscMainnet],
+  defaultNetwork: bscMainnet,
   metadata: {
     name: "HIYOKO Presale",
     description: "Buy HYK tokens in the HIYOKO presale",
