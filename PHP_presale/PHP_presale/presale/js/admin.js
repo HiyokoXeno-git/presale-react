@@ -78,9 +78,9 @@ async function loadAdminData() {
 
         const text =
 `Sale Active: ${saleActive}
-Total Sold: ${formatUnits(totalSold, 18)} HDT
-Sale Cap: ${formatUnits(saleCap, 18)} HDT
-Remaining For Sale: ${formatUnits(remainingSale, 18)} HDT
+Total Sold: ${formatUnits(totalSold, 18)} THK
+Sale Cap: ${formatUnits(saleCap, 18)} THK
+Remaining For Sale: ${formatUnits(remainingSale, 18)} THK
 TGE Timestamp: ${tgeTimestamp}`;
 
         document.getElementById("adminStatus").innerText = text;

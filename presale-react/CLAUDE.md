@@ -41,7 +41,7 @@ There are no tests configured.
 
 ## Architecture
 
-This is an HDT token presale dApp built with React 19 + Vite, targeting **BSC Testnet (chainId 97)**. It requires MetaMask in the browser.
+This is an THK token presale dApp built with React 19 + Vite, targeting **BSC Testnet (chainId 97)**. It requires MetaMask in the browser.
 
 ### Routing (`App.jsx`)
 - `/` → `OnePage` — wallet connect landing page; navigates to `/presale` on success
@@ -69,6 +69,6 @@ Single `CONFIG` object holds all environment-specific values: contract addresses
 
 ### Decimal conventions
 - USDT: 6 decimals (`usdtDecimals: 6`)
-- HDT token: 18 decimals (`tokenDecimals: 18`)
-- Token rate: 1 USDT = 66 HDT (hardcoded in `PresalePage` helpers)
+- THK token: 18 decimals (`tokenDecimals: 18`)
+- Token rate: 1 USDT = 66 THK (hardcoded in `PresalePage` helpers)
 - Raw USDT amounts are plain strings of the integer representation (no BigNumber library — uses native `BigInt`)

@@ -3,7 +3,7 @@
 <head>
 
 <meta charset="utf-8">
-<title>HDT Presale Admin</title>
+<title>THK Presale Admin</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -83,7 +83,7 @@
     <div class="card">
 
         <div class="title">
-        HDT Presale Admin
+        THK Presale Admin
         <span class="badge">ADMIN</span>
         </div>
 
@@ -103,15 +103,15 @@
         </div>
 
         <div class="stat">
-        Total Sold: <span id="totalSold">-</span> HDT
+        Total Sold: <span id="totalSold">-</span> THK
         </div>
 
         <div class="stat">
-        Hard Cap: <span id="saleCap">-</span> HDT
+        Hard Cap: <span id="saleCap">-</span> THK
         </div>
 
         <div class="stat">
-        Remaining: <span id="remaining">-</span> HDT
+        Remaining: <span id="remaining">-</span> THK
         </div>
 
         <br>
@@ -200,7 +200,7 @@
             </div>
 
             <div class="stat-card">
-                <div class="stat-title">Total HDT</div>
+                <div class="stat-title">Total THK</div>
                 <div class="stat-value" id="statTotalToken">0</div>
             </div>
         </div>
@@ -244,7 +244,7 @@
                         <th>Wallet Address</th>
                         <th>TX Hash</th>
                         <th>USDT</th>
-                        <th>HDT</th>
+                        <th>THK</th>
                         <th>Block</th>
                         <th>Created At</th>
                     </tr>
@@ -338,7 +338,7 @@
         <br><br>
 
         <input id="withdrawTo" placeholder="Recipient wallet address">
-        <input id="withdrawAmount" placeholder="Amount (HDT)">
+        <input id="withdrawAmount" placeholder="Amount (THK)">
         <button onclick="withdrawExcessTokens()">Withdraw Excess Tokens</button>
 
     </div>

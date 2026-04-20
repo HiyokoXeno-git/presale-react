@@ -148,7 +148,7 @@ async function loadVestingStatus() {
                 .balanceOf(CONFIG.vestingAddress)
                 .call();
 
-            vestingBalanceEl.innerText = `${formatUnits(vestingBalance, 18)} HDT`;
+            vestingBalanceEl.innerText = `${formatUnits(vestingBalance, 18)} THK`;
         }
     } catch (err) {
         console.error("loadVestingStatus error:", err);
@@ -204,15 +204,15 @@ async function checkClaimable() {
         const claimedEl = document.getElementById("claimedResult");
 
         if (claimableEl) {
-            claimableEl.innerText = `${formatUnits(claimable, 18)} HDT`;
+            claimableEl.innerText = `${formatUnits(claimable, 18)} THK`;
         }
 
         if (allocatedEl) {
-            allocatedEl.innerText = `${formatUnits(vestingInfo.totalAllocated, 18)} HDT`;
+            allocatedEl.innerText = `${formatUnits(vestingInfo.totalAllocated, 18)} THK`;
         }
 
         if (claimedEl) {
-            claimedEl.innerText = `${formatUnits(vestingInfo.claimed, 18)} HDT`;
+            claimedEl.innerText = `${formatUnits(vestingInfo.claimed, 18)} THK`;
         }
         
     } catch (err) {
@@ -532,7 +532,7 @@ async function loadWithdrawableExcess() {
 
         const el = document.getElementById("withdrawableExcess");
         if (el) {
-            el.innerText = `${formatUnits(amount, 18)} HDT`;
+            el.innerText = `${formatUnits(amount, 18)} THK`;
         }
     } catch (err) {
         console.error("loadWithdrawableExcess error:", err);

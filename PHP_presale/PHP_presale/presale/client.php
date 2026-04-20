@@ -3,7 +3,7 @@
 <head>
 
 <meta charset="utf-8">
-<title>HDT Token Presale</title>
+<title>THK Token Presale</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -94,7 +94,7 @@
 
     <div class="card">
 
-        <div class="title">HDT Token Presale</div>
+        <div class="title">THK Token Presale</div>
 
         <button onclick="connectWallet()">Connect Wallet</button>
 
@@ -109,13 +109,13 @@
 
     <div class="title">Presale Stats</div>
 
-    <div class="stat">Token Price : 1 USDT = 66 HDT</div>
+    <div class="stat">Token Price : 1 USDT = 66 THK</div>
 
-    <div class="stat">Total Sold : <span id="totalSold">0</span> HDT</div>
+    <div class="stat">Total Sold : <span id="totalSold">0</span> THK</div>
 
-    <div class="stat">Hard Cap : <span id="saleCap">0</span> HDT</div>
+    <div class="stat">Hard Cap : <span id="saleCap">0</span> THK</div>
 
-    <div class="stat">Remaining : <span id="remaining">0</span> HDT</div>
+    <div class="stat">Remaining : <span id="remaining">0</span> THK</div>
 
     <div class="progress">
         <div id="progressBar" class="progress-bar"></div>
@@ -132,7 +132,7 @@
 
     <div>BNB Price (USDT): <span id="bnbPrice">-</span></div>
 
-    <div class="stat">Purchased HDT : <span id="purchased">0</span></div>
+    <div class="stat">Purchased THK : <span id="purchased">0</span></div>
 
     <div class="stat">Claimable : <span id="claimable">0</span></div>
 
@@ -152,11 +152,11 @@
 
     <br>
 
-    <div class="stat">Total Allocated : <span id="totalAllocated">0</span> HDT</div>
+    <div class="stat">Total Allocated : <span id="totalAllocated">0</span> THK</div>
 
-    <div class="stat">Already Claimed : <span id="alreadyClaimed">0</span> HDT</div>
+    <div class="stat">Already Claimed : <span id="alreadyClaimed">0</span> THK</div>
 
-    <div class="stat">Estimated Release Per Day : <span id="releasePerDay">0</span> HDT</div>
+    <div class="stat">Estimated Release Per Day : <span id="releasePerDay">0</span> THK</div>
 
 </div>
 
@@ -182,7 +182,7 @@
         }
     </style>
 
-    <div class="title">Buy HDT</div>
+    <div class="title">Buy THK</div>
 
     <div style="margin-bottom:16px;">
         <button type="button" id="tabUsdt" class="buy-tab-btn" onclick="selectBuyTab('USDT')">USDT</button>
@@ -191,7 +191,7 @@
 
     <div id="approveSection">
         <div class="stat" style="margin-bottom:12px;">
-            You must approve USDT spending in MetaMask before purchasing HDT.
+            You must approve USDT spending in MetaMask before purchasing THK.
         </div>
 
         <button id="approveFirstButton" onclick="handleApproveFirst()">Approve USDT</button>
@@ -207,12 +207,12 @@
             <input id="buyAmount" placeholder="USDT Amount">
 
             <div style="margin-top:10px">
-                Estimated Receive : <span id="estimated">0</span> HDT
+                Estimated Receive : <span id="estimated">0</span> THK
             </div>
 
             <br>
 
-            <button id="buyButton" onclick="buyToken()">Buy HDT</button>
+            <button id="buyButton" onclick="buyToken()">Buy THK</button>
         </div>
 
         <div id="bnbBuyBox" style="display:none;">
@@ -227,7 +227,7 @@
             </div>
 
             <div style="margin-top:10px">
-                Estimated Receive : <span id="bnbEstimatedToken">-</span> HDT
+                Estimated Receive : <span id="bnbEstimatedToken">-</span> THK
             </div>
 
             <br>

@@ -4,7 +4,7 @@ $allowedOrigins = [
     'http://localhost:5174',
     'http://3.27.156.241',
     'http://52.65.232.128',
-    getenv('HDT_FRONTEND_URL') ?: '',
+    getenv('THK_FRONTEND_URL') ?: '',
 ];
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if (in_array($origin, array_filter($allowedOrigins), true)) {
@@ -30,9 +30,9 @@ use kornrunner\Keccak;
 use kornrunner\Secp256k1;
 use kornrunner\Serializer\HexSignatureSerializer;
 
-$presaleAddress = getenv('HDT_PRESALE_ADDRESS') ?: '0xD10383EE18322cACBC568eDa637a5Ad624925a81';
-$chainId = (int)(getenv('HDT_CHAIN_ID') ?: 56);
-$signerPrivateKey = getenv('HDT_PRICE_SIGNER_PRIVATE_KEY') ?: '';
+$presaleAddress = getenv('THK_PRESALE_ADDRESS') ?: '0xD10383EE18322cACBC568eDa637a5Ad624925a81';
+$chainId = (int)(getenv('THK_CHAIN_ID') ?: 56);
+$signerPrivateKey = getenv('THK_PRICE_SIGNER_PRIVATE_KEY') ?: '';
 $quoteTtlSeconds = 300;
 
 if ($signerPrivateKey === '') {
@@ -118,7 +118,7 @@ function decimalToRaw(string $value, int $decimals): string {
     return bcadd($wholeRaw, $fraction === '' ? '0' : $fraction, 0);
 }
 
-$apiKey = getenv('HDT_CMC_API_KEY') ?: 'e60442c7-9fea-4371-87b6-795385771da2';
+$apiKey = getenv('THK_CMC_API_KEY') ?: 'e60442c7-9fea-4371-87b6-795385771da2';
 
 $url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=BNB&convert=USD';
 

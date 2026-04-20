@@ -378,7 +378,7 @@ async function buyTokenByBnb() {
         await savePurchaseToDbBnb(receipt, currentBnbQuote, tokenAmount);
         hideLoading();
         await showMessageModal(`BNB purchase completed successfully.
-You purchased ${formatUnits(tokenAmount, 18)} HDT.`);
+You purchased ${formatUnits(tokenAmount, 18)} THK.`);
         resetBuyForm();
         await loadUserData();
         await loadVestingInfo();
@@ -608,7 +608,7 @@ Your balance is ${formatUnits(usdtBalance, 6)} USDT.`);
         await savePurchaseToDb(receipt, usdt, tokenAmount);
         hideLoading();
         await showMessageModal(`Purchase completed successfully.
-You purchased ${formatUnits(tokenAmount, 18)} HDT.`);
+You purchased ${formatUnits(tokenAmount, 18)} THK.`);
         resetBuyForm();
         await loadUserData();
         await updateEstimatedReceive();
@@ -641,7 +641,7 @@ async function claimToken() {
         await vestingContract.methods.claim().send({ from: account });
         hideLoading();
         await showMessageModal(`Claim completed successfully.
-Claimed ${formatUnits(claimable, 18)} HDT.`);
+Claimed ${formatUnits(claimable, 18)} THK.`);
         await loadUserData();
     } catch (err) {
         hideLoading();

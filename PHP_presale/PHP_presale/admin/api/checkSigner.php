@@ -7,9 +7,9 @@ require_once __DIR__ . '/../../vendor/autoload.php';
 use kornrunner\Keccak;
 use kornrunner\Secp256k1;
 
-$pk = getenv('HDT_PRICE_SIGNER_PRIVATE_KEY') ?: '';
+$pk = getenv('THK_PRICE_SIGNER_PRIVATE_KEY') ?: '';
 if ($pk === '') {
-    echo json_encode(['success' => false, 'message' => 'HDT_PRICE_SIGNER_PRIVATE_KEY not configured on server']);
+    echo json_encode(['success' => false, 'message' => 'THK_PRICE_SIGNER_PRIVATE_KEY not configured on server']);
     exit;
 }
 

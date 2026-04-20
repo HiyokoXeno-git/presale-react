@@ -3,7 +3,7 @@ $allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:5174',
     'http://3.27.156.241',
-    getenv('HDT_FRONTEND_URL') ?: '',
+    getenv('THK_FRONTEND_URL') ?: '',
 ];
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if (in_array($origin, array_filter($allowedOrigins), true)) {

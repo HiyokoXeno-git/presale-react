@@ -17,7 +17,7 @@ if (file_exists($cacheFile)) {
 }
 
 // Fetch fresh from CoinMarketCap
-$apiKey = getenv('HDT_CMC_API_KEY') ?: 'e60442c7-9fea-4371-87b6-795385771da2';
+$apiKey = getenv('THK_CMC_API_KEY') ?: 'e60442c7-9fea-4371-87b6-795385771da2';
 $url    = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=BNB&convert=USD';
 
 $ch = curl_init();
