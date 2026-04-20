@@ -1,15 +1,15 @@
 export const CONFIG = {
-  chainId: 97,
-  chainHex: "0x61",
-  networkName: "BSC Testnet",
+  chainId: 56,
+  chainHex: "0x38",
+  networkName: "BSC Mainnet",
 
   // Get your free Project ID at https://cloud.walletconnect.com
   walletConnectProjectId: "e518620b775fc7327c5c9c6b8f9282f6",
 
-  presaleAddress: "0x806B1FaA90535f22757B5F4fd43F692b4c4e78e6",
-  vestingAddress: "0xCb19532b53D9e123F23c962e0c473a6473646ec6",
-  tokenAddress: "0x17B40DBFc5B5f8db3a5878232a96F3Eed73B9423",
-  usdtAddress: "0xD0D47E5C93448CA0A30953dDD7db3350362C5Fb9",
+  presaleAddress: "0xD10383EE18322cACBC568eDa637a5Ad624925a81",
+  vestingAddress: "0x863D2189c55E3Ae663011bEf19159af8061398De",
+  tokenAddress: "0x3251afe0C8ed2451C6dC2bB371A593e567dBc510",
+  usdtAddress: "0x55d398326f99059fF775485246999027B3197955",
 
   presaleApiBaseUrl: "https://presale.hiyoko.io/presale/api",
   adminApiBaseUrl: "https://presale.hiyoko.io/admin/api",
@@ -17,8 +17,8 @@ export const CONFIG = {
   usdtDecimals: 6,
   tokenDecimals: 18,
 
-  // BSCScan Testnet API
-  bscscanApiUrl: "https://api-testnet.bscscan.com/api",
+  // BSCScan Mainnet API
+  bscscanApiUrl: "https://api.bscscan.com/api",
   bscscanApiKey: import.meta.env.VITE_BSCSCAN_API_KEY ?? "YourApiKeyToken",
 
   // Presale end date — May 1 2026 07:00 WIB = 2026-05-01T00:00:00Z (UTC)

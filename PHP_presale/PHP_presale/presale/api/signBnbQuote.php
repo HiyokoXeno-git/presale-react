@@ -30,8 +30,8 @@ use kornrunner\Keccak;
 use kornrunner\Secp256k1;
 use kornrunner\Serializer\HexSignatureSerializer;
 
-$presaleAddress = getenv('HDT_PRESALE_ADDRESS') ?: '0x806B1FaA90535f22757B5F4fd43F692b4c4e78e6';
-$chainId = (int)(getenv('HDT_CHAIN_ID') ?: 97);
+$presaleAddress = getenv('HDT_PRESALE_ADDRESS') ?: '0xD10383EE18322cACBC568eDa637a5Ad624925a81';
+$chainId = (int)(getenv('HDT_CHAIN_ID') ?: 56);
 $signerPrivateKey = getenv('HDT_PRICE_SIGNER_PRIVATE_KEY') ?: '';
 $quoteTtlSeconds = 300;
 
