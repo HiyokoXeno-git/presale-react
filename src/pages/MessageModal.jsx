@@ -72,7 +72,7 @@ export default function MessageModal({ type, message, txHash, onClose }) {
         {txHash && (
           <div style={{ marginBottom: "20px" }}>
             <a
-              href={`https://testnet.bscscan.com/tx/${txHash}`}
+              href={`https://bscscan.com/tx/${txHash}`}
               target="_blank"
               rel="noreferrer"
               style={{

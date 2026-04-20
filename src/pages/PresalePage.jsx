@@ -157,7 +157,7 @@ function PresalePage() {
             setSwitchNetworkMessage("");
             await switchNetwork();
         } catch (err) {
-            setSwitchNetworkMessage(err.code === 4001 ? "Network switch rejected." : (err.message || "Failed to switch network."));
+            setSwitchNetworkMessage(err.code === 4001 ? t("networkSwitchRejected") : (err.message || t("networkSwitchFailed")));
         } finally {
             setIsSwitchingNetwork(false);
         }
@@ -170,18 +170,18 @@ function PresalePage() {
             setClaimMessage("");
             const receipt = await claimTokens(account);
             if (receipt?.status) {
-                setClaimMessage("Tokens claimed successfully!");
+                setClaimMessage(t("claimSuccessInline"));
                 await loadChainData(account);
-                setModal({ type: "success", message: "HDT tokens claimed successfully!", txHash: receipt.transactionHash });
+                setModal({ type: "success", message: t("claimSuccessModal"), txHash: receipt.transactionHash });
             } else {
-                setClaimMessage("Claim transaction failed.");
+                setClaimMessage(t("claimTxFailed"));
             }
         } catch (err) {
             const rawMsg = String(err?.message || "").toLowerCase();
             const cancelled = err?.code === 4001 ||
                 rawMsg.includes("user denied") || rawMsg.includes("user rejected");
             if (!cancelled) {
-                setClaimMessage(err?.message || "Claim failed.");
+                setClaimMessage(err?.message || t("claimFailedMsg"));
             }
             // User cancelled — no message needed
         } finally {
@@ -225,51 +225,51 @@ function PresalePage() {
         if (code === 4001 || code === "ACTION_REJECTED" ||
             msg.includes("user denied") || msg.includes("user rejected") ||
             msg.includes("metamask tx signature") || msg.includes("cancelled by user")) {
-            return "Transaction rejected. You cancelled the request in your wallet.";
+            return t("errTxRejected");
         }
 
         // Transaction submitted but not confirmed yet (web3 polling timeout)
         // The tx may still be pending on-chain — DO NOT say "cancelled"
         if (msg.includes("not mined within") || msg.includes("50 blocks") ||
             msg.includes("transaction was not mined")) {
-            return `Transaction submitted but confirmation is taking longer than expected. Check BSCScan Testnet for your wallet address to see if it went through.`;
+            return t("errTxPendingBsc");
         }
 
         // Transaction replaced / sped up / dropped
         if (msg.includes("transaction was replaced") || msg.includes("replacement fee too low") ||
             code === "TRANSACTION_REPLACED") {
-            return "Transaction was replaced or dropped. Please check your wallet history.";
+            return t("errTxReplaced");
         }
 
         // Insufficient gas / funds
         if (msg.includes("insufficient funds") || msg.includes("not enough") ||
             msg.includes("insufficient balance")) {
-            return `Insufficient ${token === "BNB" ? "BNB" : "USDT or BNB"} balance to cover this transaction.`;
+            return token === "BNB" ? t("errInsufficientBnb") : t("errInsufficientUsdtBnb");
         }
 
         // Gas underpriced
         if (msg.includes("underpriced") || msg.includes("gas too low")) {
-            return "Transaction gas price too low. Please try again.";
+            return t("errGasTooLow");
         }
 
         // Nonce issues
         if (msg.includes("nonce too low") || msg.includes("nonce too high")) {
-            return "Nonce error — please reset your MetaMask account (Settings → Advanced → Reset Account) and try again.";
+            return t("errNonceError");
         }
 
         // Network / RPC error
         if (msg.includes("network") || msg.includes("disconnected") || msg.includes("rpc") ||
             msg.includes("connection") || msg.includes("timeout") || msg.includes("failed to fetch")) {
-            return "Network error. Please check your connection and try again.";
+            return t("errNetworkError");
         }
 
         // Contract revert (already handled in web3.js extractRevertReason, but just in case)
         if (msg.includes("revert") || msg.includes("execution reverted")) {
-            return "Transaction reverted by the contract. The presale may not be active or your purchase exceeds the limit.";
+            return t("errContractRevert");
         }
 
         // Fallback
-        return error?.message || `${token} purchase failed. Please try again.`;
+        return error?.message || t("errPurchaseFailed").replace("{token}", token);
     }
 
     async function handleBuyWithBnb() {
@@ -279,33 +279,33 @@ function PresalePage() {
         try {
             setIsBuying(true);
             setBuyMessage("");
-            if (!account) { setBuyMessage("Wallet is not connected."); return; }
+            if (!account) { setBuyMessage(t("errWalletNotConnected")); return; }
             const trimmedBnbAmount = String(bnbAmount ?? "").trim();
-            if (!trimmedBnbAmount) { setBuyMessage("Please enter BNB amount."); return; }
+            if (!trimmedBnbAmount) { setBuyMessage(t("errEnterBnbAmount")); return; }
 
             // Pre-flight: check priceSigner is configured on the contract
             const bnbPreflightStats = await getPresaleStats();
             console.log("[handleBuyWithBnb] presaleStats:", bnbPreflightStats);
             if (!bnbPreflightStats.saleActive) {
-                setBuyMessage("The presale is not currently active.");
+                setBuyMessage(t("errPresaleNotActive"));
                 return;
             }
             const zeroAddr = /^0x0+$/i;
             if (!bnbPreflightStats.priceSigner || zeroAddr.test(bnbPreflightStats.priceSigner)) {
-                setBuyMessage("Contract error: priceSigner is not configured on the presale contract. Please contact the team.");
+                setBuyMessage(t("errPriceSigner"));
                 return;
             }
 
             let quote = bnbQuote;
             if (!quote) {
                 quote = await fetchBnbQuote(account, trimmedBnbAmount);
-                if (!quote || quote.success === false) { setBuyMessage(quote?.message || "Failed to fetch BNB quote."); return; }
+                if (!quote || quote.success === false) { setBuyMessage(quote?.message || t("errFetchBnbQuote")); return; }
                 setBnbQuote(quote);
             }
             const now = Math.floor(Date.now() / 1000);
             if (!quote.deadline || now > Number(quote.deadline)) {
                 const refreshedQuote = await fetchBnbQuote(account, trimmedBnbAmount);
-                if (!refreshedQuote || refreshedQuote.success === false) { setBuyMessage(refreshedQuote?.message || "BNB quote expired."); return; }
+                if (!refreshedQuote || refreshedQuote.success === false) { setBuyMessage(refreshedQuote?.message || t("errBnbQuoteExpired")); return; }
                 quote = refreshedQuote;
                 setBnbQuote(refreshedQuote);
             }
@@ -316,8 +316,8 @@ function PresalePage() {
             const quoteDeadline = String(quote.deadline ?? "");
             const quoteDigest = String(quote.digest ?? "");
 
-            if (!usdtAmountRaw || !bnbAmountWei || !signature || !quoteDeadline) { setBuyMessage("BNB quote data is incomplete."); return; }
-            if (BigInt(usdtAmountRaw) < BigInt("10000000")) { setBuyMessage("Minimum purchase is 10 USDT worth of BNB."); return; }
+            if (!usdtAmountRaw || !bnbAmountWei || !signature || !quoteDeadline) { setBuyMessage(t("errBnbQuoteIncomplete")); return; }
+            if (BigInt(usdtAmountRaw) < BigInt("10000000")) { setBuyMessage(t("errMinBnbPurchase")); return; }
 
             const tokenAmountRaw = await getTokenAmount(usdtAmountRaw);
 
@@ -334,7 +334,7 @@ function PresalePage() {
                     blockNumber: null, chainId: String(CONFIG.chainId),
                     networkName: String(CONFIG.networkName)
                 });
-                setBuyMessage("Transaction submitted! Waiting for blockchain confirmation...");
+                setBuyMessage(t("msgTxSubmitted"));
             };
 
             const { receipt, txHash } = await buyWithBnb(account, bnbAmountWei, usdtAmountRaw, quoteDeadline, signature, onHashCaptured);
@@ -356,28 +356,28 @@ function PresalePage() {
                 if (saveResult?.success || saveResult?.message?.toLowerCase().includes("already saved")) {
                     dequeue(bnbPayload.txHash);
                     setBnbAmount(""); setBnbUsdtDisplay(""); setBnbThkDisplay(""); setBnbQuote(null); setBuyMessage("");
-                    setModal({ type: "success", message: "Your HDT tokens have been reserved!", txHash });
+                    setModal({ type: "success", message: t("msgTokensReserved"), txHash });
                     loadChainData(account);
                     pollTxHistoryUntilNew(txHash);
                 } else {
-                    setModal({ type: "success", message: "Transaction confirmed on-chain! Syncing data...", txHash });
+                    setModal({ type: "success", message: t("msgTxConfirmedSyncing"), txHash });
                     loadChainData(account);
                     pollTxHistoryUntilNew(txHash);
                 }
             } else {
-                setModal({ type: "error", message: "BNB purchase transaction failed." });
+                setModal({ type: "error", message: t("errBnbTxFailed") });
             }
         } catch (error) {
             const txHashForError = capturedTxHashForUI || error.txHash;
             if (txHashForError && isBlockTimeoutError(error)) {
                 setModal({
                     type: "error",
-                    message: "Transaction timeout: your transaction was not confirmed within 600 blocks. It may still be pending — check BSCScan for your wallet address.",
+                    message: t("errTxBlockTimeout"),
                     txHash: txHashForError,
                 });
             } else if (txHashForError) {
                 // TX was broadcast — already in rescue queue from onHashCaptured
-                setBuyMessage("Transaction submitted. Your purchase will be recorded automatically.");
+                setBuyMessage(t("msgTxSubmittedAuto"));
             } else {
                 const code = error?.code;
                 const msg  = String(error?.message || "").toLowerCase();
@@ -385,10 +385,10 @@ function PresalePage() {
                     msg.includes("user denied") || msg.includes("user rejected") ||
                     msg.includes("metamask tx signature") || msg.includes("cancelled by user");
                 if (isUserCancel) {
-                    setModal({ type: "cancelled", message: "You cancelled the transaction in your wallet. The page will reload." });
+                    setModal({ type: "cancelled", message: t("msgUserCancelled") });
                 } else if (isMetaMaskTimeoutError(error)) {
                     // MetaMask popup was not confirmed within 10 min — auto-expire the buy flow
-                    setModal({ type: "cancelled", message: "Transaction request expired after 10 minutes. The page will reload." });
+                    setModal({ type: "cancelled", message: t("msgTxExpired") });
                 } else {
                     setBuyMessage(classifyTxError(error, "BNB"));
                 }
@@ -408,13 +408,13 @@ function PresalePage() {
         try {
             setBnbQuoteMessage(""); setBnbQuote(null);
             const trimmedAmount = String(inputBnbAmount ?? "").trim();
-            if (!account) { setBnbQuoteMessage("Wallet is not connected."); return; }
+            if (!account) { setBnbQuoteMessage(t("errWalletNotConnected")); return; }
             if (!trimmedAmount) { setBnbQuote(null); return; }
             const numericAmount = Number(trimmedAmount);
-            if (!Number.isFinite(numericAmount) || numericAmount <= 0) { setBnbQuoteMessage("Please enter a valid BNB amount."); return; }
+            if (!Number.isFinite(numericAmount) || numericAmount <= 0) { setBnbQuoteMessage(t("errEnterValidBnb")); return; }
             setIsFetchingBnbQuote(true);
             const result = await fetchBnbQuote(account, trimmedAmount);
-            if (!result || result.success === false) { setBnbQuote(null); setBnbQuoteMessage(result?.message || "Failed to fetch BNB quote."); return; }
+            if (!result || result.success === false) { setBnbQuote(null); setBnbQuoteMessage(result?.message || t("errFetchBnbQuote")); return; }
             setBnbQuote(result);
             // Sync USDT display from quote result (always)
             const usdtVal = parseFloat(String(result.usdtAmount).replace(/,/g, ""));
@@ -499,14 +499,14 @@ function PresalePage() {
         if (isBuying) return;
         try {
             setIsBuying(true);
-            setBuyMessage("Approving USDT... Please confirm in your wallet.");
+            setBuyMessage(t("msgApprovingUsdt"));
             await approveUsdt(account);
             await refreshUsdtAllowance(account);
             setBuyMessage("");
         } catch (err) {
             const rawMsg = String(err?.message || "").toLowerCase();
             const cancelled = err?.code === 4001 || rawMsg.includes("user denied") || rawMsg.includes("user rejected");
-            setBuyMessage(cancelled ? "Approval cancelled." : (err?.message || "Approval failed."));
+            setBuyMessage(cancelled ? t("errApprovalCancelled") : (err?.message || t("errApprovalFailed")));
         } finally {
             setIsBuying(false);
         }
@@ -521,11 +521,11 @@ function PresalePage() {
             const tokenAmountRaw = getTokenAmountRawFromUsdtRaw(usdtAmountRaw);
 
             // ── Pre-flight checks ─────────────────────────────────────────
-            setBuyMessage("Checking presale status...");
+            setBuyMessage(t("msgCheckingPresale"));
             const freshStats = await getPresaleStats();
             console.log("[handleBuyWithUsdt] freshStats:", freshStats);
             if (!freshStats.saleActive) {
-                setBuyMessage("The presale is not currently active.");
+                setBuyMessage(t("errPresaleNotActive"));
                 return;
             }
 
@@ -535,12 +535,14 @@ function PresalePage() {
             const usdtBal = BigInt(freshUserStats.usdtBalance ?? "0");
             const usdtRawBig = BigInt(usdtAmountRaw);
             if (usdtBal < usdtRawBig) {
-                setBuyMessage(`Insufficient USDT balance. You have ${(Number(usdtBal) / 1e6).toFixed(2)} USDT, need ${usdtAmount} USDT.`);
+                setBuyMessage(t("errInsufficientUsdtBalance")
+                    .replace("{have}", (Number(usdtBal) / 1e6).toFixed(2))
+                    .replace("{need}", usdtAmount));
                 return;
             }
             // ──────────────────────────────────────────────────────────────
 
-            setBuyMessage("Purchasing... Please confirm in your wallet.");
+            setBuyMessage(t("msgPurchasingUsdt"));
 
             // Called immediately when the TX is broadcast (before mining).
             // Enqueue right away so the rescue queue has the entry even if receipt never fires.
@@ -554,12 +556,12 @@ function PresalePage() {
                     blockNumber: null, chainId: String(CONFIG.chainId),
                     networkName: String(CONFIG.networkName)
                 });
-                setBuyMessage("Transaction submitted! Waiting for blockchain confirmation...");
+                setBuyMessage(t("msgTxSubmitted"));
             };
 
             const { receipt, txHash } = await buyWithUsdt(account, usdtAmountRaw, onHashCaptured);
 
-            if (!receipt?.status) { setBuyMessage("USDT purchase transaction was not successful."); return; }
+            if (!receipt?.status) { setBuyMessage(t("errUsdtTxFailed")); return; }
 
             // Build full payload (blockNumber now known from receipt)
             const usdtPayload = {
@@ -577,13 +579,13 @@ function PresalePage() {
             if (saveResult?.success || saveResult?.message?.toLowerCase().includes("already saved")) {
                 dequeue(usdtPayload.txHash);
                 setUsdtAmount(""); setThkAmount(""); setBuyMessage("");
-                setModal({ type: "success", message: "Your HDT tokens have been reserved!", txHash });
+                setModal({ type: "success", message: t("msgTokensReserved"), txHash });
                 loadChainData(account);
                 refreshUsdtAllowance(account);
                 pollTxHistoryUntilNew(txHash);
             } else {
                 // Transaction confirmed on-chain — rescue queue will retry the DB save
-                setModal({ type: "success", message: "Transaction confirmed on-chain! Syncing data...", txHash });
+                setModal({ type: "success", message: t("msgTxConfirmedSyncing"), txHash });
                 loadChainData(account);
                 refreshUsdtAllowance(account);
                 pollTxHistoryUntilNew(txHash);
@@ -593,12 +595,12 @@ function PresalePage() {
             if (txHashForError && isBlockTimeoutError(error)) {
                 setModal({
                     type: "error",
-                    message: "Transaction timeout: your transaction was not confirmed within 600 blocks. It may still be pending — check BSCScan for your wallet address.",
+                    message: t("errTxBlockTimeout"),
                     txHash: txHashForError,
                 });
             } else if (txHashForError) {
                 // TX was broadcast — already in rescue queue from onHashCaptured
-                setBuyMessage("Transaction submitted. Your purchase will be recorded automatically.");
+                setBuyMessage(t("msgTxSubmittedAuto"));
             } else {
                 const code = error?.code;
                 const msg  = String(error?.message || "").toLowerCase();
@@ -606,10 +608,10 @@ function PresalePage() {
                     msg.includes("user denied") || msg.includes("user rejected") ||
                     msg.includes("metamask tx signature") || msg.includes("cancelled by user");
                 if (isUserCancel) {
-                    setModal({ type: "cancelled", message: "You cancelled the transaction in your wallet. The page will reload." });
+                    setModal({ type: "cancelled", message: t("msgUserCancelled") });
                 } else if (isMetaMaskTimeoutError(error)) {
                     // MetaMask popup was not confirmed within 10 min — auto-expire the buy flow
-                    setModal({ type: "cancelled", message: "Transaction request expired after 10 minutes. The page will reload." });
+                    setModal({ type: "cancelled", message: t("msgTxExpired") });
                 } else {
                     setBuyMessage(classifyTxError(error, "USDT"));
                 }
@@ -1648,7 +1650,7 @@ function PresalePage() {
                                                             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                                                 <span style={{ fontSize: "10px", color: "#6666AA" }}>{timeStr}</span>
                                                                 <a
-                                                                    href={`https://testnet.bscscan.com/tx/${tx.tx_hash}`}
+                                                                    href={`https://bscscan.com/tx/${tx.tx_hash}`}
                                                                     target="_blank" rel="noreferrer"
                                                                     style={{ fontSize: "10px", color: "#00E5FF", textDecoration: "none", fontWeight: 600 }}
                                                                 >↗ BSCScan</a>

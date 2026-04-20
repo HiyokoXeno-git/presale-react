@@ -214,6 +214,54 @@ export const TRANSLATIONS = {
     // Landing page – Footer
     footerRights: "© 2026 HIYOKO. All rights reserved.",
     footerDisclaimer: "The content of this site is not investment advice. Investing in cryptocurrencies involves risk. Please consider participating with a medium-to-long-term perspective.",
+    // Network switching
+    networkSwitchRejected: "Network switch rejected.",
+    networkSwitchFailed: "Failed to switch network.",
+    // Claim
+    claimSuccessInline: "Tokens claimed successfully!",
+    claimSuccessModal: "HDT tokens claimed successfully!",
+    claimTxFailed: "Claim transaction failed.",
+    claimFailedMsg: "Claim failed.",
+    // TX error messages
+    errTxRejected: "Transaction rejected. You cancelled the request in your wallet.",
+    errTxPendingBsc: "Transaction submitted but confirmation is taking longer than expected. Check BSCScan for your wallet address to see if it went through.",
+    errTxReplaced: "Transaction was replaced or dropped. Please check your wallet history.",
+    errInsufficientBnb: "Insufficient BNB balance to cover this transaction.",
+    errInsufficientUsdtBnb: "Insufficient USDT or BNB balance to cover this transaction.",
+    errGasTooLow: "Transaction gas price too low. Please try again.",
+    errNonceError: "Nonce error — please reset your MetaMask account (Settings → Advanced → Reset Account) and try again.",
+    errNetworkError: "Network error. Please check your connection and try again.",
+    errContractRevert: "Transaction reverted by the contract. The presale may not be active or your purchase exceeds the limit.",
+    // General buy flow
+    errWalletNotConnected: "Wallet is not connected.",
+    errPresaleNotActive: "The presale is not currently active.",
+    // BNB buy
+    errEnterBnbAmount: "Please enter BNB amount.",
+    errPriceSigner: "Contract error: priceSigner is not configured on the presale contract. Please contact the team.",
+    errFetchBnbQuote: "Failed to fetch BNB quote.",
+    errBnbQuoteExpired: "BNB quote expired.",
+    errBnbQuoteIncomplete: "BNB quote data is incomplete.",
+    errMinBnbPurchase: "Minimum purchase is 10 USDT worth of BNB.",
+    errEnterValidBnb: "Please enter a valid BNB amount.",
+    // Shared buy/tx flow
+    msgTxSubmitted: "Transaction submitted! Waiting for blockchain confirmation...",
+    msgTxSubmittedAuto: "Transaction submitted. Your purchase will be recorded automatically.",
+    msgTokensReserved: "Your HDT tokens have been reserved!",
+    msgTxConfirmedSyncing: "Transaction confirmed on-chain! Syncing data...",
+    errBnbTxFailed: "BNB purchase transaction failed.",
+    errTxBlockTimeout: "Transaction timeout: your transaction was not confirmed within 600 blocks. It may still be pending — check BSCScan for your wallet address.",
+    msgUserCancelled: "You cancelled the transaction in your wallet. The page will reload.",
+    msgTxExpired: "Transaction request expired after 10 minutes. The page will reload.",
+    // Approve USDT
+    msgApprovingUsdt: "Approving USDT... Please confirm in your wallet.",
+    errApprovalCancelled: "Approval cancelled.",
+    errApprovalFailed: "Approval failed.",
+    // USDT buy
+    msgCheckingPresale: "Checking presale status...",
+    msgPurchasingUsdt: "Purchasing... Please confirm in your wallet.",
+    errUsdtTxFailed: "USDT purchase transaction was not successful.",
+    errInsufficientUsdtBalance: "Insufficient USDT balance. You have {have} USDT, need {need} USDT.",
+    errPurchaseFailed: "{token} purchase failed. Please try again.",
   },
 
   id: {
@@ -421,6 +469,54 @@ export const TRANSLATIONS = {
     // Landing page – Footer
     footerRights: "© 2026 HIYOKO. Hak cipta dilindungi.",
     footerDisclaimer: "Konten situs ini bukan merupakan saran investasi. Berinvestasi dalam kripto melibatkan risiko. Harap pertimbangkan untuk berpartisipasi dengan perspektif jangka menengah hingga panjang.",
+    // Network switching
+    networkSwitchRejected: "Penggantian jaringan ditolak.",
+    networkSwitchFailed: "Gagal mengganti jaringan.",
+    // Claim
+    claimSuccessInline: "Token berhasil diklaim!",
+    claimSuccessModal: "Token HDT berhasil diklaim!",
+    claimTxFailed: "Transaksi klaim gagal.",
+    claimFailedMsg: "Klaim gagal.",
+    // TX error messages
+    errTxRejected: "Transaksi ditolak. Anda membatalkan permintaan di wallet.",
+    errTxPendingBsc: "Transaksi telah dikirim tetapi konfirmasi membutuhkan waktu lebih lama. Cek BSCScan untuk alamat wallet Anda.",
+    errTxReplaced: "Transaksi digantikan atau dibatalkan. Periksa riwayat wallet Anda.",
+    errInsufficientBnb: "Saldo BNB tidak cukup untuk transaksi ini.",
+    errInsufficientUsdtBnb: "Saldo USDT atau BNB tidak cukup untuk transaksi ini.",
+    errGasTooLow: "Harga gas terlalu rendah. Silakan coba lagi.",
+    errNonceError: "Kesalahan nonce — reset akun MetaMask Anda (Pengaturan → Lanjutan → Reset Akun) dan coba lagi.",
+    errNetworkError: "Kesalahan jaringan. Periksa koneksi Anda dan coba lagi.",
+    errContractRevert: "Transaksi dibatalkan oleh kontrak. Presale mungkin tidak aktif atau pembelian Anda melebihi batas.",
+    // General buy flow
+    errWalletNotConnected: "Wallet tidak terhubung.",
+    errPresaleNotActive: "Presale sedang tidak aktif.",
+    // BNB buy
+    errEnterBnbAmount: "Masukkan jumlah BNB.",
+    errPriceSigner: "Kesalahan kontrak: priceSigner belum dikonfigurasi. Hubungi tim.",
+    errFetchBnbQuote: "Gagal mengambil harga BNB.",
+    errBnbQuoteExpired: "Harga BNB kedaluwarsa.",
+    errBnbQuoteIncomplete: "Data harga BNB tidak lengkap.",
+    errMinBnbPurchase: "Minimum pembelian setara 10 USDT dalam BNB.",
+    errEnterValidBnb: "Masukkan jumlah BNB yang valid.",
+    // Shared buy/tx flow
+    msgTxSubmitted: "Transaksi dikirim! Menunggu konfirmasi blockchain...",
+    msgTxSubmittedAuto: "Transaksi dikirim. Pembelian Anda akan direkam otomatis.",
+    msgTokensReserved: "Token HDT Anda telah dipesan!",
+    msgTxConfirmedSyncing: "Transaksi dikonfirmasi on-chain! Menyinkronkan data...",
+    errBnbTxFailed: "Transaksi pembelian BNB gagal.",
+    errTxBlockTimeout: "Timeout transaksi: tidak dikonfirmasi dalam 600 blok. Mungkin masih pending — cek BSCScan untuk alamat wallet Anda.",
+    msgUserCancelled: "Anda membatalkan transaksi di wallet. Halaman akan dimuat ulang.",
+    msgTxExpired: "Permintaan transaksi kedaluwarsa setelah 10 menit. Halaman akan dimuat ulang.",
+    // Approve USDT
+    msgApprovingUsdt: "Menyetujui USDT... Konfirmasi di wallet Anda.",
+    errApprovalCancelled: "Persetujuan dibatalkan.",
+    errApprovalFailed: "Persetujuan gagal.",
+    // USDT buy
+    msgCheckingPresale: "Memeriksa status presale...",
+    msgPurchasingUsdt: "Memproses pembelian... Konfirmasi di wallet Anda.",
+    errUsdtTxFailed: "Transaksi pembelian USDT tidak berhasil.",
+    errInsufficientUsdtBalance: "Saldo USDT tidak cukup. Anda punya {have} USDT, butuh {need} USDT.",
+    errPurchaseFailed: "Pembelian {token} gagal. Silakan coba lagi.",
   },
 
   ja: {
@@ -628,6 +724,54 @@ export const TRANSLATIONS = {
     // Landing page – Footer
     footerRights: "© 2026 HIYOKO. All rights reserved.",
     footerDisclaimer: "本サイトの内容は投資助言ではありません。仮想通貨への投資にはリスクが伴います。プレセール参加は中長期の視点で検討してください。",
+    // Network switching
+    networkSwitchRejected: "ネットワーク切替が拒否されました。",
+    networkSwitchFailed: "ネットワーク切替に失敗しました。",
+    // Claim
+    claimSuccessInline: "トークンを受け取りました！",
+    claimSuccessModal: "HDTトークンを受け取りました！",
+    claimTxFailed: "受取トランザクションが失敗しました。",
+    claimFailedMsg: "受取に失敗しました。",
+    // TX error messages
+    errTxRejected: "トランザクションが拒否されました。ウォレットでキャンセルされました。",
+    errTxPendingBsc: "トランザクションは送信されましたが、確認に時間がかかっています。BSCScanでウォレットアドレスを確認してください。",
+    errTxReplaced: "トランザクションが置き換えまたは削除されました。ウォレット履歴を確認してください。",
+    errInsufficientBnb: "BNB残高がトランザクションを処理するために不足しています。",
+    errInsufficientUsdtBnb: "USDTまたはBNB残高が不足しています。",
+    errGasTooLow: "ガス価格が低すぎます。もう一度お試しください。",
+    errNonceError: "Nonceエラー — MetaMaskアカウントをリセットしてください（設定 → 詳細 → アカウントをリセット）。",
+    errNetworkError: "ネットワークエラー。接続を確認してもう一度お試しください。",
+    errContractRevert: "コントラクトによりトランザクションがリバートされました。プレセールが非アクティブか購入上限を超えている可能性があります。",
+    // General buy flow
+    errWalletNotConnected: "ウォレットが接続されていません。",
+    errPresaleNotActive: "プレセールは現在アクティブではありません。",
+    // BNB buy
+    errEnterBnbAmount: "BNB金額を入力してください。",
+    errPriceSigner: "コントラクトエラー: priceSignerが設定されていません。チームにお問い合わせください。",
+    errFetchBnbQuote: "BNB見積の取得に失敗しました。",
+    errBnbQuoteExpired: "BNB見積が期限切れです。",
+    errBnbQuoteIncomplete: "BNB見積データが不完全です。",
+    errMinBnbPurchase: "最低購入額はBNB相当10 USDTです。",
+    errEnterValidBnb: "有効なBNB金額を入力してください。",
+    // Shared buy/tx flow
+    msgTxSubmitted: "トランザクション送信済み！ブロックチェーンの確認を待っています...",
+    msgTxSubmittedAuto: "トランザクションを送信しました。購入は自動的に記録されます。",
+    msgTokensReserved: "HDTトークンが予約されました！",
+    msgTxConfirmedSyncing: "トランザクションがオンチェーンで確認されました！データを同期中...",
+    errBnbTxFailed: "BNB購入トランザクションが失敗しました。",
+    errTxBlockTimeout: "タイムアウト: トランザクションが600ブロック以内に確認されませんでした。まだ保留中の可能性があります — BSCScanで確認してください。",
+    msgUserCancelled: "ウォレットでトランザクションをキャンセルしました。ページを再読込します。",
+    msgTxExpired: "トランザクションリクエストが10分後に期限切れになりました。ページを再読込します。",
+    // Approve USDT
+    msgApprovingUsdt: "USDTを承認中... ウォレットで確認してください。",
+    errApprovalCancelled: "承認がキャンセルされました。",
+    errApprovalFailed: "承認に失敗しました。",
+    // USDT buy
+    msgCheckingPresale: "プレセール状態を確認中...",
+    msgPurchasingUsdt: "購入処理中... ウォレットで確認してください。",
+    errUsdtTxFailed: "USDT購入トランザクションが失敗しました。",
+    errInsufficientUsdtBalance: "USDT残高が不足しています。残高: {have} USDT、必要: {need} USDT。",
+    errPurchaseFailed: "{token}購入に失敗しました。もう一度お試しください。",
   },
 };
 

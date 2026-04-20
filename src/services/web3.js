@@ -242,7 +242,6 @@ export async function getUsdtDecimals() {
   try {
     const dec = await getUsdtContract().methods.decimals().call();
     const parsed = Number(dec);
-    // Sanity check: USDT always uses 6 decimals on BSC; reject out-of-range values
     _usdtDecimals = (parsed >= 0 && parsed <= 18) ? parsed : CONFIG.usdtDecimals;
   } catch {
     _usdtDecimals = CONFIG.usdtDecimals; // fallback to config
@@ -438,8 +437,8 @@ export async function switchNetwork() {
             chainId: CONFIG.chainHex,
             chainName: CONFIG.networkName,
             nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
-            rpcUrls: ["https://data-seed-prebsc-1-s1.binance.org:8545/"],
-            blockExplorerUrls: ["https://testnet.bscscan.com"],
+            rpcUrls: ["https://bsc-dataseed.binance.org/"],
+            blockExplorerUrls: ["https://bscscan.com"],
           },
         ],
       });
