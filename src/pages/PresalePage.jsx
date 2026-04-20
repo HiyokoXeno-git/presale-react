@@ -40,6 +40,7 @@ function PresalePage() {
     // Keep ref in sync so session timer always sees current value (avoids stale closure)
     useEffect(() => { isBuyingRef.current = isBuying; }, [isBuying]);
     const [buyMessage, setBuyMessage] = useState("");
+    const [buyMsgVariant, setBuyMsgVariant] = useState("error"); // "progress"|"pending"|"cancelled"|"error"
     const [bnbAmount, setBnbAmount] = useState("");
     const [bnbUsdtDisplay, setBnbUsdtDisplay] = useState("");  // read-only USDT in BNB tab
     const [bnbThkDisplay, setBnbThkDisplay] = useState("");    // editable THK in BNB tab
@@ -189,15 +190,16 @@ function PresalePage() {
         }
     }
 
-    function buyMsgColor(msg) {
-        if (!msg) return "#ff6060";
-        // Green for in-progress steps
-        if (msg.startsWith("Step") || msg.includes("Checking") || msg.includes("Approving")) return "#FF9F1C";
-        // Yellow warning for submitted-but-pending
-        if (msg.includes("BSCScan") || msg.includes("taking longer") || msg.includes("replaced")) return "#FFD84D";
-        // Orange for cancelled by user (not really an error)
-        if (msg.includes("cancelled") || msg.includes("rejected")) return "#FF9F1C";
-        // Red for actual errors
+    function setMsg(text, variant = "error") {
+        setBuyMessage(text);
+        setBuyMsgVariant(variant);
+    }
+
+    function buyMsgColor() {
+        if (!buyMessage) return "#ff6060";
+        if (buyMsgVariant === "progress")  return "#FF9F1C";
+        if (buyMsgVariant === "pending")   return "#FFD84D";
+        if (buyMsgVariant === "cancelled") return "#FF9F1C";
         return "#ff6060";
     }
 
@@ -279,33 +281,33 @@ function PresalePage() {
         try {
             setIsBuying(true);
             setBuyMessage("");
-            if (!account) { setBuyMessage(t("errWalletNotConnected")); return; }
+            if (!account) { setMsg(t("errWalletNotConnected")); return; }
             const trimmedBnbAmount = String(bnbAmount ?? "").trim();
-            if (!trimmedBnbAmount) { setBuyMessage(t("errEnterBnbAmount")); return; }
+            if (!trimmedBnbAmount) { setMsg(t("errEnterBnbAmount")); return; }
 
             // Pre-flight: check priceSigner is configured on the contract
             const bnbPreflightStats = await getPresaleStats();
             console.log("[handleBuyWithBnb] presaleStats:", bnbPreflightStats);
             if (!bnbPreflightStats.saleActive) {
-                setBuyMessage(t("errPresaleNotActive"));
+                setMsg(t("errPresaleNotActive"));
                 return;
             }
             const zeroAddr = /^0x0+$/i;
             if (!bnbPreflightStats.priceSigner || zeroAddr.test(bnbPreflightStats.priceSigner)) {
-                setBuyMessage(t("errPriceSigner"));
+                setMsg(t("errPriceSigner"));
                 return;
             }
 
             let quote = bnbQuote;
             if (!quote) {
                 quote = await fetchBnbQuote(account, trimmedBnbAmount);
-                if (!quote || quote.success === false) { setBuyMessage(quote?.message || t("errFetchBnbQuote")); return; }
+                if (!quote || quote.success === false) { setMsg(quote?.message || t("errFetchBnbQuote")); return; }
                 setBnbQuote(quote);
             }
             const now = Math.floor(Date.now() / 1000);
             if (!quote.deadline || now > Number(quote.deadline)) {
                 const refreshedQuote = await fetchBnbQuote(account, trimmedBnbAmount);
-                if (!refreshedQuote || refreshedQuote.success === false) { setBuyMessage(refreshedQuote?.message || t("errBnbQuoteExpired")); return; }
+                if (!refreshedQuote || refreshedQuote.success === false) { setMsg(refreshedQuote?.message || t("errBnbQuoteExpired")); return; }
                 quote = refreshedQuote;
                 setBnbQuote(refreshedQuote);
             }
@@ -316,8 +318,8 @@ function PresalePage() {
             const quoteDeadline = String(quote.deadline ?? "");
             const quoteDigest = String(quote.digest ?? "");
 
-            if (!usdtAmountRaw || !bnbAmountWei || !signature || !quoteDeadline) { setBuyMessage(t("errBnbQuoteIncomplete")); return; }
-            if (BigInt(usdtAmountRaw) < BigInt("10000000")) { setBuyMessage(t("errMinBnbPurchase")); return; }
+            if (!usdtAmountRaw || !bnbAmountWei || !signature || !quoteDeadline) { setMsg(t("errBnbQuoteIncomplete")); return; }
+            if (BigInt(usdtAmountRaw) < BigInt("10000000")) { setMsg(t("errMinBnbPurchase")); return; }
 
             const tokenAmountRaw = await getTokenAmount(usdtAmountRaw);
 
@@ -334,7 +336,7 @@ function PresalePage() {
                     blockNumber: null, chainId: String(CONFIG.chainId),
                     networkName: String(CONFIG.networkName)
                 });
-                setBuyMessage(t("msgTxSubmitted"));
+                setMsg(t("msgTxSubmitted"), "progress");
             };
 
             const { receipt, txHash } = await buyWithBnb(account, bnbAmountWei, usdtAmountRaw, quoteDeadline, signature, onHashCaptured);
@@ -377,7 +379,7 @@ function PresalePage() {
                 });
             } else if (txHashForError) {
                 // TX was broadcast — already in rescue queue from onHashCaptured
-                setBuyMessage(t("msgTxSubmittedAuto"));
+                setMsg(t("msgTxSubmittedAuto"), "pending");
             } else {
                 const code = error?.code;
                 const msg  = String(error?.message || "").toLowerCase();
@@ -390,7 +392,7 @@ function PresalePage() {
                     // MetaMask popup was not confirmed within 10 min — auto-expire the buy flow
                     setModal({ type: "cancelled", message: t("msgTxExpired") });
                 } else {
-                    setBuyMessage(classifyTxError(error, "BNB"));
+                    setMsg(classifyTxError(error, "BNB"));
                 }
             }
         } finally {
@@ -499,14 +501,14 @@ function PresalePage() {
         if (isBuying) return;
         try {
             setIsBuying(true);
-            setBuyMessage(t("msgApprovingUsdt"));
+            setMsg(t("msgApprovingUsdt"), "progress");
             await approveUsdt(account);
             await refreshUsdtAllowance(account);
             setBuyMessage("");
         } catch (err) {
             const rawMsg = String(err?.message || "").toLowerCase();
             const cancelled = err?.code === 4001 || rawMsg.includes("user denied") || rawMsg.includes("user rejected");
-            setBuyMessage(cancelled ? t("errApprovalCancelled") : (err?.message || t("errApprovalFailed")));
+            setMsg(cancelled ? t("errApprovalCancelled") : (err?.message || t("errApprovalFailed")), cancelled ? "cancelled" : "error");
         } finally {
             setIsBuying(false);
         }
@@ -521,11 +523,11 @@ function PresalePage() {
             const tokenAmountRaw = getTokenAmountRawFromUsdtRaw(usdtAmountRaw);
 
             // ── Pre-flight checks ─────────────────────────────────────────
-            setBuyMessage(t("msgCheckingPresale"));
+            setMsg(t("msgCheckingPresale"), "progress");
             const freshStats = await getPresaleStats();
             console.log("[handleBuyWithUsdt] freshStats:", freshStats);
             if (!freshStats.saleActive) {
-                setBuyMessage(t("errPresaleNotActive"));
+                setMsg(t("errPresaleNotActive"));
                 return;
             }
 
@@ -535,14 +537,14 @@ function PresalePage() {
             const usdtBal = BigInt(freshUserStats.usdtBalance ?? "0");
             const usdtRawBig = BigInt(usdtAmountRaw);
             if (usdtBal < usdtRawBig) {
-                setBuyMessage(t("errInsufficientUsdtBalance")
+                setMsg(t("errInsufficientUsdtBalance")
                     .replace("{have}", (Number(usdtBal) / 1e6).toFixed(2))
                     .replace("{need}", usdtAmount));
                 return;
             }
             // ──────────────────────────────────────────────────────────────
 
-            setBuyMessage(t("msgPurchasingUsdt"));
+            setMsg(t("msgPurchasingUsdt"), "progress");
 
             // Called immediately when the TX is broadcast (before mining).
             // Enqueue right away so the rescue queue has the entry even if receipt never fires.
@@ -556,12 +558,12 @@ function PresalePage() {
                     blockNumber: null, chainId: String(CONFIG.chainId),
                     networkName: String(CONFIG.networkName)
                 });
-                setBuyMessage(t("msgTxSubmitted"));
+                setMsg(t("msgTxSubmitted"), "progress");
             };
 
             const { receipt, txHash } = await buyWithUsdt(account, usdtAmountRaw, onHashCaptured);
 
-            if (!receipt?.status) { setBuyMessage(t("errUsdtTxFailed")); return; }
+            if (!receipt?.status) { setMsg(t("errUsdtTxFailed")); return; }
 
             // Build full payload (blockNumber now known from receipt)
             const usdtPayload = {
@@ -600,7 +602,7 @@ function PresalePage() {
                 });
             } else if (txHashForError) {
                 // TX was broadcast — already in rescue queue from onHashCaptured
-                setBuyMessage(t("msgTxSubmittedAuto"));
+                setMsg(t("msgTxSubmittedAuto"), "pending");
             } else {
                 const code = error?.code;
                 const msg  = String(error?.message || "").toLowerCase();
@@ -613,7 +615,7 @@ function PresalePage() {
                     // MetaMask popup was not confirmed within 10 min — auto-expire the buy flow
                     setModal({ type: "cancelled", message: t("msgTxExpired") });
                 } else {
-                    setBuyMessage(classifyTxError(error, "USDT"));
+                    setMsg(classifyTxError(error, "USDT"));
                 }
             }
         } finally {
@@ -1446,7 +1448,7 @@ function PresalePage() {
                                             )}
 
                                             {buyMessage && (
-                                                <div style={{ marginTop: "10px", fontSize: "13px", color: buyMsgColor(buyMessage), textAlign: "center" }}>{buyMessage}</div>
+                                                <div style={{ marginTop: "10px", fontSize: "13px", color: buyMsgColor(), textAlign: "center" }}>{buyMessage}</div>
                                             )}
                                         </>
                                     );
@@ -1570,7 +1572,7 @@ function PresalePage() {
                                             {!isCorrectNetwork ? "⚠️ Switch Network First" : isBuying ? "⏳ Processing..." : "BUY NOW"}
                                         </button>
                                         {buyMessage && (
-                                            <div style={{ marginTop: "10px", fontSize: "13px", color: buyMsgColor(buyMessage), textAlign: "center" }}>{buyMessage}</div>
+                                            <div style={{ marginTop: "10px", fontSize: "13px", color: buyMsgColor(), textAlign: "center" }}>{buyMessage}</div>
                                         )}
                                     </>
                                 )}

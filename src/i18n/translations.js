@@ -262,6 +262,14 @@ export const TRANSLATIONS = {
     errUsdtTxFailed: "USDT purchase transaction was not successful.",
     errInsufficientUsdtBalance: "Insufficient USDT balance. You have {have} USDT, need {need} USDT.",
     errPurchaseFailed: "{token} purchase failed. Please try again.",
+    // MessageModal
+    modalSuccessTitle: "Purchase Successful",
+    modalCancelledTitle: "Transaction Cancelled",
+    modalFailedTitle: "Transaction Failed",
+    modalDoneBtn: "Done",
+    modalOkBtn: "OK",
+    modalCloseBtn: "Close",
+    modalViewBscScan: "View on BSCScan",
   },
 
   id: {
@@ -517,6 +525,14 @@ export const TRANSLATIONS = {
     errUsdtTxFailed: "Transaksi pembelian USDT tidak berhasil.",
     errInsufficientUsdtBalance: "Saldo USDT tidak cukup. Anda punya {have} USDT, butuh {need} USDT.",
     errPurchaseFailed: "Pembelian {token} gagal. Silakan coba lagi.",
+    // MessageModal
+    modalSuccessTitle: "Pembelian Berhasil",
+    modalCancelledTitle: "Transaksi Dibatalkan",
+    modalFailedTitle: "Transaksi Gagal",
+    modalDoneBtn: "Selesai",
+    modalOkBtn: "OK",
+    modalCloseBtn: "Tutup",
+    modalViewBscScan: "Lihat di BSCScan",
   },
 
   ja: {
@@ -772,6 +788,14 @@ export const TRANSLATIONS = {
     errUsdtTxFailed: "USDT購入トランザクションが失敗しました。",
     errInsufficientUsdtBalance: "USDT残高が不足しています。残高: {have} USDT、必要: {need} USDT。",
     errPurchaseFailed: "{token}購入に失敗しました。もう一度お試しください。",
+    // MessageModal
+    modalSuccessTitle: "購入成功",
+    modalCancelledTitle: "取引キャンセル",
+    modalFailedTitle: "取引失敗",
+    modalDoneBtn: "完了",
+    modalOkBtn: "OK",
+    modalCloseBtn: "閉じる",
+    modalViewBscScan: "BSCScanで確認",
   },
 };
 

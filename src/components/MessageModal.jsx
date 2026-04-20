@@ -1,4 +1,7 @@
+import { useLanguage } from "../hooks/useLanguage";
+
 export default function MessageModal({ type, message, txHash, onClose }) {
+  const { t } = useLanguage();
   if (!message) return null;
 
   const isSuccess   = type === "success";
@@ -8,8 +11,8 @@ export default function MessageModal({ type, message, txHash, onClose }) {
   const glowColor   = isSuccess ? "rgba(106,198,69,0.1)" : isCancelled ? "rgba(255,159,28,0.1)" : "rgba(255,80,80,0.1)";
   const borderColor = isSuccess ? "rgba(106,198,69,0.3)" : isCancelled ? "rgba(255,159,28,0.3)" : "rgba(255,80,80,0.3)";
   const icon        = isSuccess ? "✅" : isCancelled ? "⚠️" : "❌";
-  const title       = isSuccess ? "Purchase Successful" : isCancelled ? "Transaction Cancelled" : "Transaction Failed";
-  const btnLabel    = isSuccess ? "Done" : isCancelled ? "OK" : "Close";
+  const title       = isSuccess ? t("modalSuccessTitle") : isCancelled ? t("modalCancelledTitle") : t("modalFailedTitle");
+  const btnLabel    = isSuccess ? t("modalDoneBtn") : isCancelled ? t("modalOkBtn") : t("modalCloseBtn");
   const btnBg       = isSuccess
     ? "linear-gradient(135deg, #6AC645, #4ade80)"
     : isCancelled
@@ -85,7 +88,7 @@ export default function MessageModal({ type, message, txHash, onClose }) {
                 border: "1px solid rgba(0,229,255,0.2)",
               }}
             >
-              🔗 View on BSCScan
+              🔗 {t("modalViewBscScan")}
             </a>
           </div>
         )}
