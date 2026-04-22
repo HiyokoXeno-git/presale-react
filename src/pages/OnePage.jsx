@@ -32,7 +32,7 @@ const SEGMENT_DATA = DONUT_SEGMENTS.reduce((acc, seg) => {
 function DonutChart() {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%" }}>
-      <svg viewBox="0 0 320 320" style={{ width: "100%", maxWidth: "420px", overflow: "visible" }}>
+      <svg viewBox="0 0 320 320" style={{ width: "100%", maxWidth: "520px", overflow: "visible" }}>
         <defs>
           <linearGradient id="presaleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#FF9F1C" />
