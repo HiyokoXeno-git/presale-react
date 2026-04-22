@@ -35,7 +35,7 @@ function PresalePage() {
 
     // Buy form
     const [usdtAmount, setUsdtAmount] = useState("");
-    const [thkAmount, setThkAmount] = useState("");  // bidirectional THK input
+    const [thkAmount, setThkAmount] = useState("");  // bidirectional HYK input
     const [isBuying, setIsBuying] = useState(false);
     const [usdtAllowance, setUsdtAllowance] = useState(null); // null=loading, "0"=needs approve, else approved
     // Keep ref in sync so session timer always sees current value (avoids stale closure)
@@ -44,7 +44,7 @@ function PresalePage() {
     const [buyMsgVariant, setBuyMsgVariant] = useState("error"); // "progress"|"pending"|"cancelled"|"error"
     const [bnbAmount, setBnbAmount] = useState("");
     const [bnbUsdtDisplay, setBnbUsdtDisplay] = useState("");  // read-only USDT in BNB tab
-    const [bnbThkDisplay, setBnbThkDisplay] = useState("");    // editable THK in BNB tab
+    const [bnbThkDisplay, setBnbThkDisplay] = useState("");    // editable HYK in BNB tab
     const [lastBnbPrice, setLastBnbPrice] = useState(null);    // BNB/USDT rate from last quote
     const [_liveBnbPrice, setLiveBnbPrice] = useState(null);    // live BNB/USD price (polled) — display not yet implemented
     const [_liveBnbChange, setLiveBnbChange] = useState(null);  // 24h % change — display not yet implemented
@@ -54,7 +54,7 @@ function PresalePage() {
     const [paymentTab, setPaymentTab] = useState("USDT");
     const [modal, setModal] = useState(null);
     const lastEditedBnbFieldRef = useRef("bnb"); // "bnb" | "thk" — tracks which field user last edited
-    const bnbUsdtTargetRef = useRef(null); // USDT target when user types THK with no prior BNB price
+    const bnbUsdtTargetRef = useRef(null); // USDT target when user types HYK with no prior BNB price
     const isBuyingRef = useRef(false); // always-current mirror of isBuying state (avoids stale closure in session timer)
 
     // Presale stats from blockchain
@@ -433,7 +433,7 @@ function PresalePage() {
             const usdtVal = parseFloat(String(result.usdtAmount).replace(/,/g, ""));
             const thkVal = parseFloat(String(result.tokenAmount).replace(/,/g, ""));
             if (!isNaN(usdtVal)) setBnbUsdtDisplay(usdtVal.toFixed(6));
-            // Only sync THK display if user didn't manually type in the THK field
+            // Only sync HYK display if user didn't manually type in the HYK field
             if (!isNaN(thkVal) && lastEditedBnbFieldRef.current !== "thk") {
                 setBnbThkDisplay(Math.floor(thkVal).toString());
             }
@@ -441,7 +441,7 @@ function PresalePage() {
             if (!isNaN(usdtVal) && numericAmount > 0) {
                 const price = usdtVal / numericAmount;
                 setLastBnbPrice(price);
-                // If user was typing THK with no prior price, recalculate the correct BNB amount.
+                // If user was typing HYK with no prior price, recalculate the correct BNB amount.
                 // Only act on the target that was set at call-time (usdtTargetSnapshot) to avoid
                 // using a stale value from a concurrent call that updated the ref mid-flight.
                 if (editedFieldSnapshot === "thk" && usdtTargetSnapshot != null &&
@@ -468,7 +468,7 @@ function PresalePage() {
         lastEditedBnbFieldRef.current = "bnb";
         const v = normalizeUsdtInput(val);
         setBnbAmount(v);
-        // USDT and THK will be updated when quote comes back (debounced)
+        // USDT and HYK will be updated when quote comes back (debounced)
         if (!v || Number(v) <= 0) { setBnbUsdtDisplay(""); setBnbThkDisplay(""); setBnbQuote(null); }
     }
 
@@ -478,7 +478,7 @@ function PresalePage() {
         setBnbThkDisplay(v);
         const thk = Number(v);
         if (!v || thk <= 0) { setBnbUsdtDisplay(""); setBnbAmount(""); setBnbQuote(null); return; }
-        // USDT = THK / 66
+        // USDT = HYK / 66
         const usdt = (thk / 66).toFixed(6);
         setBnbUsdtDisplay(usdt);
         // BNB = USDT / rate — triggers debounced quote fetch to get accurate values
@@ -506,7 +506,7 @@ function PresalePage() {
     function getTokenAmountRawFromUsdtRaw(usdtRaw) {
         const raw = BigInt(usdtRaw);
         // usdtRaw is in CONFIG.usdtDecimals precision (6 for contract interface).
-        // THK has 18 decimals, so scale = 10^(18 - 6) = 10^12.
+        // HYK has 18 decimals, so scale = 10^(18 - 6) = 10^12.
         const scale = BigInt(10 ** (18 - CONFIG.usdtDecimals));
         return (raw * 66n * scale).toString();
     }
@@ -644,7 +644,7 @@ function PresalePage() {
         }
     }
 
-    // Bidirectional USDT ↔ THK handlers
+    // Bidirectional USDT ↔ HYK handlers
     function handleSpendChange(val) {
         const v = normalizeUsdtInput(val);
         setUsdtAmount(v);
@@ -1176,7 +1176,7 @@ function PresalePage() {
                                 </div>
                                 <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "6px" }}>Total Allocation</div>
                                 <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "22px", fontWeight: 800, color: "#FFA01C", lineHeight: 1.1 }}>
-                                    {totalAlloc === "—" ? "0 THK" : `${totalAlloc} THK`}
+                                    {totalAlloc === "—" ? "0 HYK" : `${totalAlloc} HYK`}
                                 </div>
                                 <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "5px" }}>
                                     {totalAlloc !== "—" ? `≈ $${formatNumber((parseFloat(totalAlloc.replace(/,/g, "")) * 0.015).toFixed(2), 2)} ${t("atPresalePrice")}` : t("noAllocationYet")}
@@ -1194,7 +1194,7 @@ function PresalePage() {
                                 <span style={{ fontSize: "22px", marginBottom: "12px", display: "block" }}>📅</span>
                                 <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "6px" }}>{t("dailyAllocation")}</div>
                                 <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "22px", fontWeight: 800, color: "#FFA01C", lineHeight: 1.1 }}>
-                                    {dailyAlloc === "—" ? "— THK" : `${dailyAlloc} THK`}
+                                    {dailyAlloc === "—" ? "— HYK" : `${dailyAlloc} HYK`}
                                 </div>
                                 <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "5px" }}>{t("afterVestingStarts")}</div>
                             </div>
@@ -1210,10 +1210,10 @@ function PresalePage() {
                                 <span style={{ fontSize: "22px", marginBottom: "12px", display: "block" }}>✅</span>
                                 <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "6px" }}>{t("alreadyClaimed")}</div>
                                 <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "22px", fontWeight: 800, color: "#FFA01C", lineHeight: 1.1 }}>
-                                    {claimed === "—" ? "0 THK" : `${claimed} THK`}
+                                    {claimed === "—" ? "0 HYK" : `${claimed} HYK`}
                                 </div>
                                 <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "5px" }}>
-                                    {t("disbursed")}: {claimed === "—" ? "0 THK" : `${claimed} THK`}
+                                    {t("disbursed")}: {claimed === "—" ? "0 HYK" : `${claimed} HYK`}
                                 </div>
                             </div>
                         </div>
@@ -1232,7 +1232,7 @@ function PresalePage() {
                                 <div>
                                     <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "4px" }}>{t("claimableNow")}</div>
                                     <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "20px", fontWeight: 800, color: claimableRaw > 0n ? "#6AC645" : "#6666AA", lineHeight: 1.1 }}>
-                                        {claimableNow} THK
+                                        {claimableNow} HYK
                                     </div>
                                     <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "3px", display: "flex", alignItems: "center", gap: "4px" }}>
                                         🔒 {t("lockedUntil")} {lockUntilDate}
@@ -1287,7 +1287,7 @@ function PresalePage() {
                                     <div>
                                         <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.12em", color: "#6666AA", marginBottom: "3px", fontWeight: 600 }}>{t("presalePrice")}</div>
                                         <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "28px", fontWeight: 900, color: "#FFD94E", lineHeight: 1, textShadow: "0 0 30px rgba(255,216,77,0.5)" }}>
-                                            $0.015 <span style={{ fontSize: "13px", color: "#6666AA", fontWeight: 400 }}>USDT / THK</span>
+                                            $0.015 <span style={{ fontSize: "13px", color: "#6666AA", fontWeight: 400 }}>USDT / HYK</span>
                                         </div>
                                         <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "3px" }}>
                                             {paymentTab === "USDT" ? t("rateUsdt") : t("rateThk")}
@@ -1303,8 +1303,8 @@ function PresalePage() {
                                 {presaleStats && (
                                     <div style={{ marginBottom: "14px" }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#6666AA", marginBottom: "5px" }}>
-                                            <span>{t("soldLabel")}: <span style={{ color: "#F0F0FF" }}>{soldDisplay} THK</span></span>
-                                            <span>{t("capLabel")}: <span style={{ color: "#F0F0FF" }}>{capDisplay} THK</span></span>
+                                            <span>{t("soldLabel")}: <span style={{ color: "#F0F0FF" }}>{soldDisplay} HYK</span></span>
+                                            <span>{t("capLabel")}: <span style={{ color: "#F0F0FF" }}>{capDisplay} HYK</span></span>
                                         </div>
                                         <div style={{ height: "6px", background: "rgba(255,255,255,0.06)", borderRadius: "100px", overflow: "hidden" }}>
                                             <div style={{
@@ -1322,9 +1322,9 @@ function PresalePage() {
                                         {/* Presale Stats */}
                                         <div style={{ display: "flex", gap: "6px", marginTop: "12px", flexWrap: "wrap" }}>
                                             {[
-                                                { label: t("totalSoldLabel"), value: `${soldDisplay} THK`, color: "#FFD94E" },
-                                                { label: t("hardCapLabel"), value: `${capDisplay} THK`, color: "#FFD94E" },
-                                                { label: t("remainingLabel"), value: `${remainingDisplay} THK`, color: "#FFD94E" },
+                                                { label: t("totalSoldLabel"), value: `${soldDisplay} HYK`, color: "#FFD94E" },
+                                                { label: t("hardCapLabel"), value: `${capDisplay} HYK`, color: "#FFD94E" },
+                                                { label: t("remainingLabel"), value: `${remainingDisplay} HYK`, color: "#FFD94E" },
                                             ].map(({ label, value, color }) => (
                                                 <div key={label} style={{
                                                     flex: 1, minWidth: "90px",
@@ -1462,7 +1462,7 @@ function PresalePage() {
                                                             fontWeight: 700, fontSize: "12px", color: "#FFD94E",
                                                             borderLeft: "1px solid rgba(255,216,77,0.15)", height: "100%",
                                                             display: "flex", alignItems: "center",
-                                                        }}>THK</div>
+                                                        }}>HYK</div>
                                                     </div>
                                                     {usdtAmount && !isValidUsdtAmount(usdtAmount) && (
                                                         <div style={{ fontSize: "11px", color: "#FFA01C", textAlign: "center", marginBottom: "8px" }}>Minimum purchase is 10 USDT</div>
@@ -1539,7 +1539,7 @@ function PresalePage() {
                                                 1 BNB ≈ <span style={{ color: "#FFD94E" }}>${lastBnbPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD</span>
                                             </div>
                                         )}
-                                        {/* USDT equivalent — read-only, computed from BNB/THK */}
+                                        {/* USDT equivalent — read-only, computed from BNB/HYK */}
                                         <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>≈ USDT value {isFetchingBnbQuote && <span style={{ color: "#FFA01C" }}>⏳</span>}</div>
                                         <div style={{
                                             display: "flex", alignItems: "center",
@@ -1564,7 +1564,7 @@ function PresalePage() {
                                                 display: "flex", alignItems: "center",
                                             }}>USDT</div>
                                         </div>
-                                        {/* THK receive — editable */}
+                                        {/* HYK receive — editable */}
                                         <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>🐣 {t("hykYouReceive")}</div>
                                         <div style={{
                                             display: "flex", alignItems: "center",
@@ -1585,7 +1585,7 @@ function PresalePage() {
                                                 fontWeight: 700, fontSize: "12px", color: "#FFD94E",
                                                 borderLeft: "1px solid rgba(255,216,77,0.15)", height: "100%",
                                                 display: "flex", alignItems: "center",
-                                            }}>THK</div>
+                                            }}>HYK</div>
                                         </div>
                                         {bnbQuoteMessage && (
                                             <div style={{ fontSize: "12px", color: "#ff6060", textAlign: "center", marginBottom: "10px" }}>{bnbQuoteMessage}</div>
@@ -1692,7 +1692,7 @@ function PresalePage() {
                                                                 <>
                                                                     <span style={{ color: "#6666AA", fontSize: "11px", margin: "0 6px" }}>→</span>
                                                                     <span style={{ color: "#FFD94E", fontWeight: 700 }}>
-                                                                        {formatNumber(parseFloat(tx.token_amount), 4)} THK
+                                                                        {formatNumber(parseFloat(tx.token_amount), 4)} HYK
                                                                     </span>
                                                                 </>
                                                             )}
@@ -1780,7 +1780,7 @@ function PresalePage() {
                                                 icon: "📅",
                                                 date: cliffEnd > 0 && vestEnd > 0 ? `${formatDate(cliffEnd)} — ${formatDate(vestEnd)}` : "TGE + 1h — +7 days",
                                                 name: t("step4name"),
-                                                val: dailyAlloc !== "—" ? `${dailyAlloc} THK` : "—",
+                                                val: dailyAlloc !== "—" ? `${dailyAlloc} HYK` : "—",
                                                 sub: "per day",
                                                 valColor: "#6AC645",
                                             },
@@ -1788,7 +1788,7 @@ function PresalePage() {
                                                 icon: "🎉",
                                                 date: vestEnd > 0 ? formatDate(vestEnd) : "May 2027",
                                                 name: t("step5name"),
-                                                val: totalAlloc !== "—" ? `${totalAlloc} THK` : "—",
+                                                val: totalAlloc !== "—" ? `${totalAlloc} HYK` : "—",
                                                 sub: "100% received",
                                                 valColor: "#a78bfa",
                                             },
