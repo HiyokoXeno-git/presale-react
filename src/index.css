@@ -1652,6 +1652,15 @@ footer {
     grid-template-columns: 1fr;
   }
 
+  .tknm-grid svg {
+    max-width: 260px !important;
+    width: 260px !important;
+  }
+
+  .alloc-list {
+    grid-template-columns: 1fr;
+  }
+
   .donut-wrap {
     overflow: visible;
     padding: 8px 0;
@@ -1659,8 +1668,8 @@ footer {
 
   .donut-wrap svg {
     overflow: visible;
-    max-width: 100%;
-    width: 100%;
+    max-width: 260px;
+    width: 260px;
   }
 
   .rm-grid {
@@ -1827,8 +1836,17 @@ footer {
     grid-template-columns: 1fr;
   }
 
+  .tknm-grid svg {
+    max-width: 380px !important;
+    width: 380px !important;
+  }
+
+  .alloc-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .donut-wrap svg {
-    max-width: 360px;
+    max-width: 380px;
   }
 
   .rm-grid {
