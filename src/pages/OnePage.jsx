@@ -32,7 +32,7 @@ const SEGMENT_DATA = DONUT_SEGMENTS.reduce((acc, seg) => {
 function DonutChart() {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%" }}>
-      <svg viewBox="0 0 320 320" style={{ width: "100%", maxWidth: "520px", overflow: "visible" }}>
+      <svg viewBox="-60 20 440 280" style={{ width: "100%", maxWidth: "520px" }}>
         <defs>
           <linearGradient id="presaleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#FFA01C" />
@@ -566,7 +566,7 @@ function OnePage() {
             <p className="vitalis-desc">{t("happyChickDesc")}</p>
             <div className="vitalis-badge" style={{ borderColor: "rgba(255,159,28,0.3)", background: "rgba(255,159,28,0.08)", color: "#FFA01C" }}>{t("happyChickBadge")}</div>
           </div>
-          <img className="vitalis-img" src="/HiyokoHero.png" alt="Happy Chick"
+          <img className="vitalis-img" src="/HiyokoWalk.png" alt="Happy Chick"
             style={{ width: "340px", transform: "translateY(-20px) scale(1.12)", filter: "drop-shadow(0 8px 40px rgba(255,159,28,0.35))" }}
             onError={(e) => { e.target.style.display = "none"; }} />
         </div>

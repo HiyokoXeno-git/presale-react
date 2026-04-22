@@ -1653,14 +1653,8 @@ footer {
   }
 
   .tknm-grid svg {
-    max-width: 240px !important;
-    width: 240px !important;
-  }
-
-  /* Hide SVG leader lines and labels on mobile — alloc-list serves as legend */
-  .tknm-grid svg line,
-  .tknm-grid svg text {
-    display: none;
+    max-width: 100%;
+    width: 100%;
   }
 
   .alloc-list {
@@ -1840,11 +1834,6 @@ footer {
 
   .tknm-grid {
     grid-template-columns: 1fr;
-  }
-
-  .tknm-grid svg {
-    max-width: 420px !important;
-    width: 420px !important;
   }
 
   .alloc-list {
