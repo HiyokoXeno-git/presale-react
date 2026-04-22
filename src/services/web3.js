@@ -283,60 +283,87 @@ export function getEthereum() {
 }
 
 export async function connectWithWalletConnect() {
-  // Open the AppKit modal — user picks their wallet (desktop extension or mobile QR)
+  // MetaMask (injected) fast path — skip AppKit entirely.
+  // Avoids AppKit trying to reuse a stale WalletConnect session for injected wallets.
+  if (window.ethereum) {
+    const provider = window.ethereum.providers
+      ? (window.ethereum.providers.find(p => p.isMetaMask) || window.ethereum)
+      : window.ethereum;
+    const accounts = await provider.request({ method: "eth_requestAccounts" });
+    if (!accounts || accounts.length === 0) throw new Error("No account found.");
+    _wcProvider = provider;
+    return accounts[0];
+  }
+
+  // No injected wallet — open AppKit for WalletConnect / mobile QR.
   await modal.open();
 
-  // Wait until the user is connected (or closes the modal)
   return new Promise((resolve, reject) => {
-    const unsub = modal.subscribeState((state) => {
-      if (state.open) return; // modal still open — keep waiting
-      unsub();
+    let done = false;
 
-      // getWalletProvider() returns null for injected wallets (MetaMask extension).
-      // Fall back to window.ethereum in that case.
-      const provider = modal.getWalletProvider() || window.ethereum;
-      const address = modal.getAddress();
+    function finish(address, provider) {
+      if (done) return;
+      done = true;
+      unsubState();
+      if (unsubAccount) unsubAccount();
+      if (provider) _wcProvider = provider;
+      resolve(address);
+    }
 
-      if (!provider && !address) {
-        reject(new Error("Connection cancelled."));
-        return;
-      }
+    function cancel(reason) {
+      if (done) return;
+      done = true;
+      unsubState();
+      if (unsubAccount) unsubAccount();
+      reject(new Error(reason || "Connection cancelled."));
+    }
 
-      // If we have an address from AppKit but no provider, resolve directly
-      if (!provider && address) {
-        resolve(address);
-        return;
-      }
-
-      provider.request({ method: "eth_accounts" }).then((accounts) => {
-        if (!accounts || accounts.length === 0) {
-          // Last resort: use address from AppKit modal state
-          if (address) {
-            _wcProvider = provider;
-            resolve(address);
-          } else {
-            reject(new Error("No account found."));
-          }
-        } else {
-          _wcProvider = provider;
-          resolve(accounts[0]);
-        }
-      }).catch((err) => {
-        // eth_accounts failed but AppKit has the address — use it
-        if (address) {
-          _wcProvider = provider;
-          resolve(address);
-        } else {
-          reject(err);
+    // subscribeAccount fires when AppKit actually has a confirmed connected account
+    let unsubAccount = null;
+    try {
+      unsubAccount = modal.subscribeAccount((accountData) => {
+        if (accountData?.isConnected && accountData?.address) {
+          const provider = modal.getWalletProvider() || window.ethereum;
+          finish(accountData.address, provider);
         }
       });
+    } catch { /* subscribeAccount not available in this build */ }
+
+    // subscribeState fires when the modal opens/closes (covers cancel)
+    const unsubState = modal.subscribeState((state) => {
+      if (state.open) return;
+      // Modal closed — give AppKit 400ms to settle connection state
+      setTimeout(() => {
+        const address = modal.getAddress();
+        if (address) {
+          const provider = modal.getWalletProvider() || window.ethereum;
+          finish(address, provider);
+        } else {
+          cancel("Connection cancelled.");
+        }
+      }, 400);
     });
   });
 }
 
 export async function disconnectWalletConnect() {
+  // Revoke MetaMask site permission so the next eth_requestAccounts shows the confirmation popup.
+  // wallet_revokePermissions is available in MetaMask v11+; silently ignored on older versions.
   try {
-    await modal.disconnect();
+    const provider = window.ethereum?.providers
+      ? (window.ethereum.providers.find(p => p.isMetaMask) || window.ethereum)
+      : window.ethereum;
+    if (provider) {
+      await provider.request({
+        method: "wallet_revokePermissions",
+        params: [{ eth_accounts: {} }],
+      });
+    }
+  } catch { /* older MetaMask / non-MetaMask wallet — ignore */ }
+
+  try {
+    // Timeout 2 s — prevents hanging when WalletConnect relay is blocked by ad-blocker/firewall
+    await Promise.race([modal.disconnect(), new Promise(r => setTimeout(r, 2000))]);
   } catch { /* ignore */ }
   _wcProvider = null;
 
@@ -389,7 +416,8 @@ export async function connectWallet() {
 export async function getCurrentAccount() {
   const ethereum = getEthereum();
   if (!ethereum) {
-    return null;
+    // WalletConnect path: no injected provider, get address from AppKit state
+    return modal.getAddress() || null;
   }
 
   const accounts = await ethereum.request({
@@ -397,7 +425,8 @@ export async function getCurrentAccount() {
   });
 
   if (!accounts || accounts.length === 0) {
-    return null;
+    // Fallback: AppKit may have the address even if eth_accounts returns empty
+    return modal.getAddress() || null;
   }
 
   return accounts[0];
@@ -414,6 +443,12 @@ export async function getCurrentChainId() {
   });
 
   return chainId;
+}
+
+export async function getBnbBalance(address) {
+  const web3 = getWeb3();
+  const wei = await web3.eth.getBalance(address);
+  return BigInt(wei);
 }
 
 export async function switchNetwork() {

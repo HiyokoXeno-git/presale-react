@@ -1,7 +1,7 @@
 :root {
-  --yellow: #FFD84D;
-  --orange: #FF9F1C;
-  --cyan: #00E5FF;
+  --yellow: #FFD94E;
+  --orange: #FFA01C;
+  --cyan: #06E5FF;
   --green: #6AC645;
   --bg: #06060F;
   --card: rgba(14, 14, 28, 0.9);
@@ -1454,7 +1454,7 @@ footer {
 
 .lang-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #FFD84D;
+  color: #FFD94E;
   border-color: rgba(255, 216, 77, 0.3);
 }
 
@@ -1499,11 +1499,11 @@ footer {
 
 .lang-option:hover {
   background: rgba(255, 255, 255, 0.06);
-  color: #FFD84D;
+  color: #FFD94E;
 }
 
 .lang-option.active {
-  color: #FFD84D;
+  color: #FFD94E;
   font-weight: 700;
 }
 

@@ -7,7 +7,7 @@ export default function MessageModal({ type, message, txHash, onClose }) {
   const isSuccess   = type === "success";
   const isCancelled = type === "cancelled";
 
-  const accentColor = isSuccess ? "#6AC645" : isCancelled ? "#FF9F1C" : "#ff5050";
+  const accentColor = isSuccess ? "#6AC645" : isCancelled ? "#FFA01C" : "#ff5050";
   const glowColor   = isSuccess ? "rgba(106,198,69,0.1)" : isCancelled ? "rgba(255,159,28,0.1)" : "rgba(255,80,80,0.1)";
   const borderColor = isSuccess ? "rgba(106,198,69,0.3)" : isCancelled ? "rgba(255,159,28,0.3)" : "rgba(255,80,80,0.3)";
   const icon        = isSuccess ? "✅" : isCancelled ? "⚠️" : "❌";
@@ -16,7 +16,7 @@ export default function MessageModal({ type, message, txHash, onClose }) {
   const btnBg       = isSuccess
     ? "linear-gradient(135deg, #6AC645, #4ade80)"
     : isCancelled
-      ? "linear-gradient(135deg, #FF9F1C, #f59e0b)"
+      ? "linear-gradient(135deg, #FFA01C, #f59e0b)"
       : "rgba(255,255,255,0.08)";
   const btnColor    = (isSuccess || isCancelled) ? "#06060F" : "#F0F0FF";
 
@@ -46,7 +46,7 @@ export default function MessageModal({ type, message, txHash, onClose }) {
           background: isSuccess
             ? "linear-gradient(90deg, #6AC645, #4ade80)"
             : isCancelled
-              ? "linear-gradient(90deg, #FF9F1C, #f59e0b)"
+              ? "linear-gradient(90deg, #FFA01C, #f59e0b)"
               : "linear-gradient(90deg, #ff5050, #ff9050)",
         }} />
 
@@ -80,12 +80,12 @@ export default function MessageModal({ type, message, txHash, onClose }) {
               rel="noreferrer"
               style={{
                 display: "inline-flex", alignItems: "center", gap: "6px",
-                fontSize: "12px", color: "#00E5FF",
+                fontSize: "12px", color: "#06E5FF",
                 textDecoration: "none",
                 padding: "6px 14px",
-                background: "rgba(0,229,255,0.08)",
+                background: "rgba(6,229,255,0.08)",
                 borderRadius: "100px",
-                border: "1px solid rgba(0,229,255,0.2)",
+                border: "1px solid rgba(6,229,255,0.2)",
               }}
             >
               🔗 {t("modalViewBscScan")}

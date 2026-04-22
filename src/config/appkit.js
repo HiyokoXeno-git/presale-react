@@ -38,7 +38,7 @@ export const modal = createAppKit({
   },
   themeMode: "dark",
   themeVariables: {
-    "--w3m-accent": "#FFD84D",
+    "--w3m-accent": "#FFD94E",
     "--w3m-border-radius-master": "12px",
   },
 });

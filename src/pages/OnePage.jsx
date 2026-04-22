@@ -10,12 +10,12 @@ import { connectWithWalletConnect, disconnectWalletConnect, getCurrentAccount, g
 
 // ── Donut chart data ──────────────────────────────────────
 const DONUT_SEGMENTS = [
-  { pct: 0.10, color: "#00E5FF", label: "Ecosystem", amount: "100,000,000" },
-  { pct: 0.05, color: "#FF9F1C", label: "Game to Earn (CheePoint)", amount: "50,000,000" },
+  { pct: 0.10, color: "#06E5FF", label: "Ecosystem", amount: "100,000,000" },
+  { pct: 0.05, color: "#FFA01C", label: "Game to Earn (CheePoint)", amount: "50,000,000" },
   { pct: 0.10, color: "#8888CC", label: "Team", amount: "100,000,000" },
   { pct: 0.10, color: "#44AAFF", label: "Marketing / KOL / Listing", amount: "100,000,000" },
   { pct: 0.10, color: "#FF6688", label: "Foundation / Reserve", amount: "100,000,000" },
-  { pct: 0.35, color: "#FFD84D", label: "Market Make", amount: "350,000,000" },
+  { pct: 0.35, color: "#FFD94E", label: "Market Make", amount: "350,000,000" },
   { pct: 0.10, color: "#AA55FF", label: "Investors", amount: "100,000,000" },
   { pct: 0.10, color: "#FF6B35", label: "Presale", amount: "~100,000,000" },
 ];
@@ -35,8 +35,8 @@ function DonutChart() {
       <svg viewBox="0 0 320 320" style={{ width: "100%", maxWidth: "520px", overflow: "visible" }}>
         <defs>
           <linearGradient id="presaleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#FF9F1C" />
-            <stop offset="100%" stopColor="#FFD84D" />
+            <stop offset="0%" stopColor="#FFA01C" />
+            <stop offset="100%" stopColor="#FFD94E" />
           </linearGradient>
           <filter id="presaleGlow" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="3" result="blur" />
@@ -61,15 +61,15 @@ function DonutChart() {
 
         {/* ── SVG Labels with leader lines (matching HTML reference) ── */}
         {/* Ecosystem – cyan, top-right */}
-        <line x1="192.1" y1="61.1" x2="198.9" y2="40.2" stroke="#00E5FF" strokeWidth="1.2" opacity="0.7" />
-        <line x1="198.9" y1="40.2" x2="220.9" y2="40.2" stroke="#00E5FF" strokeWidth="1.2" opacity="0.7" />
-        <text x="224.9" y="37.2" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#00E5FF" textAnchor="start">Ecosystem</text>
+        <line x1="192.1" y1="61.1" x2="198.9" y2="40.2" stroke="#06E5FF" strokeWidth="1.2" opacity="0.7" />
+        <line x1="198.9" y1="40.2" x2="220.9" y2="40.2" stroke="#06E5FF" strokeWidth="1.2" opacity="0.7" />
+        <text x="224.9" y="37.2" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#06E5FF" textAnchor="start">Ecosystem</text>
         <text x="224.9" y="49.2" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">10%</text>
 
         {/* Game to Earn – orange, right */}
-        <line x1="233.5" y1="86.5" x2="249.1" y2="70.9" stroke="#FF9F1C" strokeWidth="1.2" opacity="0.7" />
-        <line x1="249.1" y1="70.9" x2="271.1" y2="70.9" stroke="#FF9F1C" strokeWidth="1.2" opacity="0.7" />
-        <text x="275.1" y="67.9" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#FF9F1C" textAnchor="start">Game to Earn</text>
+        <line x1="233.5" y1="86.5" x2="249.1" y2="70.9" stroke="#FFA01C" strokeWidth="1.2" opacity="0.7" />
+        <line x1="249.1" y1="70.9" x2="271.1" y2="70.9" stroke="#FFA01C" strokeWidth="1.2" opacity="0.7" />
+        <text x="275.1" y="67.9" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#FFA01C" textAnchor="start">Game to Earn</text>
         <text x="275.1" y="79.9" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">5%</text>
 
         {/* Team – lavender, right-middle */}
@@ -91,9 +91,9 @@ function DonutChart() {
         <text x="260.1" y="270.9" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">10%</text>
 
         {/* Market Make – yellow, left-bottom */}
-        <line x1="86.5" y1="233.5" x2="70.9" y2="249.1" stroke="#FFD84D" strokeWidth="1.2" opacity="0.7" />
-        <line x1="70.9" y1="249.1" x2="48.9" y2="249.1" stroke="#FFD84D" strokeWidth="1.2" opacity="0.7" />
-        <text x="44.9" y="246.1" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#FFD84D" textAnchor="end">Market Make</text>
+        <line x1="86.5" y1="233.5" x2="70.9" y2="249.1" stroke="#FFD94E" strokeWidth="1.2" opacity="0.7" />
+        <line x1="70.9" y1="249.1" x2="48.9" y2="249.1" stroke="#FFD94E" strokeWidth="1.2" opacity="0.7" />
+        <text x="44.9" y="246.1" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#FFD94E" textAnchor="end">Market Make</text>
         <text x="44.9" y="258.1" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="end">35%</text>
 
         {/* Investors – violet, left */}
@@ -103,13 +103,13 @@ function DonutChart() {
         <text x="32.1" y="94.9" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="end">10%</text>
 
         {/* Presale – gradient yellow, top-left */}
-        <line x1="127.9" y1="61.1" x2="121.1" y2="40.2" stroke="#FFD84D" strokeWidth="1.5" opacity="0.9" />
-        <line x1="121.1" y1="40.2" x2="99.1" y2="40.2" stroke="#FFD84D" strokeWidth="1.5" opacity="0.9" />
-        <text x="95.1" y="35.2" fontFamily="Outfit,sans-serif" fontSize="13" fontWeight="700" fill="#FFD84D" textAnchor="end">🔥 Presale</text>
+        <line x1="127.9" y1="61.1" x2="121.1" y2="40.2" stroke="#FFD94E" strokeWidth="1.5" opacity="0.9" />
+        <line x1="121.1" y1="40.2" x2="99.1" y2="40.2" stroke="#FFD94E" strokeWidth="1.5" opacity="0.9" />
+        <text x="95.1" y="35.2" fontFamily="Outfit,sans-serif" fontSize="13" fontWeight="700" fill="#FFD94E" textAnchor="end">🔥 Presale</text>
         <text x="95.1" y="49.2" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,216,77,0.8)" textAnchor="end">10%</text>
 
         {/* Center text */}
-        <text x="160" y="152" fontFamily="Outfit,sans-serif" fontSize="30" fontWeight="900" fill="#FFD84D" textAnchor="middle">1B</text>
+        <text x="160" y="152" fontFamily="Outfit,sans-serif" fontSize="30" fontWeight="900" fill="#FFD94E" textAnchor="middle">1B</text>
         <text x="160" y="170" fontFamily="DM Sans,sans-serif" fontSize="11" fill="rgba(160,160,220,0.7)" textAnchor="middle">Total THK</text>
       </svg>
     </div>
@@ -354,7 +354,7 @@ function OnePage() {
                     cursor: "pointer", textAlign: "left",
                     fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "13px",
                     fontWeight: lang === l.code ? 700 : 500,
-                    color: lang === l.code ? "#FFD84D" : "#F0F0FF",
+                    color: lang === l.code ? "#FFD94E" : "#F0F0FF",
                     transition: "all 0.15s",
                   }}
                 >
@@ -371,7 +371,7 @@ function OnePage() {
           {walletConnected ? (
             <button onClick={() => transitionTo("/my-page")} style={{
               display: "flex", alignItems: "center", gap: "8px", padding: "11px 24px",
-              background: "linear-gradient(135deg, #FFD84D, #FF9F1C)",
+              background: "linear-gradient(135deg, #FFD94E, #FFA01C)",
               color: "#06060F", border: "none", borderRadius: "100px",
               fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "15px",
               cursor: "pointer", transition: "all 0.2s",
@@ -383,7 +383,7 @@ function OnePage() {
             <button onClick={handleConnectWC} disabled={isConnecting} style={{
               display: "flex", alignItems: "center", gap: "8px", padding: "11px 24px",
               background: "rgba(255,216,77,0.12)", border: "1px solid rgba(255,216,77,0.45)",
-              color: "#FFD84D", borderRadius: "100px", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
+              color: "#FFD94E", borderRadius: "100px", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
               fontWeight: 700, fontSize: "15px", cursor: isConnecting ? "not-allowed" : "pointer",
               opacity: isConnecting ? 0.7 : 1, transition: "all 0.2s",
               boxShadow: "0 0 16px rgba(255,216,77,0.12)",
@@ -428,7 +428,7 @@ function OnePage() {
                     borderRadius: "8px", cursor: "pointer", textAlign: "left",
                     fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "13px",
                     fontWeight: lang === l.code ? 700 : 500,
-                    color: lang === l.code ? "#FFD84D" : "#F0F0FF",
+                    color: lang === l.code ? "#FFD94E" : "#F0F0FF",
                     transition: "all 0.15s",
                   }}
                 >
@@ -443,7 +443,7 @@ function OnePage() {
               <button onClick={() => { transitionTo("/my-page"); setMobileMenuOpen(false); }} style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
                 padding: "13px 24px", width: "100%",
-                background: "linear-gradient(135deg, #FFD84D, #FF9F1C)",
+                background: "linear-gradient(135deg, #FFD94E, #FFA01C)",
                 color: "#06060F", border: "none", borderRadius: "100px",
                 fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "15px", cursor: "pointer",
               }}>
@@ -454,7 +454,7 @@ function OnePage() {
                 display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
                 padding: "13px 24px", width: "100%",
                 background: "rgba(255,216,77,0.12)", border: "1px solid rgba(255,216,77,0.45)",
-                color: "#FFD84D", borderRadius: "100px",
+                color: "#FFD94E", borderRadius: "100px",
                 fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "15px",
                 cursor: isConnecting ? "not-allowed" : "pointer", opacity: isConnecting ? 0.7 : 1,
               }}>
@@ -487,7 +487,7 @@ function OnePage() {
             </div>
             <div className="prog-labels">
               <span>{t("heroRaised")}: <b>THK {presaleRaised.toLocaleString()}</b></span>
-              <span>{t("heroGoal")}: THK 1,500,000 &nbsp;<strong style={{ color: "#00E5FF" }}>{presaleProgress.toFixed(1)}%</strong></span>
+              <span>{t("heroGoal")}: THK 1,500,000 &nbsp;<strong style={{ color: "#06E5FF" }}>{presaleProgress.toFixed(1)}%</strong></span>
             </div>
             <div className="prog-bar">
               <div className="prog-fill" style={{ width: `${progWidth}%` }} />
@@ -561,10 +561,10 @@ function OnePage() {
         <div className="vitalis-card" style={{ borderColor: "rgba(255,159,28,0.2)", boxShadow: "0 0 60px rgba(255,159,28,0.06)", overflow: "visible" }}>
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 60% at 20% 50%, rgba(255,159,28,0.07) 0%, transparent 70%)", pointerEvents: "none", borderRadius: "28px", overflow: "hidden" }} />
           <div className="vitalis-text">
-            <span className="vitalis-tag" style={{ color: "#FF9F1C" }}>{t("happyChickTag")}</span>
+            <span className="vitalis-tag" style={{ color: "#FFA01C" }}>{t("happyChickTag")}</span>
             <div className="vitalis-title">{t("happyChickTitle")}</div>
             <p className="vitalis-desc">{t("happyChickDesc")}</p>
-            <div className="vitalis-badge" style={{ borderColor: "rgba(255,159,28,0.3)", background: "rgba(255,159,28,0.08)", color: "#FF9F1C" }}>{t("happyChickBadge")}</div>
+            <div className="vitalis-badge" style={{ borderColor: "rgba(255,159,28,0.3)", background: "rgba(255,159,28,0.08)", color: "#FFA01C" }}>{t("happyChickBadge")}</div>
           </div>
           <img className="vitalis-img" src="/HiyokoHero.png" alt="Happy Chick"
             style={{ width: "340px", transform: "translateY(-20px) scale(1.12)", filter: "drop-shadow(0 8px 40px rgba(255,159,28,0.35))" }}
@@ -590,10 +590,10 @@ function OnePage() {
         <div className="vitalis-card" style={{ borderColor: "rgba(255,216,77,0.2)", boxShadow: "0 0 60px rgba(255,216,77,0.06)" }}>
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 60% at 80% 50%, rgba(255,216,77,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
           <div className="vitalis-text">
-            <span className="vitalis-tag" style={{ color: "#FFD84D" }}>{t("cheepointTag")}</span>
+            <span className="vitalis-tag" style={{ color: "#FFD94E" }}>{t("cheepointTag")}</span>
             <div className="vitalis-title">{t("cheepointTitle")}</div>
             <p className="vitalis-desc">{t("cheepointDesc")}</p>
-            <div className="vitalis-badge" style={{ borderColor: "rgba(255,216,77,0.3)", background: "rgba(255,216,77,0.08)", color: "#FFD84D" }}>{t("cheepointBadge")}</div>
+            <div className="vitalis-badge" style={{ borderColor: "rgba(255,216,77,0.3)", background: "rgba(255,216,77,0.08)", color: "#FFD94E" }}>{t("cheepointBadge")}</div>
           </div>
           <img className="vitalis-img" src="/CheePoint.png" alt="CheePoint" onError={(e) => { e.target.style.display = "none"; }} />
         </div>
@@ -648,7 +648,7 @@ function OnePage() {
                 <div style={{
                   marginTop: "10px", display: "inline-block",
                   fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em",
-                  background: "linear-gradient(90deg,#FF9F1C,#FFD84D)",
+                  background: "linear-gradient(90deg,#FFA01C,#FFD94E)",
                   WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
                 }}>▶ NOW</div>
               )}
@@ -680,7 +680,7 @@ function OnePage() {
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 60% at 50% 50%, rgba(255,216,77,0.06) 0%, transparent 70%)", pointerEvents: "none" }} />
           <div style={{ fontSize: "52px", marginBottom: "18px" }}>🐣</div>
           <h2 style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "clamp(26px,3.5vw,42px)", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "14px" }}>
-            Join the <span style={{ color: "#FFD84D" }}>HIYOKO</span> Ecosystem <span style={{ color: "#00E5FF" }}>Early.</span>
+            Join the <span style={{ color: "#FFD94E" }}>HIYOKO</span> Ecosystem <span style={{ color: "#06E5FF" }}>Early.</span>
           </h2>
           <p style={{ fontSize: "15px", color: "rgba(240,240,255,0.7)", maxWidth: "520px", margin: "0 auto 36px", lineHeight: 1.75 }}>{t("ctaSubtitle")}</p>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px", flexWrap: "wrap" }}>
