@@ -13,6 +13,7 @@ import {
     buyWithUsdt,
     claimTokens,
     disconnectWalletConnect,
+    getBnbBalance,
     getCurrentAccount, getCurrentChainId,
     getPresaleStats,
     getTokenAmount,
@@ -45,8 +46,8 @@ function PresalePage() {
     const [bnbUsdtDisplay, setBnbUsdtDisplay] = useState("");  // read-only USDT in BNB tab
     const [bnbThkDisplay, setBnbThkDisplay] = useState("");    // editable THK in BNB tab
     const [lastBnbPrice, setLastBnbPrice] = useState(null);    // BNB/USDT rate from last quote
-    const [liveBnbPrice, setLiveBnbPrice] = useState(null);    // live BNB/USD price (polled)
-    const [liveBnbChange, setLiveBnbChange] = useState(null);  // 24h % change
+    const [_liveBnbPrice, setLiveBnbPrice] = useState(null);    // live BNB/USD price (polled) — display not yet implemented
+    const [_liveBnbChange, setLiveBnbChange] = useState(null);  // 24h % change — display not yet implemented
     const [bnbQuote, setBnbQuote] = useState(null);
     const [bnbQuoteMessage, setBnbQuoteMessage] = useState("");
     const [isFetchingBnbQuote, setIsFetchingBnbQuote] = useState(false);
@@ -321,6 +322,16 @@ function PresalePage() {
             if (!usdtAmountRaw || !bnbAmountWei || !signature || !quoteDeadline) { setMsg(t("errBnbQuoteIncomplete")); return; }
             if (BigInt(usdtAmountRaw) < BigInt("10000000")) { setMsg(t("errMinBnbPurchase")); return; }
 
+            // Pre-flight: verify wallet has enough BNB (purchase amount + ~0.001 BNB gas buffer)
+            try {
+                const GAS_BUFFER = BigInt("1000000000000000"); // 0.001 BNB
+                const balance = await getBnbBalance(account);
+                if (balance < BigInt(bnbAmountWei) + GAS_BUFFER) {
+                    setMsg(t("errInsufficientBnb"));
+                    return;
+                }
+            } catch { /* RPC error — skip check, contract will reject if truly insufficient */ }
+
             const tokenAmountRaw = await getTokenAmount(usdtAmountRaw);
 
             // Enqueue immediately when TX is broadcast (before mining)
@@ -484,7 +495,7 @@ function PresalePage() {
     }
 
     function parseUsdtToRaw(value, decimals) {
-        const d = decimals ?? userStats?.usdtDecimals ?? 6;
+        const d = decimals ?? CONFIG.usdtDecimals;
         if (!value) return "0";
         const [wholePart, decimalPart = ""] = value.split(".");
         const safeWhole = wholePart.replace(/^0+(?=\d)/, "") || "0";
@@ -494,7 +505,10 @@ function PresalePage() {
 
     function getTokenAmountRawFromUsdtRaw(usdtRaw) {
         const raw = BigInt(usdtRaw);
-        return (raw * 66n * 1000000000000n).toString();
+        // Scale: THK has 18 decimals, USDT has CONFIG.usdtDecimals.
+        // tokens_raw = usdtRaw * 66 * 10^(18 - usdtDecimals)
+        const scale = BigInt(10 ** (18 - CONFIG.usdtDecimals));
+        return (raw * 66n * scale).toString();
     }
 
     async function handleApproveUsdt() {
@@ -533,12 +547,17 @@ function PresalePage() {
 
             // Check USDT balance
             const freshUserStats = await getUserStats(account);
-            console.log("[handleBuyWithUsdt] freshUserStats:", freshUserStats);
-            const usdtBal = BigInt(freshUserStats.usdtBalance ?? "0");
+            const onChainDec = Number(freshUserStats.usdtDecimals ?? CONFIG.usdtDecimals);
+            const contractDec = CONFIG.usdtDecimals;
+            const usdtBalRaw = BigInt(freshUserStats.usdtBalance ?? "0");
+            // If on-chain decimals differ from config (e.g. using test USDT), normalize.
+            const usdtBal = onChainDec > contractDec
+                ? usdtBalRaw / (10n ** BigInt(onChainDec - contractDec))
+                : usdtBalRaw;
             const usdtRawBig = BigInt(usdtAmountRaw);
             if (usdtBal < usdtRawBig) {
                 setMsg(t("errInsufficientUsdtBalance")
-                    .replace("{have}", (Number(usdtBal) / 1e6).toFixed(2))
+                    .replace("{have}", (Number(usdtBal) / (10 ** contractDec)).toFixed(2))
                     .replace("{need}", usdtAmount));
                 return;
             }
@@ -661,7 +680,11 @@ function PresalePage() {
                     return;
                 }
 
-                const currentAccount = await getCurrentAccount();
+                let currentAccount = await getCurrentAccount();
+                // WalletConnect fallback: provider may not be available yet, use stored wallet
+                if (!currentAccount) {
+                    currentAccount = localStorage.getItem("hyk_wallet") || null;
+                }
                 if (!currentAccount) {
                     await disconnectWalletConnect();
                     navigate("/");
@@ -701,8 +724,14 @@ function PresalePage() {
         const ethereum = window.ethereum;
         if (ethereum) {
             function handleAccountsChanged(accounts) {
-                if (!accounts || accounts.length === 0) { navigate("/"); }
-                else {
+                if (!accounts || accounts.length === 0) {
+                    // MetaMask temporarily reports 0 accounts during network-switch.
+                    // Wait 2 s and recheck before redirecting.
+                    setTimeout(async () => {
+                        const current = await getCurrentAccount().catch(() => null);
+                        if (!current) navigate("/");
+                    }, 2000);
+                } else {
                     setAccount(accounts[0]);
                     loadChainData(accounts[0]);
                     loadTxHistory();
@@ -869,7 +898,7 @@ function PresalePage() {
     const vestDur = vestingInfo?.vestingDuration ? Number(vestingInfo.vestingDuration) : 0;
     const now = Math.floor(Date.now() / 1000);
 
-    const presaleActive = presaleStats?.saleActive ?? true;
+
     const cliffEnd = tge > 0 ? tge + cliff : 0;
     const vestEnd = cliffEnd > 0 ? cliffEnd + vestDur : 0;
 
@@ -890,7 +919,7 @@ function PresalePage() {
         color: active ? "#06060F" : "#6666AA",
         border: active ? "none" : "1px solid rgba(255,255,255,0.1)",
         borderRadius: "100px",
-        fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: "16px", letterSpacing: "0.06em",
+        fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 900, fontSize: "16px", letterSpacing: "0.06em",
         cursor: active ? "pointer" : "not-allowed",
         transition: "all 0.25s",
         boxShadow: active ? "0 0 24px rgba(255,216,77,0.3)" : "none",
@@ -900,7 +929,7 @@ function PresalePage() {
     if (isLoading) {
         return (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#06060F" }}>
-                <div style={{ fontFamily: "'Outfit', sans-serif", color: "#6666AA", fontSize: "16px" }}>{t("loading")}</div>
+                <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", color: "#6666AA", fontSize: "16px" }}>{t("loading")}</div>
             </div>
         );
     }
@@ -959,7 +988,7 @@ function PresalePage() {
                 {/* Logo — click to go back to landing page */}
                 <a onClick={() => navigate("/", { state: { fromDashboard: true } })} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", textDecoration: "none" }}>
                     <img src="/HiyokoLogo.png" alt="HIYOKO" style={{ width: "38px", height: "38px", objectFit: "contain", borderRadius: "8px" }} />
-                    <span className="ps-logo-text" style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: "22px", color: "#FFD84D", letterSpacing: "0.04em", textShadow: "0 0 20px rgba(255,216,77,0.4)" }}>HIYOKO</span>
+                    <span className="ps-logo-text" style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 900, fontSize: "22px", color: "#FFD84D", letterSpacing: "0.04em", textShadow: "0 0 20px rgba(255,216,77,0.4)" }}>HIYOKO</span>
                 </a>
 
                 {/* Center decorative banner */}
@@ -976,8 +1005,8 @@ function PresalePage() {
                                 padding: "7px 13px",
                                 background: "rgba(20,20,40,0.85)", border: "1px solid rgba(255,255,255,0.1)",
                                 borderRadius: "100px", cursor: "pointer", transition: "all 0.2s",
-                                fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "13px",
-                                color: "#F0F0FF",
+                                fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 600, fontSize: "13px",
+                                color: "#BCBCBC",
                             }}
                         >
                             <img src={SUPPORTED_LANGS.find(l => l.code === lang)?.flagUrl} alt="" style={{ width: "20px", height: "15px", borderRadius: "2px", objectFit: "cover" }} />
@@ -1003,7 +1032,7 @@ function PresalePage() {
                                             background: lang === l.code ? "rgba(255,216,77,0.1)" : "transparent",
                                             border: "none", borderRadius: "8px",
                                             cursor: "pointer", textAlign: "left",
-                                            fontFamily: "'Outfit', sans-serif", fontSize: "13px",
+                                            fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "13px",
                                             fontWeight: lang === l.code ? 700 : 500,
                                             color: lang === l.code ? "#FFD84D" : "#F0F0FF",
                                             transition: "all 0.15s",
@@ -1036,14 +1065,14 @@ function PresalePage() {
                         display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px",
                         background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)",
                         color: "rgba(240,240,255,0.7)", borderRadius: "100px",
-                        fontFamily: "'Outfit', sans-serif", fontWeight: 600, fontSize: "13px",
+                        fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 600, fontSize: "13px",
                         cursor: "pointer", transition: "all 0.2s",
                     }}>← Back</button>
                     <button onClick={handleDisconnect} style={{
                         display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px",
                         background: "rgba(255,60,60,0.12)", border: "1px solid rgba(255,60,60,0.4)",
                         color: "#ff6b6b", borderRadius: "100px",
-                        fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "13px",
+                        fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "13px",
                         cursor: "pointer", transition: "all 0.2s",
                     }}>⏻ Disconnect</button>
                 </div>
@@ -1054,19 +1083,7 @@ function PresalePage() {
 
                 {/* Title */}
                 <div>
-                    <div style={{
-                        display: "inline-flex", alignItems: "center", gap: "7px",
-                        padding: "5px 14px",
-                        background: presaleActive ? "rgba(255,159,28,0.12)" : "rgba(106,198,69,0.08)",
-                        border: `1px solid ${presaleActive ? "rgba(255,159,28,0.35)" : "rgba(106,198,69,0.25)"}`,
-                        borderRadius: "100px", fontSize: "11px", fontWeight: 700,
-                        color: presaleActive ? "#FF9F1C" : "#6AC645",
-                        letterSpacing: "0.1em", textTransform: "uppercase", width: "fit-content",
-                    }}>
-                        <div style={{ width: "7px", height: "7px", background: presaleActive ? "#FF9F1C" : "#6AC645", borderRadius: "50%", boxShadow: `0 0 8px ${presaleActive ? "#FF9F1C" : "#6AC645"}`, animation: "blink 1.8s infinite" }} />
-                        {presaleActive ? t("presaleLive") : t("presaleEnded")}
-                    </div>
-                    <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: "38px", letterSpacing: "-0.02em", lineHeight: 1.08, marginTop: "10px" }}>
+                    <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 900, fontSize: "38px", letterSpacing: "-0.02em", lineHeight: 1.08, marginTop: "10px" }}>
                         {t("myDashboard1")} <span style={{ color: "#FFD84D", textShadow: "0 0 30px rgba(255,216,77,0.4)" }}>{t("myDashboard2")}</span>
                     </div>
                 </div>
@@ -1093,7 +1110,7 @@ function PresalePage() {
                         display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap",
                     }}>
                         <div>
-                            <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "16px", color: "#ff6060", marginBottom: "4px" }}>⚠️ {t("wrongNetwork")}</div>
+                            <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "16px", color: "#ff6060", marginBottom: "4px" }}>⚠️ {t("wrongNetwork")}</div>
                             <div style={{ fontSize: "13px", color: "#6666AA" }}>{t("connectedTo")} {currentChainId ? `Chain ${Number(currentChainId) || "unknown"}` : t("unknownNetwork")}. {t("switchTo")}</div>
                             {switchNetworkMessage && <div style={{ fontSize: "12px", color: "#ff6060", marginTop: "6px" }}>{switchNetworkMessage}</div>}
                         </div>
@@ -1117,7 +1134,7 @@ function PresalePage() {
                                     padding: "11px 20px",
                                     background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)",
                                     color: "#F0F0FF", borderRadius: "100px",
-                                    fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "13px",
+                                    fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "13px",
                                     cursor: "pointer", whiteSpace: "nowrap",
                                 }}
                             >↺ Retry</button>
@@ -1128,7 +1145,7 @@ function PresalePage() {
                                     padding: "11px 24px",
                                     background: "linear-gradient(135deg, #FFD84D, #FF9F1C)",
                                     color: "#06060F", border: "none", borderRadius: "100px",
-                                    fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "13px",
+                                    fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 800, fontSize: "13px",
                                     cursor: isSwitchingNetwork ? "not-allowed" : "pointer",
                                     opacity: isSwitchingNetwork ? 0.6 : 1,
                                     letterSpacing: "0.04em", whiteSpace: "nowrap",
@@ -1158,7 +1175,7 @@ function PresalePage() {
                                     <span style={{ fontSize: "22px" }}>📦</span>
                                 </div>
                                 <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "6px" }}>Total Allocation</div>
-                                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 800, color: "#00E5FF", lineHeight: 1.1 }}>
+                                <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "22px", fontWeight: 800, color: "#FFA01C", lineHeight: 1.1 }}>
                                     {totalAlloc === "—" ? "0 THK" : `${totalAlloc} THK`}
                                 </div>
                                 <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "5px" }}>
@@ -1176,7 +1193,7 @@ function PresalePage() {
                                 <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", borderRadius: "16px 16px 0 0", background: "linear-gradient(90deg, #FFD84D, transparent)", opacity: 0.7 }} />
                                 <span style={{ fontSize: "22px", marginBottom: "12px", display: "block" }}>📅</span>
                                 <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "6px" }}>{t("dailyAllocation")}</div>
-                                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 800, color: "#FFD84D", lineHeight: 1.1 }}>
+                                <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "22px", fontWeight: 800, color: "#FFA01C", lineHeight: 1.1 }}>
                                     {dailyAlloc === "—" ? "— THK" : `${dailyAlloc} THK`}
                                 </div>
                                 <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "5px" }}>{t("afterVestingStarts")}</div>
@@ -1192,11 +1209,11 @@ function PresalePage() {
                                 <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", borderRadius: "16px 16px 0 0", background: "linear-gradient(90deg, #6AC645, transparent)", opacity: 0.7 }} />
                                 <span style={{ fontSize: "22px", marginBottom: "12px", display: "block" }}>✅</span>
                                 <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "6px" }}>{t("alreadyClaimed")}</div>
-                                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 800, color: "#6AC645", lineHeight: 1.1 }}>
+                                <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "22px", fontWeight: 800, color: "#FFA01C", lineHeight: 1.1 }}>
                                     {claimed === "—" ? "0 THK" : `${claimed} THK`}
                                 </div>
                                 <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "5px" }}>
-                                    {t("Provided")}: {claimed === "—" ? "0 THK" : `${claimed} THK`}
+                                    {t("disbursed")}: {claimed === "—" ? "0 THK" : `${claimed} THK`}
                                 </div>
                             </div>
                         </div>
@@ -1214,7 +1231,7 @@ function PresalePage() {
                             <div style={{ display: "flex", alignItems: "center", gap: "28px", flex: 1, flexWrap: "wrap" }}>
                                 <div>
                                     <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "4px" }}>{t("claimableNow")}</div>
-                                    <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "20px", fontWeight: 800, color: claimableRaw > 0n ? "#6AC645" : "#6666AA", lineHeight: 1.1 }}>
+                                    <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "20px", fontWeight: 800, color: claimableRaw > 0n ? "#6AC645" : "#6666AA", lineHeight: 1.1 }}>
                                         {claimableNow} THK
                                     </div>
                                     <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "3px", display: "flex", alignItems: "center", gap: "4px" }}>
@@ -1234,13 +1251,13 @@ function PresalePage() {
                                     style={{
                                         display: "flex", alignItems: "center", gap: "8px",
                                         padding: "13px 28px",
-                                        background: (isClaiming || claimableRaw === 0n) ? "rgba(255,255,255,0.1)" : "linear-gradient(135deg, #6AC645, #4ade80)",
+                                        background: (isClaiming || claimableRaw === 0n) ? "rgba(255,255,255,0.1)" : "linear-gradient(135deg, #FFD94E, #FFA01C)",
                                         color: (isClaiming || claimableRaw === 0n) ? "#6666AA" : "#06060F",
                                         border: "none", borderRadius: "100px",
-                                        fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "14px",
+                                        fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 800, fontSize: "16px",
                                         cursor: (isClaiming || claimableRaw === 0n) ? "not-allowed" : "pointer",
                                         letterSpacing: "0.04em", whiteSpace: "nowrap",
-                                        boxShadow: (isClaiming || claimableRaw === 0n) ? "none" : "0 0 20px rgba(106,198,69,0.25)",
+                                        boxShadow: (isClaiming || claimableRaw === 0n) ? "none" : "0 0 20px rgba(255,160,28,0.35)",
                                         transition: "all 0.25s",
                                         opacity: (isClaiming || claimableRaw === 0n) ? 0.35 : 1,
                                     }}
@@ -1269,16 +1286,16 @@ function PresalePage() {
                                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "10px" }}>
                                     <div>
                                         <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.12em", color: "#6666AA", marginBottom: "3px", fontWeight: 600 }}>{t("presalePrice")}</div>
-                                        <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "28px", fontWeight: 900, color: "#FFD84D", lineHeight: 1, textShadow: "0 0 30px rgba(255,216,77,0.5)" }}>
+                                        <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "28px", fontWeight: 900, color: "#FFD84D", lineHeight: 1, textShadow: "0 0 30px rgba(255,216,77,0.5)" }}>
                                             $0.015 <span style={{ fontSize: "13px", color: "#6666AA", fontWeight: 400 }}>USDT / THK</span>
                                         </div>
                                         <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "3px" }}>
-                                            {paymentTab === "USDT" ? "= 66 THK per USDT" : "≈ $0.015 per THK"}
+                                            {paymentTab === "USDT" ? t("rateUsdt") : t("rateThk")}
                                         </div>
                                     </div>
                                     <div style={{ textAlign: "right" }}>
-                                        <div style={{ fontSize: "10px", color: "#6666AA", marginBottom: "4px" }}>BSC (BEP-20)</div>
-                                        <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "11px", fontWeight: 700, color: "#FF9F1C" }}>🟡 BEP-20</div>
+                                        <div style={{ fontSize: "10px", color: "#6666AA", marginBottom: "4px" }}>{t("networkBsc")}</div>
+                                        <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "11px", fontWeight: 700, color: "#FF9F1C" }}>🟡 BEP-20</div>
                                     </div>
                                 </div>
 
@@ -1286,8 +1303,8 @@ function PresalePage() {
                                 {presaleStats && (
                                     <div style={{ marginBottom: "14px" }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#6666AA", marginBottom: "5px" }}>
-                                            <span>Sold: <span style={{ color: "#F0F0FF" }}>{soldDisplay} THK</span></span>
-                                            <span>Cap: <span style={{ color: "#F0F0FF" }}>{capDisplay} THK</span></span>
+                                            <span>{t("soldLabel")}: <span style={{ color: "#F0F0FF" }}>{soldDisplay} THK</span></span>
+                                            <span>{t("capLabel")}: <span style={{ color: "#F0F0FF" }}>{capDisplay} THK</span></span>
                                         </div>
                                         <div style={{ height: "6px", background: "rgba(255,255,255,0.06)", borderRadius: "100px", overflow: "hidden" }}>
                                             <div style={{
@@ -1305,9 +1322,9 @@ function PresalePage() {
                                         {/* Presale Stats */}
                                         <div style={{ display: "flex", gap: "6px", marginTop: "12px", flexWrap: "wrap" }}>
                                             {[
-                                                { label: "Total Sold", value: `${soldDisplay} THK`, color: "#FFD84D" },
-                                                { label: "Hard Cap", value: `${capDisplay} THK`, color: "#00E5FF" },
-                                                { label: "Remaining", value: `${remainingDisplay} THK`, color: "#AA55FF" },
+                                                { label: t("totalSoldLabel"), value: `${soldDisplay} THK`, color: "#FFD84D" },
+                                                { label: t("hardCapLabel"), value: `${capDisplay} THK`, color: "#FFD84D" },
+                                                { label: t("remainingLabel"), value: `${remainingDisplay} THK`, color: "#FFD84D" },
                                             ].map(({ label, value, color }) => (
                                                 <div key={label} style={{
                                                     flex: 1, minWidth: "90px",
@@ -1317,7 +1334,7 @@ function PresalePage() {
                                                     padding: "8px 10px",
                                                 }}>
                                                     <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "3px", fontWeight: 600 }}>{label}</div>
-                                                    <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "12px", fontWeight: 700, color }}>{value}</div>
+                                                    <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "12px", fontWeight: 700, color }}>{value}</div>
                                                 </div>
                                             ))}
                                         </div>
@@ -1328,23 +1345,32 @@ function PresalePage() {
 
                                 {/* Currency tabs */}
                                 <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.12em", color: "#6666AA", fontWeight: 700, marginBottom: "8px" }}>{t("selectCurrency")}</div>
-                                <div style={{ display: "flex", gap: "6px", marginBottom: "16px" }}>
-                                    {["USDT", "BNB"].map((tab) => (
+                                <div style={{ display: "flex", gap: "6px", marginBottom: "8px" }}>
+                                    {[{ key: "USDT", label: "USDT (BEP-20)" }, { key: "BNB", label: "BNB" }].map(({ key, label }) => (
                                         <button
-                                            key={tab}
-                                            onClick={() => { setPaymentTab(tab); setBuyMessage(""); }}
+                                            key={key}
+                                            onClick={() => { setPaymentTab(key); setBuyMessage(""); }}
                                             style={{
                                                 flex: 1, padding: "8px 4px",
                                                 background: "transparent",
-                                                border: `1px solid ${paymentTab === tab ? "#FFD84D" : "transparent"}`,
+                                                border: `1px solid ${paymentTab === key ? "#FFD84D" : "transparent"}`,
                                                 borderRadius: "100px",
-                                                fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "12px",
-                                                color: paymentTab === tab ? "#FFD84D" : "#6666AA",
+                                                fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "12px",
+                                                color: paymentTab === key ? "#FFD84D" : "#6666AA",
                                                 cursor: "pointer", transition: "all 0.2s", letterSpacing: "0.04em",
                                             }}
-                                        >{tab}</button>
+                                        >{label}</button>
                                     ))}
                                 </div>
+                                {paymentTab === "USDT" && (
+                                    <div style={{
+                                        fontSize: "11px", color: "#FF9F1C", marginBottom: "12px",
+                                        background: "rgba(255,159,28,0.08)", border: "1px solid rgba(255,159,28,0.25)",
+                                        borderRadius: "8px", padding: "7px 10px",
+                                    }}>
+                                        {t("bepWarning")}
+                                    </div>
+                                )}
 
                                 {/* ── USDT TAB ── */}
                                 {paymentTab === "USDT" && (() => {
@@ -1354,7 +1380,7 @@ function PresalePage() {
                                         <>
                                             {userStats?.usdtBalance !== undefined && (
                                                 <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px", textAlign: "right" }}>
-                                                    Balance: <span style={{ color: "#F0F0FF" }}>{formatNumber(formatUnits(userStats.usdtBalance, userStats?.usdtDecimals ?? 6), 2)} USDT</span>
+                                                    {t("balance")}: <span style={{ color: "#F0F0FF" }}>{formatNumber(formatUnits(userStats.usdtBalance, userStats?.usdtDecimals ?? 6), 2)} USDT</span>
                                                 </div>
                                             )}
 
@@ -1362,17 +1388,17 @@ function PresalePage() {
                                             {!isApproved && (
                                                 <>
                                                     <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)", textAlign: "center", marginBottom: "14px", lineHeight: 1.5 }}>
-                                                        First, approve hUSDT spending so the presale contract can accept your payment.
+                                                        {t("firstApprove")}
                                                     </div>
                                                     <button
                                                         onClick={handleApproveUsdt}
                                                         disabled={!isCorrectNetwork || isBuying || isLoadingAllowance}
                                                         style={btnBuyStyle(isCorrectNetwork && !isBuying && !isLoadingAllowance)}
                                                     >
-                                                        {!isCorrectNetwork ? "⚠️ Switch Network First"
-                                                            : isLoadingAllowance ? "⏳ Checking allowance..."
-                                                            : isBuying ? "⏳ Approving..."
-                                                            : "Approve USDT"}
+                                                        {!isCorrectNetwork ? t("switchNetworkFirst")
+                                                            : isLoadingAllowance ? t("checkingAllowance")
+                                                            : isBuying ? `⏳ ${t("approving")}`
+                                                            : t("approveUsdt")}
                                                     </button>
                                                 </>
                                             )}
@@ -1394,7 +1420,7 @@ function PresalePage() {
                                                             onChange={(e) => handleSpendChange(e.target.value)}
                                                             style={{
                                                                 flex: 1, background: "none", border: "none", outline: "none",
-                                                                color: "#F0F0FF", fontFamily: "'Outfit', sans-serif",
+                                                                color: "#F0F0FF", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
                                                                 fontSize: "16px", fontWeight: 400, padding: "11px 14px",
                                                             }}
                                                         />
@@ -1403,14 +1429,14 @@ function PresalePage() {
                                                                 onClick={() => handleSpendChange(formatUnits(userStats.usdtBalance, userStats?.usdtDecimals ?? 6))}
                                                                 style={{
                                                                     background: "rgba(255,216,77,0.18)", border: "none", cursor: "pointer",
-                                                                    color: "#FFD84D", fontFamily: "'Outfit', sans-serif",
+                                                                    color: "#FFD84D", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
                                                                     fontWeight: 800, fontSize: "10px", padding: "5px 10px",
                                                                     borderRadius: "6px", marginRight: "6px", letterSpacing: "0.06em",
                                                                 }}
                                                             >MAX</button>
                                                         )}
                                                         <div style={{
-                                                            padding: "0 14px", fontFamily: "'Outfit', sans-serif",
+                                                            padding: "0 14px", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
                                                             fontWeight: 700, fontSize: "12px", color: "rgba(255,255,255,0.5)",
                                                             borderLeft: "1px solid rgba(255,255,255,0.07)", height: "100%",
                                                             display: "flex", alignItems: "center",
@@ -1427,12 +1453,12 @@ function PresalePage() {
                                                             onChange={(e) => handleThkChange(e.target.value)}
                                                             style={{
                                                                 flex: 1, background: "none", border: "none", outline: "none",
-                                                                color: "#FFD84D", fontFamily: "'Outfit', sans-serif",
+                                                                color: "#FFD84D", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
                                                                 fontSize: "16px", fontWeight: 700, padding: "11px 14px",
                                                             }}
                                                         />
                                                         <div style={{
-                                                            padding: "0 14px", fontFamily: "'Outfit', sans-serif",
+                                                            padding: "0 14px", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
                                                             fontWeight: 700, fontSize: "12px", color: "#FFD84D",
                                                             borderLeft: "1px solid rgba(255,216,77,0.15)", height: "100%",
                                                             display: "flex", alignItems: "center",
@@ -1442,7 +1468,7 @@ function PresalePage() {
                                                         <div style={{ fontSize: "11px", color: "#FF9F1C", textAlign: "center", marginBottom: "8px" }}>Minimum purchase is 10 USDT</div>
                                                     )}
                                                     <button onClick={handleBuyWithUsdt} disabled={!isCorrectNetwork || !isValidUsdtAmount(usdtAmount) || isBuying} style={btnBuyStyle(isCorrectNetwork && isValidUsdtAmount(usdtAmount) && !isBuying)}>
-                                                        {!isCorrectNetwork ? "⚠️ Switch Network First" : isBuying ? `⏳ ${t("buying")}...` : t("buyNow")}
+                                                        {!isCorrectNetwork ? t("switchNetworkFirst") : isBuying ? `⏳ ${t("buying")}` : t("buyNow")}
                                                     </button>
                                                 </>
                                             )}
@@ -1460,7 +1486,7 @@ function PresalePage() {
                                         {/* BNB balance */}
                                         {userStats?.bnbBalance !== undefined && (
                                             <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px", textAlign: "right" }}>
-                                                Balance: <span style={{ color: "#F0F0FF" }}>{formatNumber(formatUnits(userStats.bnbBalance, 18), 4)} BNB</span>
+                                                {t("balance")}: <span style={{ color: "#F0F0FF" }}>{formatNumber(formatUnits(userStats.bnbBalance, 18), 4)} BNB</span>
                                             </div>
                                         )}
                                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>
@@ -1478,11 +1504,11 @@ function PresalePage() {
                                                 onChange={(e) => handleBnbChange(e.target.value)}
                                                 style={{
                                                     flex: 1, background: "none", border: "none", outline: "none",
-                                                    color: "#F0F0FF", fontFamily: "'Outfit', sans-serif",
+                                                    color: "#F0F0FF", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
                                                     fontSize: "16px", fontWeight: 400, padding: "11px 14px",
                                                 }}
                                             />
-                                            {userStats?.bnbBalance && BigInt(userStats.bnbBalance) > 0n && (
+                                            {BigInt(String(userStats?.bnbBalance ?? "0")) > 0n && (
                                                 <button
                                                     onClick={() => {
                                                         // Leave small reserve for gas (~0.001 BNB)
@@ -1494,14 +1520,14 @@ function PresalePage() {
                                                     }}
                                                     style={{
                                                         background: "rgba(255,216,77,0.18)", border: "none", cursor: "pointer",
-                                                        color: "#FFD84D", fontFamily: "'Outfit', sans-serif",
+                                                        color: "#FFD84D", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
                                                         fontWeight: 800, fontSize: "10px", padding: "5px 10px",
                                                         borderRadius: "6px", marginRight: "6px", letterSpacing: "0.06em",
                                                     }}
                                                 >MAX</button>
                                             )}
                                             <div style={{
-                                                padding: "0 14px", fontFamily: "'Outfit', sans-serif",
+                                                padding: "0 14px", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
                                                 fontWeight: 700, fontSize: "12px", color: "rgba(255,255,255,0.5)",
                                                 borderLeft: "1px solid rgba(255,255,255,0.07)", height: "100%",
                                                 display: "flex", alignItems: "center",
@@ -1526,13 +1552,13 @@ function PresalePage() {
                                                 readOnly
                                                 style={{
                                                     flex: 1, background: "none", border: "none", outline: "none",
-                                                    color: "#A0A0CC", fontFamily: "'Outfit', sans-serif",
+                                                    color: "#A0A0CC", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
                                                     fontSize: "16px", fontWeight: 400, padding: "11px 14px",
                                                     cursor: "default",
                                                 }}
                                             />
                                             <div style={{
-                                                padding: "0 14px", fontFamily: "'Outfit', sans-serif",
+                                                padding: "0 14px", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
                                                 fontWeight: 700, fontSize: "12px", color: "rgba(255,255,255,0.4)",
                                                 borderLeft: "1px solid rgba(255,255,255,0.05)", height: "100%",
                                                 display: "flex", alignItems: "center",
@@ -1550,12 +1576,12 @@ function PresalePage() {
                                                 onChange={(e) => handleBnbThkChange(e.target.value)}
                                                 style={{
                                                     flex: 1, background: "none", border: "none", outline: "none",
-                                                    color: "#FFD84D", fontFamily: "'Outfit', sans-serif",
+                                                    color: "#FFD84D", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
                                                     fontSize: "16px", fontWeight: 700, padding: "11px 14px",
                                                 }}
                                             />
                                             <div style={{
-                                                padding: "0 14px", fontFamily: "'Outfit', sans-serif",
+                                                padding: "0 14px", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
                                                 fontWeight: 700, fontSize: "12px", color: "#FFD84D",
                                                 borderLeft: "1px solid rgba(255,216,77,0.15)", height: "100%",
                                                 display: "flex", alignItems: "center",
@@ -1569,7 +1595,7 @@ function PresalePage() {
                                             disabled={!isCorrectNetwork || !bnbAmount || !bnbQuote || isBuying || isFetchingBnbQuote}
                                             style={btnBuyStyle(isCorrectNetwork && !!bnbAmount && !!bnbQuote && !isBuying && !isFetchingBnbQuote)}
                                         >
-                                            {!isCorrectNetwork ? "⚠️ Switch Network First" : isBuying ? "⏳ Processing..." : "BUY NOW"}
+                                            {!isCorrectNetwork ? t("switchNetworkFirst") : isBuying ? t("processing") : t("buyNow")}
                                         </button>
                                         {buyMessage && (
                                             <div style={{ marginTop: "10px", fontSize: "13px", color: buyMsgColor(), textAlign: "center" }}>{buyMessage}</div>
@@ -1595,7 +1621,7 @@ function PresalePage() {
                                     display: "flex", alignItems: "center", justifyContent: "space-between",
                                     padding: "18px 22px", borderBottom: "1px solid rgba(255,255,255,0.06)",
                                 }}>
-                                    <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "16px", fontWeight: 800, color: "#F0F0FF" }}>{t("txHistory")}</div>
+                                    <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "16px", fontWeight: 800, color: "#F0F0FF" }}>{t("txHistory")}</div>
                                     <div style={{ display: "flex", gap: "6px" }}>
                                         {["my", "all"].map((tab) => (
                                             <button
@@ -1692,7 +1718,7 @@ function PresalePage() {
                                 padding: "18px 24px", borderBottom: "1px solid rgba(255,255,255,0.06)",
                                 flexWrap: "wrap", gap: "10px",
                             }}>
-                                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "16px", fontWeight: 800, color: "#F0F0FF" }}>
+                                <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "16px", fontWeight: 800, color: "#FFA01C" }}>
                                     🔒 {t("vestingSchedule")}
                                 </div>
                                 <div style={{
@@ -1826,9 +1852,9 @@ function PresalePage() {
                                                     {/* date */}
                                                     <div style={{ fontSize: "10px", color: "#6666AA", letterSpacing: "0.04em", marginBottom: "4px" }}>{s.date}</div>
                                                     {/* step name */}
-                                                    <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 700, color: isDone || isActive ? "#F0F0FF" : "#8888AA", lineHeight: 1.2, marginBottom: "8px" }}>{s.name}</div>
+                                                    <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "13px", fontWeight: 700, color: isDone || isActive ? "#F0F0FF" : "#8888AA", lineHeight: 1.2, marginBottom: "8px" }}>{s.name}</div>
                                                     {/* status value */}
-                                                    <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "13px", fontWeight: 800, color: isDone ? doneGreen : isActive ? activeGreen : s.valColor }}>{s.val}</div>
+                                                    <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "13px", fontWeight: 800, color: isDone ? doneGreen : isActive ? activeGreen : s.valColor }}>{s.val}</div>
                                                     {/* sub text */}
                                                     <div style={{ fontSize: "10px", color: "#6666AA", marginTop: "3px", lineHeight: 1.4 }}>{s.sub}</div>
                                                 </div>
@@ -1848,7 +1874,7 @@ function PresalePage() {
                                 display: "flex", alignItems: "center", justifyContent: "space-between",
                                 padding: "18px 22px", borderBottom: "1px solid rgba(255,255,255,0.06)",
                             }}>
-                                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "16px", fontWeight: 800, color: "#F0F0FF", display: "flex", alignItems: "center", gap: "8px" }}>
+                                <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "16px", fontWeight: 800, color: "#F0F0FF", display: "flex", alignItems: "center", gap: "8px" }}>
                                     📢 {t("announcements")}
                                     {announcements.length > 0 && (
                                         <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#FF9F1C", color: "#06060F", fontSize: "10px", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>

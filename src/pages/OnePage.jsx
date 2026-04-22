@@ -6,7 +6,7 @@ import { useLanguage } from "../hooks/useLanguage";
 import { SUPPORTED_LANGS } from "../i18n/translations";
 import { createSession, getPresaleStats, getRoadmap, validateSession } from "../services/api";
 import { formatUnits } from "../services/format";
-import { connectWithWalletConnect, disconnectWalletConnect, getCurrentAccount, getPresaleStats as getPresaleStatsChain, switchNetwork } from "../services/web3";
+import { connectWithWalletConnect, disconnectWalletConnect, getCurrentAccount, getPresaleStats as getPresaleStatsChain } from "../services/web3";
 
 // ── Donut chart data ──────────────────────────────────────
 const DONUT_SEGMENTS = [
@@ -21,9 +21,15 @@ const DONUT_SEGMENTS = [
 ];
 const C = 2 * Math.PI * 88; // ≈ 552.92
 
+// Pre-compute per-segment arc lengths and offsets at module level to avoid
+// mutating a variable during render (which triggers react-hooks/immutability).
+const SEGMENT_DATA = DONUT_SEGMENTS.reduce((acc, seg) => {
+  const prevOffset = acc.length > 0 ? acc[acc.length - 1].offset + acc[acc.length - 1].da : 0;
+  return [...acc, { ...seg, da: seg.pct * C, offset: prevOffset }];
+}, []);
+
 
 function DonutChart() {
-  let offset = 0;
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%" }}>
       <svg viewBox="0 0 320 320" style={{ width: "100%", maxWidth: "420px", overflow: "visible" }}>
@@ -42,21 +48,16 @@ function DonutChart() {
         <circle cx="160" cy="160" r="88" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="32" />
 
         {/* Segments */}
-        {DONUT_SEGMENTS.map((seg, i) => {
-          const da = seg.pct * C;
-          const curOffset = offset;
-          offset += da;
-          return (
-            <circle key={i} cx="160" cy="160" r="88" fill="none"
-              stroke={i === 7 ? "url(#presaleGrad)" : seg.color}
-              strokeWidth={i === 7 ? 34 : 32}
-              strokeDasharray={`${da} ${C}`}
-              strokeDashoffset={-curOffset}
-              transform="rotate(-90 160 160)"
-              filter={i === 7 ? "url(#presaleGlow)" : undefined}
-            />
-          );
-        })}
+        {SEGMENT_DATA.map((seg, i) => (
+          <circle key={i} cx="160" cy="160" r="88" fill="none"
+            stroke={i === 7 ? "url(#presaleGrad)" : seg.color}
+            strokeWidth={i === 7 ? 34 : 32}
+            strokeDasharray={`${seg.da} ${C}`}
+            strokeDashoffset={-seg.offset}
+            transform="rotate(-90 160 160)"
+            filter={i === 7 ? "url(#presaleGlow)" : undefined}
+          />
+        ))}
 
         {/* ── SVG Labels with leader lines (matching HTML reference) ── */}
         {/* Ecosystem – cyan, top-right */}
@@ -166,7 +167,6 @@ function OnePage() {
   const [presaleStats, setPresaleStats] = useState(null);
   const presaleRaised = presaleStats?.totalUsdt ?? 0;
   const presaleProgress = Math.min((presaleRaised / PRESALE_GOAL) * 100, 100);
-  const presalePurchases = presaleStats?.totalPurchases ?? 0;
 
   const [chainStats, setChainStats] = useState(null);
   const soldDisplay = chainStats?.totalSold ? parseFloat(formatUnits(BigInt(chainStats.totalSold), 18)).toLocaleString(undefined, { maximumFractionDigits: 2 }) : "--";
@@ -245,10 +245,13 @@ function OnePage() {
     try {
       setIsConnecting(true);
       setConnectError("");
-      await connectWithWalletConnect();
-      // Auto-switch to BSC Testnet — silently ignore if wallet rejects (PresalePage will prompt)
-      try { await switchNetwork(); } catch { /* handled in PresalePage */ }
-      const acc = await getCurrentAccount();
+      const resolvedAddress = await connectWithWalletConnect();
+      // Network switch is handled by PresalePage after navigation (switching here causes
+      // MetaMask to enter a transitional state where eth_chainId returns null, making
+      // the chain detection loop spin for 6 s)
+      // Use returned address as fallback in case getCurrentAccount() returns null (WalletConnect path)
+      const acc = (await getCurrentAccount()) || resolvedAddress;
+      if (!acc) throw new Error("Could not retrieve wallet address. Please try again.");
       await createSession(acc);
       transitionTo("/my-page");
     } catch (err) {
@@ -323,7 +326,7 @@ function OnePage() {
               padding: "7px 13px",
               background: "rgba(20,20,40,0.85)", border: "1px solid rgba(255,255,255,0.1)",
               borderRadius: "100px", cursor: "pointer", transition: "all 0.2s",
-              fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "13px",
+              fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "13px",
               color: "#F0F0FF",
             }}
           >
@@ -349,7 +352,7 @@ function OnePage() {
                     background: lang === l.code ? "rgba(255,216,77,0.1)" : "transparent",
                     border: "none", borderRadius: "8px",
                     cursor: "pointer", textAlign: "left",
-                    fontFamily: "'Outfit', sans-serif", fontSize: "13px",
+                    fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "13px",
                     fontWeight: lang === l.code ? 700 : 500,
                     color: lang === l.code ? "#FFD84D" : "#F0F0FF",
                     transition: "all 0.15s",
@@ -370,17 +373,17 @@ function OnePage() {
               display: "flex", alignItems: "center", gap: "8px", padding: "11px 24px",
               background: "linear-gradient(135deg, #FFD84D, #FF9F1C)",
               color: "#06060F", border: "none", borderRadius: "100px",
-              fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "15px",
+              fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "15px",
               cursor: "pointer", transition: "all 0.2s",
               boxShadow: "0 0 20px rgba(255,216,77,0.35)",
             }}>
-              🐣 Go to Dashboard
+              🐣 {t("goToDashboard")}
             </button>
           ) : (
             <button onClick={handleConnectWC} disabled={isConnecting} style={{
               display: "flex", alignItems: "center", gap: "8px", padding: "11px 24px",
               background: "rgba(255,216,77,0.12)", border: "1px solid rgba(255,216,77,0.45)",
-              color: "#FFD84D", borderRadius: "100px", fontFamily: "'Outfit', sans-serif",
+              color: "#FFD84D", borderRadius: "100px", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
               fontWeight: 700, fontSize: "15px", cursor: isConnecting ? "not-allowed" : "pointer",
               opacity: isConnecting ? 0.7 : 1, transition: "all 0.2s",
               boxShadow: "0 0 16px rgba(255,216,77,0.12)",
@@ -423,7 +426,7 @@ function OnePage() {
                     background: lang === l.code ? "rgba(255,216,77,0.1)" : "transparent",
                     border: lang === l.code ? "1px solid rgba(255,216,77,0.3)" : "1px solid transparent",
                     borderRadius: "8px", cursor: "pointer", textAlign: "left",
-                    fontFamily: "'Outfit', sans-serif", fontSize: "13px",
+                    fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "13px",
                     fontWeight: lang === l.code ? 700 : 500,
                     color: lang === l.code ? "#FFD84D" : "#F0F0FF",
                     transition: "all 0.15s",
@@ -442,9 +445,9 @@ function OnePage() {
                 padding: "13px 24px", width: "100%",
                 background: "linear-gradient(135deg, #FFD84D, #FF9F1C)",
                 color: "#06060F", border: "none", borderRadius: "100px",
-                fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "15px", cursor: "pointer",
+                fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "15px", cursor: "pointer",
               }}>
-                🐣 Go to Dashboard
+                🐣 {t("goToDashboard")}
               </button>
             ) : (
               <button onClick={() => { handleConnectWC(); setMobileMenuOpen(false); }} disabled={isConnecting} style={{
@@ -452,7 +455,7 @@ function OnePage() {
                 padding: "13px 24px", width: "100%",
                 background: "rgba(255,216,77,0.12)", border: "1px solid rgba(255,216,77,0.45)",
                 color: "#FFD84D", borderRadius: "100px",
-                fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "15px",
+                fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "15px",
                 cursor: isConnecting ? "not-allowed" : "pointer", opacity: isConnecting ? 0.7 : 1,
               }}>
                 {WC_SVG} {isConnecting ? t("connectingBtn") : t("connectWalletBtn")}
@@ -470,8 +473,8 @@ function OnePage() {
             {t("heroBadge")}
           </div>
           <h1>
-            Play More. Live Better.<br />
-            <span className="y">Earn </span>
+            {t("heroTitle1")}<br />
+            <span className="y">{t("heroEarn")} </span>
             <span className="c">THK.</span>
           </h1>
           <p className="hero-sub">{t("heroSubtitle")}</p>
@@ -489,12 +492,12 @@ function OnePage() {
             <div className="prog-bar">
               <div className="prog-fill" style={{ width: `${progWidth}%` }} />
             </div>
-            <div style={{ display: "flex", gap: "8px", marginTop: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: "8px", marginTop: "12px", marginBottom: "4px", flexWrap: "wrap" }}>
               {[
-                { label: "Total Sold", value: `${soldDisplay} THK`, color: "#FFD84D" },
-                { label: "Hard Cap", value: `${capDisplay} THK`, color: "#00E5FF" },
-                { label: "Remaining", value: `${remainingDisplay} THK`, color: "#AA55FF" },
-              ].map(({ label, value, color }) => (
+                { label: t("totalSoldLabel"), value: `${soldDisplay} THK` },
+                { label: t("hardCapLabel"), value: `${capDisplay} THK` },
+                { label: t("remainingLabel"), value: `${remainingDisplay} THK` },
+              ].map(({ label, value }) => (
                 <div key={label} style={{
                   flex: 1, minWidth: "100px",
                   background: "rgba(255,255,255,0.04)",
@@ -503,11 +506,11 @@ function OnePage() {
                   padding: "12px 14px",
                 }}>
                   <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "5px", fontWeight: 600 }}>{label}</div>
-                  <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "15px", fontWeight: 700, color }}>{value}</div>
+                  <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "18px", fontWeight: 700, color: "#FFD94E" }}>{value}</div>
                 </div>
               ))}
             </div>
-            <div className="countdown">
+            <div className="countdown" style={{ marginTop: "20px", marginBottom: "16px" }}>
               {[["d", t("heroCountDays")], ["h", t("heroCountHours")], ["m", t("heroCountMins")], ["s", t("heroCountSecs")]].map(([k, lbl]) => (
                 <div key={k} className="cnt-box">
                   <div className="cnt-num">{countdown[k]}</div>
@@ -533,14 +536,6 @@ function OnePage() {
           <div className="hero-glow" />
           <div className="hero-glow-inner" />
           <img className="hero-chick" src="/HiyokoHero.png" alt="HIYOKO" onError={(e) => { e.target.src = "/HiyokoHero.png"; }} />
-          <div className="stats-row">
-            {[["54M+", "Global Users"], [presalePurchases.toLocaleString(), "Pre-orders"], ["1B", "Total Supply"]].map(([num, lbl]) => (
-              <div key={lbl} className="stat-box">
-                <div className="stat-num">{num}</div>
-                <div className="stat-lbl">{lbl}</div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -563,15 +558,17 @@ function OnePage() {
 
       {/* ── HAPPY CHICK ── */}
       <div className="vitalis-section">
-        <div className="vitalis-card" style={{ borderColor: "rgba(255,159,28,0.2)", boxShadow: "0 0 60px rgba(255,159,28,0.06)" }}>
-          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 60% at 20% 50%, rgba(255,159,28,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
+        <div className="vitalis-card" style={{ borderColor: "rgba(255,159,28,0.2)", boxShadow: "0 0 60px rgba(255,159,28,0.06)", overflow: "visible" }}>
+          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 60% at 20% 50%, rgba(255,159,28,0.07) 0%, transparent 70%)", pointerEvents: "none", borderRadius: "28px", overflow: "hidden" }} />
           <div className="vitalis-text">
             <span className="vitalis-tag" style={{ color: "#FF9F1C" }}>{t("happyChickTag")}</span>
             <div className="vitalis-title">{t("happyChickTitle")}</div>
             <p className="vitalis-desc">{t("happyChickDesc")}</p>
             <div className="vitalis-badge" style={{ borderColor: "rgba(255,159,28,0.3)", background: "rgba(255,159,28,0.08)", color: "#FF9F1C" }}>{t("happyChickBadge")}</div>
           </div>
-          <img className="vitalis-img" src="/HiyokoHero.png" alt="Happy Chick" onError={(e) => { e.target.style.display = "none"; }} />
+          <img className="vitalis-img" src="/HiyokoHero.png" alt="Happy Chick"
+            style={{ width: "340px", transform: "translateY(-20px) scale(1.12)", filter: "drop-shadow(0 8px 40px rgba(255,159,28,0.35))" }}
+            onError={(e) => { e.target.style.display = "none"; }} />
         </div>
       </div>
 
@@ -682,7 +679,7 @@ function OnePage() {
         <div style={{ background: "linear-gradient(135deg, rgba(255,159,28,0.1), rgba(0,229,255,0.08))", border: "1px solid rgba(255,216,77,0.2)", borderRadius: "28px", padding: "64px 48px", position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 60% at 50% 50%, rgba(255,216,77,0.06) 0%, transparent 70%)", pointerEvents: "none" }} />
           <div style={{ fontSize: "52px", marginBottom: "18px" }}>🐣</div>
-          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: "clamp(26px,3.5vw,42px)", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "14px" }}>
+          <h2 style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "clamp(26px,3.5vw,42px)", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "14px" }}>
             Join the <span style={{ color: "#FFD84D" }}>HIYOKO</span> Ecosystem <span style={{ color: "#00E5FF" }}>Early.</span>
           </h2>
           <p style={{ fontSize: "15px", color: "rgba(240,240,255,0.7)", maxWidth: "520px", margin: "0 auto 36px", lineHeight: 1.75 }}>{t("ctaSubtitle")}</p>

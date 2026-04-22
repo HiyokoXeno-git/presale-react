@@ -14,7 +14,7 @@ export const CONFIG = {
   presaleApiBaseUrl: "https://presale.hiyoko.io/presale/api",
   adminApiBaseUrl: "https://presale.hiyoko.io/admin/api",
 
-  usdtDecimals: 6,
+  usdtDecimals: 18,
   tokenDecimals: 18,
 
   // BSCScan Mainnet API
