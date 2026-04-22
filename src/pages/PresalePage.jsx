@@ -505,8 +505,8 @@ function PresalePage() {
 
     function getTokenAmountRawFromUsdtRaw(usdtRaw) {
         const raw = BigInt(usdtRaw);
-        // Scale: THK has 18 decimals, USDT has CONFIG.usdtDecimals.
-        // tokens_raw = usdtRaw * 66 * 10^(18 - usdtDecimals)
+        // usdtRaw is in CONFIG.usdtDecimals precision (6 for contract interface).
+        // THK has 18 decimals, so scale = 10^(18 - 6) = 10^12.
         const scale = BigInt(10 ** (18 - CONFIG.usdtDecimals));
         return (raw * 66n * scale).toString();
     }
