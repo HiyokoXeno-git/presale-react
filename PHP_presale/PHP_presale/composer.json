@@ -1,8 +1,0 @@
-{
-  "require": {
-    "kornrunner/keccak": "^1.1",
-    "web3p/ethereum-util": "^0.1.4",
-    "kornrunner/ethereum-util": "^0.2.0",
-    "kornrunner/secp256k1": "^0.3"
-  }
-}
