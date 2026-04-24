@@ -320,7 +320,7 @@ function PresalePage() {
             const quoteDigest = String(quote.digest ?? "");
 
             if (!usdtAmountRaw || !bnbAmountWei || !signature || !quoteDeadline) { setMsg(t("errBnbQuoteIncomplete")); return; }
-            if (BigInt(usdtAmountRaw) < BigInt("10000000")) { setMsg(t("errMinBnbPurchase")); return; }
+            if (BigInt(usdtAmountRaw) < BigInt(10) * (10n ** BigInt(CONFIG.usdtDecimals))) { setMsg(t("errMinBnbPurchase")); return; }
 
             // Pre-flight: verify wallet has enough BNB (purchase amount + ~0.001 BNB gas buffer)
             try {

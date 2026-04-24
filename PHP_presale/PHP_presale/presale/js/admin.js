@@ -24,9 +24,9 @@ function formatUnits(value, decimals = 18) {
 async function ensureBscTestnet() {
     const chainId = await window.ethereum.request({ method: "eth_chainId" });
     if (chainId !== CONFIG.chainHex) {
-        throw new Error("MetaMask를 BSC Testnet(ChainId 97)으로 변경해주세요.");
+        throw new Error("MetaMask를 BSC Mainnet(ChainId 97)으로 변경해주세요.");
     }
-    document.getElementById("network").innerText = "BSC Testnet";
+    document.getElementById("network").innerText = "BSC Mainnet";
 }
 
 async function connectAdmin() {

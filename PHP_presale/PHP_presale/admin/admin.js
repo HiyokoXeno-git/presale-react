@@ -28,10 +28,10 @@ async function ensureBsc() {
     });
 
     if (chainId !== CONFIG.chainHex) {
-        throw new Error("Please switch MetaMask to BSC Testnet");
+        throw new Error("Please switch MetaMask to BSC Mainnet");
     }
 
-    document.getElementById("network").innerText = "BSC Testnet";
+    document.getElementById("network").innerText = "BSC Mainnet";
 }
 
 async function connectWallet() {
@@ -575,10 +575,186 @@ async function withdrawExcessTokens() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function () {
+// ── Auth ──────────────────────────────────────────────────────
+const TOKEN_KEY = 'admin_token';
+
+async function checkSession() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) { showLogin(); return; }
+    try {
+        const res = await fetch('./api/adminsession.php?token=' + encodeURIComponent(token));
+        const json = await res.json();
+        if (json.valid) {
+            showDashboard(json.username);
+        } else {
+            localStorage.removeItem(TOKEN_KEY);
+            showLogin();
+        }
+    } catch(e) { showLogin(); }
+}
+
+function showLogin() {
+    document.getElementById('loginOverlay').style.display = 'flex';
+    document.querySelector('.container').style.display = 'none';
+    document.getElementById('logoutBar').style.display = 'none';
+}
+
+function showDashboard(username) {
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.querySelector('.container').style.display = 'block';
+    const bar = document.getElementById('logoutBar');
+    if (bar) bar.style.display = 'flex';
+    const el = document.getElementById('loggedInUser');
+    if (el) el.textContent = username;
     loadStats();
     loadUsers();
-});
+    loadAnnouncements();
+    if (typeof loadRoadmap === 'function') loadRoadmap();
+}
+
+async function submitLogin() {
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errEl = document.getElementById('loginError');
+    errEl.style.display = 'none';
+    if (!username || !password) { errEl.textContent = 'Enter username and password'; errEl.style.display = 'block'; return; }
+    try {
+        const res = await fetch('./api/login.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const json = await res.json();
+        if (json.success) {
+            localStorage.setItem(TOKEN_KEY, json.token);
+            showDashboard(json.username);
+        } else {
+            errEl.textContent = json.message || 'Login failed';
+            errEl.style.display = 'block';
+        }
+    } catch(e) {
+        errEl.textContent = 'Network error';
+        errEl.style.display = 'block';
+    }
+}
+
+async function logout() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (token) {
+        fetch('./api/adminsession.php', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token })
+        });
+        localStorage.removeItem(TOKEN_KEY);
+    }
+    showLogin();
+}
+
+// ── Announcements ─────────────────────────────────────────────
+let editingAnnId = null;
+
+async function loadAnnouncements() {
+    const listEl = document.getElementById('annList');
+    if (!listEl) return;
+    try {
+        const res = await fetch('./api/getAnnouncements.php');
+        const json = await res.json();
+        if (!json.success) throw new Error(json.message);
+        if (!json.data.length) { listEl.innerHTML = '<p style="color:#888;">No announcements yet.</p>'; return; }
+        listEl.innerHTML = json.data.map(a => `
+            <div class="ann-item">
+                <div>
+                    <div class="ann-item-title">${escAnn(a.title)}<span class="ann-badge-${a.is_active ? 'active' : 'inactive'}">${a.is_active ? 'Active' : 'Inactive'}</span></div>
+                    <div class="ann-item-body">${escAnn(a.body)}</div>
+                    <div class="ann-item-meta">${escAnn(a.time_label || '')} &nbsp;|&nbsp; lang: ${escAnn(a.lang || 'en')}</div>
+                </div>
+                <div class="ann-item-actions">
+                    <button onclick="editAnnouncement(${a.id})">Edit</button>
+                    <button style="background:#ef4444;" onclick="deleteAnnouncement(${a.id})">Delete</button>
+                </div>
+            </div>`).join('');
+    } catch(e) {
+        if (listEl) listEl.innerHTML = '<p style="color:red;">Error: ' + e.message + '</p>';
+    }
+}
+
+function editAnnouncement(id) {
+    fetch('./api/getAnnouncements.php')
+        .then(r => r.json())
+        .then(json => {
+            const a = json.data.find(x => x.id == id);
+            if (!a) return;
+            document.getElementById('annEditId').value = a.id;
+            document.getElementById('annIcon').value = a.icon || '';
+            document.getElementById('annIconBg').value = a.icon_bg || '';
+            document.getElementById('annTime').value = a.time_label || '';
+            document.getElementById('annTitle').value = a.title || '';
+            document.getElementById('annBody').value = a.body || '';
+            document.getElementById('annActive').checked = !!a.is_active;
+            document.getElementById('annFormTitle').textContent = 'Edit Announcement';
+            document.getElementById('annCancelBtn').style.display = '';
+            editingAnnId = a.id;
+            document.querySelector('.ann-form').scrollIntoView({ behavior: 'smooth' });
+        });
+}
+
+async function saveAnnouncement() {
+    const id = editingAnnId;
+    const title = document.getElementById('annTitle').value.trim();
+    const body = document.getElementById('annBody').value.trim();
+    if (!title || !body) { alert('Title and body are required'); return; }
+    const payload = {
+        id: id || 0,
+        icon: document.getElementById('annIcon').value.trim(),
+        icon_bg: document.getElementById('annIconBg').value.trim(),
+        time_label: document.getElementById('annTime').value.trim(),
+        title, body,
+        is_active: document.getElementById('annActive').checked
+    };
+    try {
+        const res = await fetch('./api/saveAnnouncement.php', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.message);
+        cancelAnnEdit();
+        loadAnnouncements();
+    } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function deleteAnnouncement(id) {
+    if (!confirm('Delete this announcement?')) return;
+    try {
+        const res = await fetch('./api/deleteAnnouncement.php', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.message);
+        loadAnnouncements();
+    } catch(e) { alert('Error: ' + e.message); }
+}
+
+function cancelAnnEdit() {
+    editingAnnId = null;
+    document.getElementById('annEditId').value = '';
+    document.getElementById('annIcon').value = '';
+    document.getElementById('annIconBg').value = '';
+    document.getElementById('annTime').value = '';
+    document.getElementById('annTitle').value = '';
+    document.getElementById('annBody').value = '';
+    document.getElementById('annActive').checked = true;
+    document.getElementById('annFormTitle').textContent = 'Add New Announcement';
+    document.getElementById('annCancelBtn').style.display = 'none';
+}
+
+function escAnn(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+document.addEventListener('DOMContentLoaded', checkSession);
 
 if (window.ethereum) {
     window.ethereum.on("accountsChanged", function (accounts) {

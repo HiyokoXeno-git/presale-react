@@ -558,8 +558,8 @@ function OnePage() {
 
       {/* ── HAPPY CHICK ── */}
       <div className="vitalis-section">
-        <div className="vitalis-card" style={{ borderColor: "rgba(255,159,28,0.2)", boxShadow: "0 0 60px rgba(255,159,28,0.06)", overflow: "visible" }}>
-          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 60% at 20% 50%, rgba(255,159,28,0.07) 0%, transparent 70%)", pointerEvents: "none", borderRadius: "28px", overflow: "hidden" }} />
+        <div className="vitalis-card" style={{ borderColor: "rgba(255,159,28,0.2)", boxShadow: "0 0 60px rgba(255,159,28,0.06)" }}>
+          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 60% at 20% 50%, rgba(255,159,28,0.07) 0%, transparent 70%)", pointerEvents: "none", borderRadius: "28px" }} />
           <div className="vitalis-text">
             <span className="vitalis-tag" style={{ color: "#FFA01C" }}>{t("happyChickTag")}</span>
             <div className="vitalis-title">{t("happyChickTitle")}</div>
@@ -567,7 +567,7 @@ function OnePage() {
             <div className="vitalis-badge" style={{ borderColor: "rgba(255,159,28,0.3)", background: "rgba(255,159,28,0.08)", color: "#FFA01C" }}>{t("happyChickBadge")}</div>
           </div>
           <img className="vitalis-img" src="/HiyokoWalk.png" alt="Happy Chick"
-            style={{ width: "340px", transform: "translateY(-20px) scale(1.12)", filter: "drop-shadow(0 8px 40px rgba(255,159,28,0.35))" }}
+            style={{ filter: "drop-shadow(0 8px 40px rgba(255,159,28,0.35))" }}
             onError={(e) => { e.target.style.display = "none"; }} />
         </div>
       </div>

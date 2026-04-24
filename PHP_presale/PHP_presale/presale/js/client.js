@@ -145,7 +145,7 @@ async function savePurchaseToDb(receipt, usdtAmount, tokenAmount) {
         vestingAddress: CONFIG.vestingAddress,
         blockNumber: receipt.blockNumber,
         chainId: String(CONFIG.chainId),
-        networkName: "BSC Testnet"
+        networkName: "BSC Mainnet"
     });
 }
 
@@ -164,17 +164,17 @@ async function savePurchaseToDbBnb(receipt, quote, tokenAmount) {
         vestingAddress: CONFIG.vestingAddress,
         blockNumber: receipt.blockNumber,
         chainId: String(CONFIG.chainId),
-        networkName: "BSC Testnet"
+        networkName: "BSC Mainnet"
     });
 }
 
 async function ensureBsc(provider = window.ethereum) {
     const chainId = await provider.request({ method: "eth_chainId" });
     if (chainId !== CONFIG.chainHex) {
-        throw new Error("Switch MetaMask to BSC Testnet");
+        throw new Error("Switch MetaMask to BSC Mainnet");
     }
     const networkEl = document.getElementById("network");
-    if (networkEl) networkEl.innerText = "BSC Testnet";
+    if (networkEl) networkEl.innerText = "BSC Mainnet";
 }
 
 function updateClaimButtonState(claimable) {
