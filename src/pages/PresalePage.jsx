@@ -505,8 +505,8 @@ function PresalePage() {
 
     function getTokenAmountRawFromUsdtRaw(usdtRaw) {
         const raw = BigInt(usdtRaw);
-        // usdtRaw is in CONFIG.usdtDecimals precision (6 for contract interface).
-        // HYK has 18 decimals, so scale = 10^(18 - 6) = 10^12.
+        // usdtRaw is in CONFIG.usdtDecimals precision (18 for BSC USDT).
+        // HYK has 18 decimals, so scale = 10^(18 - 18) = 1.
         const scale = BigInt(10 ** (18 - CONFIG.usdtDecimals));
         return (raw * 66n * scale).toString();
     }
@@ -1380,7 +1380,7 @@ function PresalePage() {
                                         <>
                                             {userStats?.usdtBalance !== undefined && (
                                                 <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px", textAlign: "right" }}>
-                                                    {t("balance")}: <span style={{ color: "#F0F0FF" }}>{formatNumber(formatUnits(userStats.usdtBalance, userStats?.usdtDecimals ?? 6), 2)} USDT</span>
+                                                    {t("balance")}: <span style={{ color: "#F0F0FF" }}>{formatNumber(formatUnits(userStats.usdtBalance, userStats?.usdtDecimals ?? CONFIG.usdtDecimals), 2)} USDT</span>
                                                 </div>
                                             )}
 
@@ -1424,9 +1424,9 @@ function PresalePage() {
                                                                 fontSize: "16px", fontWeight: 400, padding: "11px 14px",
                                                             }}
                                                         />
-                                                        {userStats?.usdtBalance && (
+                                                        {BigInt(userStats?.usdtBalance ?? 0) > 0n && (
                                                             <button
-                                                                onClick={() => handleSpendChange(formatUnits(userStats.usdtBalance, userStats?.usdtDecimals ?? 6))}
+                                                                onClick={() => handleSpendChange(formatUnits(userStats.usdtBalance, userStats?.usdtDecimals ?? CONFIG.usdtDecimals))}
                                                                 style={{
                                                                     background: "rgba(255,216,77,0.18)", border: "none", cursor: "pointer",
                                                                     color: "#FFD94E", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
