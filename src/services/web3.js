@@ -295,7 +295,16 @@ export async function connectWithWalletConnect() {
     return accounts[0];
   }
 
-  // No injected wallet — open AppKit for WalletConnect / mobile QR.
+  // No injected wallet — clear stale WC sessions then open AppKit.
+  // Stale sessions cause AppKit to throw "No active wallet found" on reopen.
+  try {
+    const staleKeys = Object.keys(localStorage).filter(k =>
+      k.startsWith("wc@") || k.startsWith("wagmi") || k.startsWith("W3M") ||
+      k.startsWith("@appkit") || k.startsWith("reown") || k === "walletconnect"
+    );
+    staleKeys.forEach(k => localStorage.removeItem(k));
+    await modal.disconnect().catch(() => {});
+  } catch { /* ignore */ }
   await modal.open();
 
   return new Promise((resolve, reject) => {
@@ -347,20 +356,6 @@ export async function connectWithWalletConnect() {
 }
 
 export async function disconnectWalletConnect() {
-  // Revoke MetaMask site permission so the next eth_requestAccounts shows the confirmation popup.
-  // wallet_revokePermissions is available in MetaMask v11+; silently ignored on older versions.
-  try {
-    const provider = window.ethereum?.providers
-      ? (window.ethereum.providers.find(p => p.isMetaMask) || window.ethereum)
-      : window.ethereum;
-    if (provider) {
-      await provider.request({
-        method: "wallet_revokePermissions",
-        params: [{ eth_accounts: {} }],
-      });
-    }
-  } catch { /* older MetaMask / non-MetaMask wallet — ignore */ }
-
   try {
     // Timeout 2 s — prevents hanging when WalletConnect relay is blocked by ad-blocker/firewall
     await Promise.race([modal.disconnect(), new Promise(r => setTimeout(r, 2000))]);
@@ -443,12 +438,6 @@ export async function getCurrentChainId() {
   });
 
   return chainId;
-}
-
-export async function getBnbBalance(address) {
-  const web3 = getWeb3();
-  const wei = await web3.eth.getBalance(address);
-  return BigInt(wei);
 }
 
 export async function switchNetwork() {
