@@ -162,7 +162,7 @@ function OnePage() {
   const [countdown, setCountdown] = useState({ d: "--", h: "--", m: "--", s: "--" });
   const [openFaq, setOpenFaq] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [copiedAddr, setCopiedAddr] = useState(null);
+  // const [copiedAddr, setCopiedAddr] = useState(null);
   const PRESALE_GOAL = 1500000;
   const [presaleStats, setPresaleStats] = useState(null);
   const presaleRaised = presaleStats?.totalUsdt ?? 0;
@@ -245,7 +245,27 @@ function OnePage() {
     try {
       setIsConnecting(true);
       setConnectError("");
-      const resolvedAddress = await connectWithWalletConnect();
+      let resolvedAddress;
+      try {
+        resolvedAddress = await connectWithWalletConnect();
+      } catch (firstErr) {
+        // AppKit throws "No active wallet found" when stale WC session exists.
+        // Clear all WC/AppKit localStorage keys and retry once.
+        if (firstErr?.message?.toLowerCase().includes("no active wallet") ||
+            firstErr?.message?.toLowerCase().includes("wallet found")) {
+          try {
+            const staleKeys = Object.keys(localStorage).filter(k =>
+              k.startsWith("wc@") || k.startsWith("wagmi") || k.startsWith("W3M") ||
+              k.startsWith("@appkit") || k.startsWith("reown") || k === "walletconnect"
+            );
+            staleKeys.forEach(k => localStorage.removeItem(k));
+            await disconnectWalletConnect().catch(() => {});
+          } catch { /* ignore */ }
+          resolvedAddress = await connectWithWalletConnect();
+        } else {
+          throw firstErr;
+        }
+      }
       // Network switch is handled by PresalePage after navigation (switching here causes
       // MetaMask to enter a transitional state where eth_chainId returns null, making
       // the chain detection loop spin for 6 s)
@@ -267,12 +287,12 @@ function OnePage() {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   }
 
-  function copyAddr(addr, idx) {
-    navigator.clipboard.writeText(addr).then(() => {
-      setCopiedAddr(idx);
-      setTimeout(() => setCopiedAddr(null), 1500);
-    });
-  }
+  // function copyAddr(addr, idx) {
+  //   navigator.clipboard.writeText(addr).then(() => {
+  //     setCopiedAddr(idx);
+  //     setTimeout(() => setCopiedAddr(null), 1500);
+  //   });
+  // }
 
   const ALLOC_ADDRESSES = [
     "0x2b3c4d5e6f7890abcdef1234567890abcdef1234",
@@ -613,14 +633,14 @@ function OnePage() {
                   <span className="alloc-name">{seg.label}</span>
                   <span className="alloc-amount" style={{ color: seg.color }}>{seg.amount}</span>
                 </div>
-                {i < ALLOC_ADDRESSES.length && (
+                {/* {i < ALLOC_ADDRESSES.length && (
                   <div className="alloc-addr">
                     <span>{ALLOC_ADDRESSES[i]}</span>
                     <button className="copy-btn" onClick={() => copyAddr(ALLOC_ADDRESSES[i], i)}>
                       {copiedAddr === i ? "Copied!" : "Copy"}
                     </button>
                   </div>
-                )}
+                )} */}
               </div>
             ))}
           </div>
