@@ -283,20 +283,8 @@ export function getEthereum() {
 }
 
 export async function connectWithWalletConnect() {
-  // MetaMask (injected) fast path — skip AppKit entirely.
-  // Avoids AppKit trying to reuse a stale WalletConnect session for injected wallets.
-  if (window.ethereum) {
-    const provider = window.ethereum.providers
-      ? (window.ethereum.providers.find(p => p.isMetaMask) || window.ethereum)
-      : window.ethereum;
-    const accounts = await provider.request({ method: "eth_requestAccounts" });
-    if (!accounts || accounts.length === 0) throw new Error("No account found.");
-    _wcProvider = provider;
-    return accounts[0];
-  }
-
-  // No injected wallet — clear stale WC sessions then open AppKit.
-  // Stale sessions cause AppKit to throw "No active wallet found" on reopen.
+  // Always open AppKit modal — lets users choose MetaMask, WalletConnect, or any other wallet.
+  // Clear stale WC sessions first to prevent "No active wallet found" errors on reopen.
   try {
     const staleKeys = Object.keys(localStorage).filter(k =>
       k.startsWith("wc@") || k.startsWith("wagmi") || k.startsWith("W3M") ||
