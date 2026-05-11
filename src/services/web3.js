@@ -440,6 +440,12 @@ export async function getCurrentChainId() {
   return chainId;
 }
 
+export async function getBnbBalance(address) {
+  const web3 = getWeb3();
+  const wei = await web3.eth.getBalance(address);
+  return BigInt(wei);
+}
+
 export async function switchNetwork() {
   const ethereum = getEthereum();
   if (!ethereum) {
@@ -655,7 +661,7 @@ export async function getUserStats(account) {
     userUsdtSpent:     val(results[2]),
     userRemainingUsdt: val(results[3]),
     claimable:         val(results[4]),
-    usdtDecimals:      val(results[5], 6),
+    usdtDecimals:      val(results[5], CONFIG.usdtDecimals),
     bnbBalance:        val(results[6]),
   };
 }

@@ -6,9 +6,9 @@ export const CONFIG = {
   // Get your free Project ID at https://cloud.walletconnect.com
   walletConnectProjectId: "e518620b775fc7327c5c9c6b8f9282f6",
 
-  presaleAddress: "0x725AEE2c387d0B765Edbd71230940f839605CCE8",
-  vestingAddress: "0xba0D84D4F30eb69571774Ef3Cf9e977756878B5c",
-  tokenAddress: "0xc5A0a5d92E1902FcA40A428EeB81E37A2f751BcB",
+  presaleAddress: "0x76Bf46FD3386B6c95bf2945307d8d82407Cfb631",
+  vestingAddress: "0x7897D7C4bf585CeC8653BDe75c1da3bF8E1e5b2d",
+  tokenAddress: "0x76b7d57071997412Edb522809ff21e26DC01De19",
   usdtAddress: "0x55d398326f99059fF775485246999027B3197955",
   
 
