@@ -356,6 +356,21 @@ export async function connectWithWalletConnect() {
 }
 
 export async function disconnectWalletConnect() {
+  // Revoke MetaMask's eth_accounts permission so the next connect() call
+  // shows the wallet confirmation popup instead of silently reconnecting.
+  // wallet_revokePermissions is supported by MetaMask ≥ 10.16.0; ignore on others.
+  try {
+    const injected = window.ethereum?.providers
+      ? (window.ethereum.providers.find(p => p.isMetaMask) || window.ethereum)
+      : window.ethereum;
+    if (injected) {
+      await injected.request({
+        method: "wallet_revokePermissions",
+        params: [{ eth_accounts: {} }],
+      });
+    }
+  } catch { /* ignore — older MetaMask or non-MetaMask wallets */ }
+
   try {
     // Timeout 2 s — prevents hanging when WalletConnect relay is blocked by ad-blocker/firewall
     await Promise.race([modal.disconnect(), new Promise(r => setTimeout(r, 2000))]);
