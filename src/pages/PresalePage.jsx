@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePageTransition } from "../App";
 import MessageModal from "../components/MessageModal";
 import { CONFIG } from "../config/config";
@@ -46,14 +46,14 @@ function PresalePage() {
     const [bnbUsdtDisplay, setBnbUsdtDisplay] = useState("");  // read-only USDT in BNB tab
     const [bnbThkDisplay, setBnbThkDisplay] = useState("");    // editable HYK in BNB tab
     const [lastBnbPrice, setLastBnbPrice] = useState(null);    // BNB/USDT rate from last quote
-    const [_liveBnbPrice, setLiveBnbPrice] = useState(null);    // live BNB/USD price (polled) â€” display not yet implemented
-    const [_liveBnbChange, setLiveBnbChange] = useState(null);  // 24h % change â€” display not yet implemented
+    const [_liveBnbPrice, setLiveBnbPrice] = useState(null);    // live BNB/USD price (polled) — display not yet implemented
+    const [_liveBnbChange, setLiveBnbChange] = useState(null);  // 24h % change — display not yet implemented
     const [bnbQuote, setBnbQuote] = useState(null);
     const [bnbQuoteMessage, setBnbQuoteMessage] = useState("");
     const [isFetchingBnbQuote, setIsFetchingBnbQuote] = useState(false);
     const [paymentTab, setPaymentTab] = useState("USDT");
     const [modal, setModal] = useState(null);
-    const lastEditedBnbFieldRef = useRef("bnb"); // "bnb" | "thk" â€” tracks which field user last edited
+    const lastEditedBnbFieldRef = useRef("bnb"); // "bnb" | "thk" — tracks which field user last edited
     const bnbUsdtTargetRef = useRef(null); // USDT target when user types HYK with no prior BNB price
     const isBuyingRef = useRef(false); // always-current mirror of isBuying state (avoids stale closure in session timer)
 
@@ -128,7 +128,7 @@ function PresalePage() {
         }
     }, []);
 
-    // â”€â”€ Rescue queue flush â€” retries any DB saves that failed in a prior session â”€â”€
+    // â”€â”€ Rescue queue flush — retries any DB saves that failed in a prior session â”€â”€
     const flushRescueQueue = useCallback(async () => {
         const pending = getPending();
         if (pending.length === 0) return;
@@ -185,7 +185,7 @@ function PresalePage() {
             if (!cancelled) {
                 setClaimMessage(err?.message || t("claimFailedMsg"));
             }
-            // User cancelled â€” no message needed
+            // User cancelled — no message needed
         } finally {
             setIsClaiming(false);
         }
@@ -232,7 +232,7 @@ function PresalePage() {
         }
 
         // Transaction submitted but not confirmed yet (web3 polling timeout)
-        // The tx may still be pending on-chain â€” DO NOT say "cancelled"
+        // The tx may still be pending on-chain — DO NOT say "cancelled"
         if (msg.includes("not mined within") || msg.includes("50 blocks") ||
             msg.includes("transaction was not mined")) {
             return t("errTxPendingBsc");
@@ -330,7 +330,7 @@ function PresalePage() {
                     setMsg(t("errInsufficientBnb"));
                     return;
                 }
-            } catch { /* RPC error â€” skip check, contract will reject if truly insufficient */ }
+            } catch { /* RPC error — skip check, contract will reject if truly insufficient */ }
 
             const tokenAmountRaw = await getTokenAmount(usdtAmountRaw);
 
@@ -389,7 +389,7 @@ function PresalePage() {
                     txHash: txHashForError,
                 });
             } else if (txHashForError) {
-                // TX was broadcast â€” already in rescue queue from onHashCaptured
+                // TX was broadcast — already in rescue queue from onHashCaptured
                 setMsg(t("msgTxSubmittedAuto"), "pending");
             } else {
                 const code = error?.code;
@@ -400,7 +400,7 @@ function PresalePage() {
                 if (isUserCancel) {
                     setModal({ type: "cancelled", message: t("msgUserCancelled") });
                 } else if (isMetaMaskTimeoutError(error)) {
-                    // MetaMask popup was not confirmed within 10 min â€” auto-expire the buy flow
+                    // MetaMask popup was not confirmed within 10 min — auto-expire the buy flow
                     setModal({ type: "cancelled", message: t("msgTxExpired") });
                 } else {
                     setMsg(classifyTxError(error, "BNB"));
@@ -414,7 +414,7 @@ function PresalePage() {
     }
 
     async function handleFetchBnbQuote(inputBnbAmount) {
-        // Snapshot mutable refs BEFORE any await â€” prevents stale-closure race when
+        // Snapshot mutable refs BEFORE any await — prevents stale-closure race when
         // the user types quickly and multiple calls overlap in-flight.
         const usdtTargetSnapshot = bnbUsdtTargetRef.current;
         const editedFieldSnapshot = lastEditedBnbFieldRef.current;
@@ -481,13 +481,13 @@ function PresalePage() {
         // USDT = HYK / 66
         const usdt = (thk / 66).toFixed(6);
         setBnbUsdtDisplay(usdt);
-        // BNB = USDT / rate â€” triggers debounced quote fetch to get accurate values
+        // BNB = USDT / rate — triggers debounced quote fetch to get accurate values
         if (lastBnbPrice && lastBnbPrice > 0) {
             bnbUsdtTargetRef.current = null;
             const bnb = (Number(usdt) / lastBnbPrice).toFixed(8);
             setBnbAmount(bnb);
         } else {
-            // No price yet â€” store USDT target and bootstrap with a small BNB amount
+            // No price yet — store USDT target and bootstrap with a small BNB amount
             // to trigger the quote fetch. handleFetchBnbQuote will recalculate once price is known.
             bnbUsdtTargetRef.current = Number(usdt);
             setBnbAmount("0.01");
@@ -605,7 +605,7 @@ function PresalePage() {
                 refreshUsdtAllowance(account);
                 pollTxHistoryUntilNew(txHash);
             } else {
-                // Transaction confirmed on-chain â€” rescue queue will retry the DB save
+                // Transaction confirmed on-chain — rescue queue will retry the DB save
                 setModal({ type: "success", message: t("msgTxConfirmedSyncing"), txHash });
                 loadChainData(account);
                 refreshUsdtAllowance(account);
@@ -620,7 +620,7 @@ function PresalePage() {
                     txHash: txHashForError,
                 });
             } else if (txHashForError) {
-                // TX was broadcast â€” already in rescue queue from onHashCaptured
+                // TX was broadcast — already in rescue queue from onHashCaptured
                 setMsg(t("msgTxSubmittedAuto"), "pending");
             } else {
                 const code = error?.code;
@@ -631,7 +631,7 @@ function PresalePage() {
                 if (isUserCancel) {
                     setModal({ type: "cancelled", message: t("msgUserCancelled") });
                 } else if (isMetaMaskTimeoutError(error)) {
-                    // MetaMask popup was not confirmed within 10 min â€” auto-expire the buy flow
+                    // MetaMask popup was not confirmed within 10 min — auto-expire the buy flow
                     setModal({ type: "cancelled", message: t("msgTxExpired") });
                 } else {
                     setMsg(classifyTxError(error, "USDT"));
@@ -672,7 +672,7 @@ function PresalePage() {
     useEffect(() => {
         async function init() {
             try {
-                // Enforce 30-minute session TTL â€” redirect if missing or expired
+                // Enforce 30-minute session TTL — redirect if missing or expired
                 const sessionValid = await validateSession();
                 if (!sessionValid) {
                     await disconnectWalletConnect();
@@ -715,7 +715,7 @@ function PresalePage() {
                     await disconnectWalletConnect();
                     navigate("/");
                 }
-                // Other errors (RPC timeout etc.) â€” stay on page, user can retry
+                // Other errors (RPC timeout etc.) — stay on page, user can retry
             }
             finally { setIsLoading(false); }
         }
@@ -787,7 +787,7 @@ function PresalePage() {
         return () => clearInterval(interval);
     }, [flushRescueQueue]);
 
-    // Live BNB price â€” fetch on mount, then refresh every 15 s
+    // Live BNB price — fetch on mount, then refresh every 15 s
     useEffect(() => {
         async function loadPrice() {
             const data = await fetchBnbPrice();
@@ -820,7 +820,7 @@ function PresalePage() {
         getAnnouncements().then(data => { if (data.length > 0) setAnnouncements(data); });
     }, []);
 
-    // â”€â”€ Session hard-expires after 30 min â€” fully disconnect wallet on expiry â”€â”€
+    // â”€â”€ Session hard-expires after 30 min — fully disconnect wallet on expiry â”€â”€
     useEffect(() => {
         const SESSION_TTL_MS = 30 * 60 * 1000;
 
@@ -834,7 +834,7 @@ function PresalePage() {
         async function expireSession() {
             // Double-check: session may have been refreshed since the timer was set
             if (getRemaining() > 0) return;
-            // Never interrupt an ongoing transaction â€” defer until it finishes
+            // Never interrupt an ongoing transaction — defer until it finishes
             if (isBuyingRef.current) {
                 setTimeout(expireSession, 5000);
                 return;
@@ -875,9 +875,9 @@ function PresalePage() {
     const remainingDisplay = formatNumber(formatUnits(remainingRaw, 18), 2);
 
     const totalAlloc = vestingInfo?.vestingData?.totalAmount
-        ? formatNumber(formatUnits(vestingInfo.vestingData.totalAmount, 18), 2) : "â€”";
+        ? formatNumber(formatUnits(vestingInfo.vestingData.totalAmount, 18), 2) : "—";
     const claimed = vestingInfo?.vestingData?.claimed
-        ? formatNumber(formatUnits(vestingInfo.vestingData.claimed, 18), 2) : "â€”";
+        ? formatNumber(formatUnits(vestingInfo.vestingData.claimed, 18), 2) : "—";
     const claimableNow = userStats?.claimable
         ? formatNumber(formatUnits(userStats.claimable, 18), 4) : "0";
     const claimableRaw = userStats?.claimable ? BigInt(userStats.claimable) : 0n;
@@ -886,9 +886,9 @@ function PresalePage() {
     const dailyAlloc = (() => {
         const total = vestingInfo?.vestingData?.totalAmount;
         const dur = vestingInfo?.vestingDuration;
-        if (!total || !dur || dur === "0") return "â€”";
+        if (!total || !dur || dur === "0") return "—";
         const days = Number(dur) / 86400;
-        if (days <= 0) return "â€”";
+        if (days <= 0) return "—";
         const daily = parseFloat(formatUnits(BigInt(String(total)), 18)) / days;
         return formatNumber(daily.toFixed(2), 2);
     })();
@@ -985,7 +985,7 @@ function PresalePage() {
                 background: "rgba(6,6,15,0.7)", backdropFilter: "blur(24px)",
                 borderBottom: "1px solid rgba(255,255,255,0.06)",
             }}>
-                {/* Logo â€” click to go back to landing page */}
+                {/* Logo — click to go back to landing page */}
                 <a onClick={() => navigate("/", { state: { fromDashboard: true } })} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", textDecoration: "none" }}>
                     <img src="/HiyokoLogo.png" alt="HIYOKO" style={{ width: "38px", height: "38px", objectFit: "contain", borderRadius: "8px" }} />
                     <span className="ps-logo-text" style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 900, fontSize: "22px", color: "#FFD94E", letterSpacing: "0.04em", textShadow: "0 0 20px rgba(255,216,77,0.4)" }}>HIYOKO</span>
@@ -1011,7 +1011,7 @@ function PresalePage() {
                         >
                             <img src={SUPPORTED_LANGS.find(l => l.code === lang)?.flagUrl} alt="" style={{ width: "20px", height: "15px", borderRadius: "2px", objectFit: "cover" }} />
                             {SUPPORTED_LANGS.find(l => l.code === lang)?.shortLabel}
-                            <span style={{ fontSize: "9px", opacity: 0.5 }}>â–¼</span>
+                            <span style={{ fontSize: "9px", opacity: 0.5 }}>▼</span>
                         </button>
                         {langDropdownOpen && (
                             <div style={{
@@ -1067,14 +1067,14 @@ function PresalePage() {
                         color: "rgba(240,240,255,0.7)", borderRadius: "100px",
                         fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 600, fontSize: "13px",
                         cursor: "pointer", transition: "all 0.2s",
-                    }}>â† Back</button>
+                    }}>← Back</button>
                     <button onClick={handleDisconnect} style={{
                         display: "flex", alignItems: "center", gap: "7px", padding: "9px 18px",
                         background: "rgba(255,60,60,0.12)", border: "1px solid rgba(255,60,60,0.4)",
                         color: "#ff6b6b", borderRadius: "100px",
                         fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "13px",
                         cursor: "pointer", transition: "all 0.2s",
-                    }}>â» Disconnect</button>
+                    }}>⏻ Disconnect</button>
                 </div>
             </header>
 
@@ -1088,7 +1088,7 @@ function PresalePage() {
                     </div>
                 </div>
 
-                {/* Detecting network â€” shown while MetaMask is still in "Connecting" state */}
+                {/* Detecting network — shown while MetaMask is still in "Connecting" state */}
                 {isDetectingChain && !isCorrectNetwork && (
                     <div style={{
                         background: "rgba(255,216,77,0.06)", border: "1px solid rgba(255,216,77,0.2)",
@@ -1110,12 +1110,12 @@ function PresalePage() {
                         display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap",
                     }}>
                         <div>
-                            <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "16px", color: "#ff6060", marginBottom: "4px" }}>âš ï¸ {t("wrongNetwork")}</div>
+                            <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "16px", color: "#ff6060", marginBottom: "4px" }}>⚠️ {t("wrongNetwork")}</div>
                             <div style={{ fontSize: "13px", color: "#6666AA" }}>{t("connectedTo")} {currentChainId ? `Chain ${Number(currentChainId) || "unknown"}` : t("unknownNetwork")}. {t("switchTo")}</div>
                             {switchNetworkMessage && <div style={{ fontSize: "12px", color: "#ff6060", marginTop: "6px" }}>{switchNetworkMessage}</div>}
                         </div>
                         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                            {/* Retry button â€” re-checks chainId without switching (for when MetaMask was still loading) */}
+                            {/* Retry button — re-checks chainId without switching (for when MetaMask was still loading) */}
                             <button
                                 onClick={async () => {
                                     try {
@@ -1137,7 +1137,7 @@ function PresalePage() {
                                     fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "13px",
                                     cursor: "pointer", whiteSpace: "nowrap",
                                 }}
-                            >â†º Retry</button>
+                            >↺ Retry</button>
                             <button
                                 onClick={handleSwitchNetwork}
                                 disabled={isSwitchingNetwork}
@@ -1157,7 +1157,7 @@ function PresalePage() {
                     </div>
                 )}
 
-                {/* Dashboard content â€” always visible; buy buttons disabled when wrong network */}
+                {/* Dashboard content — always visible; buy buttons disabled when wrong network */}
                 {account && (
                     <>
                         {/* â”€â”€ Vesting stats row â”€â”€ */}
@@ -1172,14 +1172,14 @@ function PresalePage() {
                             }}>
                                 <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", borderRadius: "16px 16px 0 0", background: "linear-gradient(90deg, #06E5FF, transparent)", opacity: 0.7 }} />
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-                                    <span style={{ fontSize: "22px" }}>ðŸ“¦</span>
+                                    <span style={{ fontSize: "22px" }}>📦</span>
                                 </div>
                                 <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "6px" }}>Total Allocation</div>
                                 <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "22px", fontWeight: 800, color: "#FFA01C", lineHeight: 1.1 }}>
-                                    {totalAlloc === "â€”" ? "0 HYK" : `${totalAlloc} HYK`}
+                                    {totalAlloc === "—" ? "0 HYK" : `${totalAlloc} HYK`}
                                 </div>
                                 <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "5px" }}>
-                                    {totalAlloc !== "â€”" ? `â‰ˆ $${formatNumber((parseFloat(totalAlloc.replace(/,/g, "")) * 0.015).toFixed(2), 2)} ${t("atPresalePrice")}` : t("noAllocationYet")}
+                                    {totalAlloc !== "—" ? `≈ $${formatNumber((parseFloat(totalAlloc.replace(/,/g, "")) * 0.015).toFixed(2), 2)} ${t("atPresalePrice")}` : t("noAllocationYet")}
                                 </div>
                             </div>
 
@@ -1191,10 +1191,10 @@ function PresalePage() {
                                 transition: "all 0.25s",
                             }}>
                                 <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", borderRadius: "16px 16px 0 0", background: "linear-gradient(90deg, #FFD94E, transparent)", opacity: 0.7 }} />
-                                <span style={{ fontSize: "22px", marginBottom: "12px", display: "block" }}>ðŸ“…</span>
+                                <span style={{ fontSize: "22px", marginBottom: "12px", display: "block" }}>📅</span>
                                 <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "6px" }}>{t("dailyAllocation")}</div>
                                 <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "22px", fontWeight: 800, color: "#FFA01C", lineHeight: 1.1 }}>
-                                    {dailyAlloc === "â€”" ? "â€” HYK" : `${dailyAlloc} HYK`}
+                                    {dailyAlloc === "—" ? "— HYK" : `${dailyAlloc} HYK`}
                                 </div>
                                 <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "5px" }}>{t("afterVestingStarts")}</div>
                             </div>
@@ -1207,13 +1207,13 @@ function PresalePage() {
                                 transition: "all 0.25s",
                             }}>
                                 <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", borderRadius: "16px 16px 0 0", background: "linear-gradient(90deg, #6AC645, transparent)", opacity: 0.7 }} />
-                                <span style={{ fontSize: "22px", marginBottom: "12px", display: "block" }}>âœ…</span>
+                                <span style={{ fontSize: "22px", marginBottom: "12px", display: "block" }}>✅</span>
                                 <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "6px" }}>{t("alreadyClaimed")}</div>
                                 <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "22px", fontWeight: 800, color: "#FFA01C", lineHeight: 1.1 }}>
-                                    {claimed === "â€”" ? "0 HYK" : `${claimed} HYK`}
+                                    {claimed === "—" ? "0 HYK" : `${claimed} HYK`}
                                 </div>
                                 <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "5px" }}>
-                                    {t("disbursed")}: {claimed === "â€”" ? "0 HYK" : `${claimed} HYK`}
+                                    {t("disbursed")}: {claimed === "—" ? "0 HYK" : `${claimed} HYK`}
                                 </div>
                             </div>
                         </div>
@@ -1235,7 +1235,7 @@ function PresalePage() {
                                         {claimableNow} HYK
                                     </div>
                                     <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "3px", display: "flex", alignItems: "center", gap: "4px" }}>
-                                        ðŸ”’ {t("lockedUntil")} {lockUntilDate}
+                                        🔒 {t("lockedUntil")} {lockUntilDate}
                                     </div>
                                     {claimMessage && (
                                         <div style={{ fontSize: "12px", color: claimMessage.toLowerCase().includes("success") ? "#6AC645" : "#ff6060", marginTop: "6px" }}>
@@ -1262,7 +1262,7 @@ function PresalePage() {
                                         opacity: (isClaiming || claimableRaw === 0n) ? 0.35 : 1,
                                     }}
                                 >
-                                    ðŸŽ {isClaiming ? t("claiming") : t("claimTokens")}
+                                    🎁 {isClaiming ? t("claiming") : t("claimTokens")}
                                 </button>
                                 <div style={{ fontSize: "11px", color: "#6666AA", display: "flex", alignItems: "center", gap: "5px", marginTop: "6px", justifyContent: "flex-end" }}>
                                     {t("availableAfter")} {lockUntilDate}
@@ -1295,7 +1295,7 @@ function PresalePage() {
                                     </div>
                                     <div style={{ textAlign: "right" }}>
                                         <div style={{ fontSize: "10px", color: "#6666AA", marginBottom: "4px" }}>{t("networkBsc")}</div>
-                                        <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "11px", fontWeight: 700, color: "#FFA01C" }}>ðŸŸ¡ BEP-20</div>
+                                        <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "11px", fontWeight: 700, color: "#FFA01C" }}>🟡 BEP-20</div>
                                     </div>
                                 </div>
 
@@ -1397,7 +1397,7 @@ function PresalePage() {
                                                     >
                                                         {!isCorrectNetwork ? t("switchNetworkFirst")
                                                             : isLoadingAllowance ? t("checkingAllowance")
-                                                            : isBuying ? `â³ ${t("approving")}`
+                                                            : isBuying ? `⏳ ${t("approving")}`
                                                             : t("approveUsdt")}
                                                     </button>
                                                 </>
@@ -1442,7 +1442,7 @@ function PresalePage() {
                                                             display: "flex", alignItems: "center",
                                                         }}>USDT</div>
                                                     </div>
-                                                    <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>ðŸ£ {t("hykYouReceive")}</div>
+                                                    <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>🐣 {t("hykYouReceive")}</div>
                                                     <div style={{
                                                         display: "flex", alignItems: "center",
                                                         background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,216,77,0.15)",
@@ -1468,7 +1468,7 @@ function PresalePage() {
                                                         <div style={{ fontSize: "11px", color: "#FFA01C", textAlign: "center", marginBottom: "8px" }}>Minimum purchase is 10 USDT</div>
                                                     )}
                                                     <button onClick={handleBuyWithUsdt} disabled={!isCorrectNetwork || !isValidUsdtAmount(usdtAmount) || isBuying} style={btnBuyStyle(isCorrectNetwork && isValidUsdtAmount(usdtAmount) && !isBuying)}>
-                                                        {!isCorrectNetwork ? t("switchNetworkFirst") : isBuying ? `â³ ${t("buying")}` : t("buyNow")}
+                                                        {!isCorrectNetwork ? t("switchNetworkFirst") : isBuying ? `⏳ ${t("buying")}` : t("buyNow")}
                                                     </button>
                                                 </>
                                             )}
@@ -1536,11 +1536,11 @@ function PresalePage() {
                                         {/* BNB live price */}
                                         {lastBnbPrice && (
                                             <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px", textAlign: "right" }}>
-                                                1 BNB â‰ˆ <span style={{ color: "#FFD94E" }}>${lastBnbPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD</span>
+                                                1 BNB ≈ <span style={{ color: "#FFD94E" }}>${lastBnbPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD</span>
                                             </div>
                                         )}
-                                        {/* USDT equivalent â€” read-only, computed from BNB/HYK */}
-                                        <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>â‰ˆ USDT value {isFetchingBnbQuote && <span style={{ color: "#FFA01C" }}>â³</span>}</div>
+                                        {/* USDT equivalent — read-only, computed from BNB/HYK */}
+                                        <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>≈ USDT value {isFetchingBnbQuote && <span style={{ color: "#FFA01C" }}>⏳</span>}</div>
                                         <div style={{
                                             display: "flex", alignItems: "center",
                                             background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)",
@@ -1564,8 +1564,8 @@ function PresalePage() {
                                                 display: "flex", alignItems: "center",
                                             }}>USDT</div>
                                         </div>
-                                        {/* HYK receive â€” editable */}
-                                        <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>ðŸ£ {t("hykYouReceive")}</div>
+                                        {/* HYK receive — editable */}
+                                        <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px" }}>🐣 {t("hykYouReceive")}</div>
                                         <div style={{
                                             display: "flex", alignItems: "center",
                                             background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,216,77,0.15)",
@@ -1654,10 +1654,10 @@ function PresalePage() {
                                                     : "";
                                                 const timeStr = tx.created_at
                                                     ? formatDate(Math.floor(new Date(tx.created_at).getTime() / 1000))
-                                                    : "â€”";
+                                                    : "—";
                                                 const amountLabel = isBnb
-                                                    ? `${tx.bnb_amount != null ? parseFloat(tx.bnb_amount).toFixed(4) : "â€”"} BNB`
-                                                    : `${tx.usdt_amount != null ? parseFloat(tx.usdt_amount).toFixed(4) : "â€”"} USDT`;
+                                                    ? `${tx.bnb_amount != null ? parseFloat(tx.bnb_amount).toFixed(4) : "—"} BNB`
+                                                    : `${tx.usdt_amount != null ? parseFloat(tx.usdt_amount).toFixed(4) : "—"} USDT`;
                                                 return (
                                                     <div key={tx.tx_hash || i} style={{
                                                         background: "rgba(255,255,255,0.03)",
@@ -1681,16 +1681,16 @@ function PresalePage() {
                                                                     href={`https://bscscan.com/tx/${tx.tx_hash}`}
                                                                     target="_blank" rel="noreferrer"
                                                                     style={{ fontSize: "10px", color: "#06E5FF", textDecoration: "none", fontWeight: 600 }}
-                                                                >â†— BSCScan</a>
+                                                                >↗ BSCScan</a>
                                                             </div>
                                                         </div>
-                                                        {/* Row 2: paid â†’ received */}
+                                                        {/* Row 2: paid → received */}
                                                         <div style={{ fontSize: "12px", color: "#F0F0FF" }}>
                                                             <span style={{ color: "#6666AA", fontSize: "11px" }}>Paid: </span>
                                                             <span style={{ fontWeight: 600 }}>{amountLabel}</span>
                                                             {tx.token_amount && (
                                                                 <>
-                                                                    <span style={{ color: "#6666AA", fontSize: "11px", margin: "0 6px" }}>â†’</span>
+                                                                    <span style={{ color: "#6666AA", fontSize: "11px", margin: "0 6px" }}>→</span>
                                                                     <span style={{ color: "#FFD94E", fontWeight: 700 }}>
                                                                         {formatNumber(parseFloat(tx.token_amount), 4)} HYK
                                                                     </span>
@@ -1719,7 +1719,7 @@ function PresalePage() {
                                 flexWrap: "wrap", gap: "10px",
                             }}>
                                 <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "16px", fontWeight: 800, color: "#FFA01C" }}>
-                                    ðŸ”’ {t("vestingSchedule")}
+                                    🔒 {t("vestingSchedule")}
                                 </div>
                                 <div style={{
                                     display: "flex", alignItems: "center", gap: "6px",
@@ -1727,7 +1727,7 @@ function PresalePage() {
                                     borderRadius: "8px", padding: "4px 10px",
                                     fontSize: "11px", fontWeight: 700, color: "#FFD94E", letterSpacing: "0.04em",
                                 }}>
-                                    ðŸ”’ {t("lockedUntil")} {lockUntilDate}
+                                    🔒 {t("lockedUntil")} {lockUntilDate}
                                 </div>
                             </div>
                             {/* Steps */}
@@ -1753,15 +1753,15 @@ function PresalePage() {
                                         const stepStates = [0, 1, 2, 3, 4].map(i => getStepState(i));
                                         const steps = [
                                             {
-                                                icon: "ðŸ£",
-                                                date: "Now â€” June 2026",
+                                                icon: "🐣",
+                                                date: "Now — June 2026",
                                                 name: t("step1name"),
                                                 val: stepStates[0] === "done" ? "Completed" : stepStates[0] === "active" ? "Presale Live" : "Not Started",
                                                 sub: "Buy at $0.015",
                                                 valColor: "#6666AA",
                                             },
                                             {
-                                                icon: "ðŸ”’",
+                                                icon: "🔒",
                                                 date: cliffEnd > 0 ? `Until ${formatDate(cliffEnd)}` : "Until Aug 1, 2026",
                                                 name: t("step2name"),
                                                 val: stepStates[1] === "done" ? "Completed" : stepStates[1] === "active" ? "Tokens Locked" : "Not Started",
@@ -1769,7 +1769,7 @@ function PresalePage() {
                                                 valColor: "#6666AA",
                                             },
                                             {
-                                                icon: "ðŸ”“",
+                                                icon: "🔓",
                                                 date: cliffEnd > 0 ? formatDate(cliffEnd) : "Aug 1, 2026",
                                                 name: t("step3name"),
                                                 val: stepStates[2] === "done" ? "Unlocked" : stepStates[2] === "active" ? "Vesting Started" : "Not Started",
@@ -1777,18 +1777,18 @@ function PresalePage() {
                                                 valColor: "#06E5FF",
                                             },
                                             {
-                                                icon: "ðŸ“…",
-                                                date: cliffEnd > 0 && vestEnd > 0 ? `${formatDate(cliffEnd)} â€” ${formatDate(vestEnd)}` : "TGE + 1h â€” +7 days",
+                                                icon: "📅",
+                                                date: cliffEnd > 0 && vestEnd > 0 ? `${formatDate(cliffEnd)} — ${formatDate(vestEnd)}` : "TGE + 1h — +7 days",
                                                 name: t("step4name"),
-                                                val: dailyAlloc !== "â€”" ? `${dailyAlloc} HYK` : "â€”",
+                                                val: dailyAlloc !== "—" ? `${dailyAlloc} HYK` : "—",
                                                 sub: "per day",
                                                 valColor: "#6AC645",
                                             },
                                             {
-                                                icon: "ðŸŽ‰",
+                                                icon: "🎉",
                                                 date: vestEnd > 0 ? formatDate(vestEnd) : "May 2027",
                                                 name: t("step5name"),
-                                                val: totalAlloc !== "â€”" ? `${totalAlloc} HYK` : "â€”",
+                                                val: totalAlloc !== "—" ? `${totalAlloc} HYK` : "—",
                                                 sub: "100% received",
                                                 valColor: "#a78bfa",
                                             },
@@ -1830,7 +1830,7 @@ function PresalePage() {
                                                             background: iconBg,
                                                             display: "flex", alignItems: "center", justifyContent: "center",
                                                             fontSize: "14px",
-                                                        }}>{isDone ? "âœ“" : s.icon}</div>
+                                                        }}>{isDone ? "✓" : s.icon}</div>
                                                         {isActive && (
                                                             <div style={{
                                                                 fontSize: "9px", fontWeight: 800, letterSpacing: "0.1em",
@@ -1838,7 +1838,7 @@ function PresalePage() {
                                                                 background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.3)",
                                                                 borderRadius: "100px", padding: "2px 8px",
                                                                 animation: "pstep 1.5s infinite",
-                                                            }}>â— Active</div>
+                                                            }}>● Active</div>
                                                         )}
                                                         {isDone && (
                                                             <div style={{
@@ -1846,7 +1846,7 @@ function PresalePage() {
                                                                 textTransform: "uppercase", color: doneGreen,
                                                                 background: "rgba(106,198,69,0.1)", border: "1px solid rgba(106,198,69,0.25)",
                                                                 borderRadius: "100px", padding: "2px 8px",
-                                                            }}>âœ“ Done</div>
+                                                            }}>✓ Done</div>
                                                         )}
                                                     </div>
                                                     {/* date */}
@@ -1875,7 +1875,7 @@ function PresalePage() {
                                 padding: "18px 22px", borderBottom: "1px solid rgba(255,255,255,0.06)",
                             }}>
                                 <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "16px", fontWeight: 800, color: "#F0F0FF", display: "flex", alignItems: "center", gap: "8px" }}>
-                                    ðŸ“¢ {t("announcements")}
+                                    📢 {t("announcements")}
                                     {announcements.length > 0 && (
                                         <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "#FFA01C", color: "#06060F", fontSize: "10px", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>
                                             {announcements.length}
@@ -1888,10 +1888,10 @@ function PresalePage() {
                                     const items = announcements.length > 0
                                         ? [...announcements].sort((a, b) => (b.id || 0) - (a.id || 0))
                                         : [
-                                            { icon: "ðŸš€", title: t("ann1title"), body: t("ann1body"), time_label: t("ann1time") },
-                                            { icon: "ðŸ¥", title: t("ann2title"), body: t("ann2body"), time_label: t("ann2time") },
-                                            { icon: "ðŸš—", title: t("ann3title"), body: t("ann3body"), time_label: t("ann3time") },
-                                            { icon: "ðŸ“…", title: t("ann4title"), body: t("ann4body"), time_label: t("ann4time") },
+                                            { icon: "🚀", title: t("ann1title"), body: t("ann1body"), time_label: t("ann1time") },
+                                            { icon: "🏥", title: t("ann2title"), body: t("ann2body"), time_label: t("ann2time") },
+                                            { icon: "🚗", title: t("ann3title"), body: t("ann3body"), time_label: t("ann3time") },
+                                            { icon: "📅", title: t("ann4title"), body: t("ann4body"), time_label: t("ann4time") },
                                         ];
                                     const iconBgs = [
                                         "rgba(255,159,28,0.12)", "rgba(255,216,77,0.1)",
