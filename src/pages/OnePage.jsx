@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { usePageTransition } from "../App";
 import { CONFIG } from "../config/config";
@@ -105,7 +105,7 @@ function DonutChart() {
         {/* Presale â€“ gradient yellow, top-left */}
         <line x1="127.9" y1="61.1" x2="121.1" y2="40.2" stroke="#FFD84D" strokeWidth="1.5" opacity="0.9" />
         <line x1="121.1" y1="40.2" x2="99.1" y2="40.2" stroke="#FFD84D" strokeWidth="1.5" opacity="0.9" />
-        <text x="95.1" y="35.2" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="13" fontWeight="700" fill="#FFD84D" textAnchor="end">ðŸ”¥ Presale</text>
+        <text x="95.1" y="35.2" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="13" fontWeight="700" fill="#FFD84D" textAnchor="end">🔥 Presale</text>
         <text x="95.1" y="49.2" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="10" fill="rgba(255,216,77,0.8)" textAnchor="end">10%</text>
 
         {/* Center text */}
@@ -355,7 +355,7 @@ function OnePage() {
           >
             <img src={SUPPORTED_LANGS.find(l => l.code === lang)?.flagUrl} alt="" style={{ width: "20px", height: "15px", borderRadius: "2px", objectFit: "cover" }} />
             {SUPPORTED_LANGS.find(l => l.code === lang)?.shortLabel}
-            <span style={{ fontSize: "9px", opacity: 0.5 }}>â–¼</span>
+            <span style={{ fontSize: "9px", opacity: 0.5 }}>▼</span>
           </button>
           {langDropdownOpen && (
             <div style={{
@@ -400,7 +400,7 @@ function OnePage() {
               cursor: "pointer", transition: "all 0.2s",
               boxShadow: "0 0 20px rgba(255,216,77,0.35)",
             }}>
-              ðŸ£ Go to Dashboard
+              🐣 Go to Dashboard
             </button>
           ) : (
             <button onClick={handleConnectWC} disabled={isConnecting} style={{
@@ -470,7 +470,7 @@ function OnePage() {
                 color: "#06060F", border: "none", borderRadius: "100px",
                 fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "15px", cursor: "pointer",
               }}>
-                ðŸ£ Go to Dashboard
+                🐣 Go to Dashboard
               </button>
             ) : (
               <button onClick={() => { handleConnectWC(); setMobileMenuOpen(false); }} disabled={isConnecting} style={{
@@ -544,8 +544,8 @@ function OnePage() {
             <div className="cta-area">
               <div className="btn-row">
                 <div className="btn-flow wc hero-wc" onClick={handleConnectWC} style={{ opacity: isConnecting ? 0.7 : 1, cursor: isConnecting ? "not-allowed" : "pointer" }}>
-                  <span className="btn-flow-buy">{isConnecting ? t("connectingBtn") : walletConnected ? "ðŸ£ Go to Dashboard" : t("heroBuyNow")}</span>
-                  <span className="btn-flow-arrow">â†’</span>
+                  <span className="btn-flow-buy">{isConnecting ? t("connectingBtn") : walletConnected ? "🐣 Go to Dashboard" : t("heroBuyNow")}</span>
+                  <span className="btn-flow-arrow">→</span>
                   <span className="btn-flow-wallet">{walletConnected ? "Dashboard" : <>{WC_SVG} WalletConnect</>}</span>
                 </div>
                 <a className="btn-how" href="#" onClick={(e) => { e.preventDefault(); scrollTo("faq"); }}>{t("heroHowToBuy")}</a>
@@ -574,9 +574,9 @@ function OnePage() {
       <div className="section" style={{ paddingTop: 0 }}>
         <div className="features">
           {[
-            { cls: "o", icon: "ðŸŽ®", title: t("feat1title"), desc: t("feat1desc") },
-            { cls: "c", icon: "ðŸ‘ï¸", title: t("feat2title"), desc: t("feat2desc") },
-            { cls: "y", icon: "ðŸ’Ž", title: t("feat3title"), desc: t("feat3desc") },
+            { cls: "o", icon: "🎮", title: t("feat1title"), desc: t("feat1desc") },
+            { cls: "c", icon: "👁️", title: t("feat2title"), desc: t("feat2desc") },
+            { cls: "y", icon: "💎", title: t("feat3title"), desc: t("feat3desc") },
           ].map((f) => (
             <div key={f.cls} className={`feat-card ${f.cls}`}>
               <div className="feat-icon">{f.icon}</div>
@@ -679,7 +679,7 @@ function OnePage() {
                   fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em",
                   background: "linear-gradient(90deg,#FF9F1C,#FFD84D)",
                   WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-                }}>â–¶ NOW</div>
+                }}>▶ NOW</div>
               )}
             </div>
           ))}
@@ -707,15 +707,15 @@ function OnePage() {
       <div className="section" style={{ textAlign: "center" }}>
         <div style={{ background: "linear-gradient(135deg, rgba(255,159,28,0.1), rgba(0,229,255,0.08))", border: "1px solid rgba(255,216,77,0.2)", borderRadius: "28px", padding: "64px 48px", position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 60% at 50% 50%, rgba(255,216,77,0.06) 0%, transparent 70%)", pointerEvents: "none" }} />
-          <div style={{ fontSize: "52px", marginBottom: "18px" }}>ðŸ£</div>
+          <div style={{ fontSize: "52px", marginBottom: "18px" }}>🐣</div>
           <h2 style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "clamp(26px,3.5vw,42px)", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "14px" }}>
             Join the <span style={{ color: "#FFD84D" }}>HIYOKO</span> Ecosystem <span style={{ color: "#00E5FF" }}>Early.</span>
           </h2>
           <p style={{ fontSize: "15px", color: "rgba(240,240,255,0.7)", maxWidth: "520px", margin: "0 auto 36px", lineHeight: 1.75 }}>{t("ctaSubtitle")}</p>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px", flexWrap: "wrap" }}>
             <div className="btn-flow hero-wc" onClick={handleConnectWC} style={{ maxWidth: "420px", opacity: isConnecting ? 0.7 : 1, cursor: isConnecting ? "not-allowed" : "pointer" }}>
-              <span className="btn-flow-buy" style={{ padding: "15px 22px", fontSize: "15px" }}>{isConnecting ? t("connectingBtn") : walletConnected ? "ðŸ£ Go to Dashboard" : t("heroBuyNow")}</span>
-              <span className="btn-flow-arrow" style={{ padding: "15px 12px", fontSize: "18px" }}>â†’</span>
+              <span className="btn-flow-buy" style={{ padding: "15px 22px", fontSize: "15px" }}>{isConnecting ? t("connectingBtn") : walletConnected ? "🐣 Go to Dashboard" : t("heroBuyNow")}</span>
+              <span className="btn-flow-arrow" style={{ padding: "15px 12px", fontSize: "18px" }}>→</span>
               <span className="btn-flow-wallet" style={{ padding: "13px 24px", fontSize: "15px", display: "flex", alignItems: "center", gap: "7px" }}>{walletConnected ? "Dashboard" : <>{WC_SVG} WalletConnect</>}</span>
             </div>
           </div>
