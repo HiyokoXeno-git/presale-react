@@ -109,7 +109,7 @@ function DonutChart() {
 
         {/* Center text */}
         <text x="160" y="152" fontFamily="Outfit,sans-serif" fontSize="30" fontWeight="900" fill="#FFD84D" textAnchor="middle">1B</text>
-        <text x="160" y="170" fontFamily="DM Sans,sans-serif" fontSize="11" fill="rgba(160,160,220,0.7)" textAnchor="middle">Total THK</text>
+        <text x="160" y="170" fontFamily="DM Sans,sans-serif" fontSize="11" fill="rgba(160,160,220,0.7)" textAnchor="middle">Total HYK</text>
       </svg>
     </div>
   );
@@ -494,7 +494,7 @@ function OnePage() {
           <h1>
             Play More. Live Better.<br />
             <span className="y">Earn </span>
-            <span className="c">THK.</span>
+            <span className="c">HYK.</span>
           </h1>
           <p className="hero-sub">{t("heroSubtitle")}</p>
 
@@ -502,20 +502,20 @@ function OnePage() {
             <div className="price-label">{t("heroPresalePrice")}</div>
             <div className="price-main">
               <span className="price-num">$0.015</span>
-              <span className="price-unit">USDT / THK</span>
+              <span className="price-unit">USDT / HYK</span>
             </div>
             <div className="prog-labels">
-              <span>{t("heroRaised")}: <b>THK {presaleRaised.toLocaleString()}</b></span>
-              <span>{t("heroGoal")}: THK 1,500,000 &nbsp;<strong style={{ color: "#00E5FF" }}>{presaleProgress.toFixed(1)}%</strong></span>
+              <span>{t("heroRaised")}: <b>HYK {presaleRaised.toLocaleString()}</b></span>
+              <span>{t("heroGoal")}: HYK 1,500,000 &nbsp;<strong style={{ color: "#06E5FF" }}>{presaleProgress.toFixed(1)}%</strong></span>
             </div>
             <div className="prog-bar">
               <div className="prog-fill" style={{ width: `${progWidth}%` }} />
             </div>
             <div style={{ display: "flex", gap: "8px", marginTop: "12px", marginBottom: "16px", flexWrap: "wrap" }}>
               {[
-                { label: "Total Sold", value: `${soldDisplay} THK`, color: "#FFD84D" },
-                { label: "Hard Cap", value: `${capDisplay} THK`, color: "#00E5FF" },
-                { label: "Remaining", value: `${remainingDisplay} THK`, color: "#AA55FF" },
+                { label: t("totalSoldLabel"), value: `${soldDisplay} HYK`, color: "#FFD84D" },
+                { label: t("hardCapLabel"), value: `${capDisplay} HYK`, color: "#00E5FF" },
+                { label: t("remainingLabel"), value: `${remainingDisplay} HYK`, color: "#AA55FF" },
               ].map(({ label, value, color }) => (
                 <div key={label} style={{
                   flex: 1, minWidth: "100px",
