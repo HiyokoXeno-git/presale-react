@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { usePageTransition } from "../App";
 import { CONFIG } from "../config/config";
@@ -8,7 +8,7 @@ import { createSession, getPresaleStats, getRoadmap, validateSession } from "../
 import { formatUnits } from "../services/format";
 import { connectWithWalletConnect, disconnectWalletConnect, getCurrentAccount, getPresaleStats as getPresaleStatsChain, switchNetwork } from "../services/web3";
 
-// ── Donut chart data ──────────────────────────────────────
+// â”€â”€ Donut chart data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const DONUT_SEGMENTS = [
   { pct: 0.10, color: "#00E5FF", label: "Ecosystem", amount: "100,000,000" },
   { pct: 0.05, color: "#FF9F1C", label: "Game to Earn (CheePoint)", amount: "50,000,000" },
@@ -19,11 +19,13 @@ const DONUT_SEGMENTS = [
   { pct: 0.10, color: "#AA55FF", label: "Investors", amount: "100,000,000" },
   { pct: 0.10, color: "#FF6B35", label: "Presale", amount: "~100,000,000" },
 ];
-const C = 2 * Math.PI * 88; // ≈ 552.92
+const C = 2 * Math.PI * 88; // â‰ˆ 552.92
 
 
 function DonutChart() {
-  let offset = 0;
+  const segOffsets = DONUT_SEGMENTS.map((_, i) =>
+    DONUT_SEGMENTS.slice(0, i).reduce((s, sg) => s + sg.pct * C, 0)
+  );
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%" }}>
       <svg viewBox="0 0 320 320" style={{ width: "100%", maxWidth: "420px", overflow: "visible" }}>
@@ -44,8 +46,7 @@ function DonutChart() {
         {/* Segments */}
         {DONUT_SEGMENTS.map((seg, i) => {
           const da = seg.pct * C;
-          const curOffset = offset;
-          offset += da;
+          const curOffset = segOffsets[i];
           return (
             <circle key={i} cx="160" cy="160" r="88" fill="none"
               stroke={i === 7 ? "url(#presaleGrad)" : seg.color}
@@ -58,58 +59,58 @@ function DonutChart() {
           );
         })}
 
-        {/* ── SVG Labels with leader lines (matching HTML reference) ── */}
-        {/* Ecosystem – cyan, top-right */}
+        {/* â”€â”€ SVG Labels with leader lines (matching HTML reference) â”€â”€ */}
+        {/* Ecosystem â€“ cyan, top-right */}
         <line x1="192.1" y1="61.1" x2="198.9" y2="40.2" stroke="#00E5FF" strokeWidth="1.2" opacity="0.7" />
         <line x1="198.9" y1="40.2" x2="220.9" y2="40.2" stroke="#00E5FF" strokeWidth="1.2" opacity="0.7" />
-        <text x="224.9" y="37.2" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#00E5FF" textAnchor="start">Ecosystem</text>
-        <text x="224.9" y="49.2" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">10%</text>
+        <text x="224.9" y="37.2" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="12" fontWeight="700" fill="#00E5FF" textAnchor="start">Ecosystem</text>
+        <text x="224.9" y="49.2" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">10%</text>
 
-        {/* Game to Earn – orange, right */}
+        {/* Game to Earn â€“ orange, right */}
         <line x1="233.5" y1="86.5" x2="249.1" y2="70.9" stroke="#FF9F1C" strokeWidth="1.2" opacity="0.7" />
         <line x1="249.1" y1="70.9" x2="271.1" y2="70.9" stroke="#FF9F1C" strokeWidth="1.2" opacity="0.7" />
-        <text x="275.1" y="67.9" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#FF9F1C" textAnchor="start">Game to Earn</text>
-        <text x="275.1" y="79.9" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">5%</text>
+        <text x="275.1" y="67.9" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="12" fontWeight="700" fill="#FF9F1C" textAnchor="start">Game to Earn</text>
+        <text x="275.1" y="79.9" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">5%</text>
 
-        {/* Team – lavender, right-middle */}
+        {/* Team â€“ lavender, right-middle */}
         <line x1="258.9" y1="127.9" x2="279.8" y2="121.1" stroke="#8888CC" strokeWidth="1.2" opacity="0.7" />
         <line x1="279.8" y1="121.1" x2="301.8" y2="121.1" stroke="#8888CC" strokeWidth="1.2" opacity="0.7" />
-        <text x="305.8" y="118.1" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#8888CC" textAnchor="start">Team</text>
-        <text x="305.8" y="130.1" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">10%</text>
+        <text x="305.8" y="118.1" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="12" fontWeight="700" fill="#8888CC" textAnchor="start">Team</text>
+        <text x="305.8" y="130.1" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">10%</text>
 
-        {/* Marketing – blue, right-lower */}
+        {/* Marketing â€“ blue, right-lower */}
         <line x1="258.9" y1="192.1" x2="279.8" y2="198.9" stroke="#44AAFF" strokeWidth="1.2" opacity="0.7" />
         <line x1="279.8" y1="198.9" x2="301.8" y2="198.9" stroke="#44AAFF" strokeWidth="1.2" opacity="0.7" />
-        <text x="305.8" y="195.9" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#44AAFF" textAnchor="start">Marketing</text>
-        <text x="305.8" y="207.9" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">10%</text>
+        <text x="305.8" y="195.9" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="12" fontWeight="700" fill="#44AAFF" textAnchor="start">Marketing</text>
+        <text x="305.8" y="207.9" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">10%</text>
 
-        {/* Foundation – pink, bottom-right */}
+        {/* Foundation â€“ pink, bottom-right */}
         <line x1="221.1" y1="244.1" x2="234.1" y2="261.9" stroke="#FF6688" strokeWidth="1.2" opacity="0.7" />
         <line x1="234.1" y1="261.9" x2="256.1" y2="261.9" stroke="#FF6688" strokeWidth="1.2" opacity="0.7" />
-        <text x="260.1" y="258.9" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#FF6688" textAnchor="start">Foundation</text>
-        <text x="260.1" y="270.9" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">10%</text>
+        <text x="260.1" y="258.9" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="12" fontWeight="700" fill="#FF6688" textAnchor="start">Foundation</text>
+        <text x="260.1" y="270.9" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">10%</text>
 
-        {/* Market Make – yellow, left-bottom */}
+        {/* Market Make â€“ yellow, left-bottom */}
         <line x1="86.5" y1="233.5" x2="70.9" y2="249.1" stroke="#FFD84D" strokeWidth="1.2" opacity="0.7" />
         <line x1="70.9" y1="249.1" x2="48.9" y2="249.1" stroke="#FFD84D" strokeWidth="1.2" opacity="0.7" />
-        <text x="44.9" y="246.1" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#FFD84D" textAnchor="end">Market Make</text>
-        <text x="44.9" y="258.1" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="end">35%</text>
+        <text x="44.9" y="246.1" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="12" fontWeight="700" fill="#FFD84D" textAnchor="end">Market Make</text>
+        <text x="44.9" y="258.1" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="end">35%</text>
 
-        {/* Investors – violet, left */}
+        {/* Investors â€“ violet, left */}
         <line x1="75.9" y1="98.9" x2="58.1" y2="85.9" stroke="#AA55FF" strokeWidth="1.2" opacity="0.7" />
         <line x1="58.1" y1="85.9" x2="36.1" y2="85.9" stroke="#AA55FF" strokeWidth="1.2" opacity="0.7" />
-        <text x="32.1" y="82.9" fontFamily="Outfit,sans-serif" fontSize="12" fontWeight="700" fill="#AA55FF" textAnchor="end">Investors</text>
-        <text x="32.1" y="94.9" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="end">10%</text>
+        <text x="32.1" y="82.9" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="12" fontWeight="700" fill="#AA55FF" textAnchor="end">Investors</text>
+        <text x="32.1" y="94.9" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="end">10%</text>
 
-        {/* Presale – gradient yellow, top-left */}
+        {/* Presale â€“ gradient yellow, top-left */}
         <line x1="127.9" y1="61.1" x2="121.1" y2="40.2" stroke="#FFD84D" strokeWidth="1.5" opacity="0.9" />
         <line x1="121.1" y1="40.2" x2="99.1" y2="40.2" stroke="#FFD84D" strokeWidth="1.5" opacity="0.9" />
-        <text x="95.1" y="35.2" fontFamily="Outfit,sans-serif" fontSize="13" fontWeight="700" fill="#FFD84D" textAnchor="end">🔥 Presale</text>
-        <text x="95.1" y="49.2" fontFamily="DM Sans,sans-serif" fontSize="10" fill="rgba(255,216,77,0.8)" textAnchor="end">10%</text>
+        <text x="95.1" y="35.2" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="13" fontWeight="700" fill="#FFD84D" textAnchor="end">ðŸ”¥ Presale</text>
+        <text x="95.1" y="49.2" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="10" fill="rgba(255,216,77,0.8)" textAnchor="end">10%</text>
 
         {/* Center text */}
-        <text x="160" y="152" fontFamily="Outfit,sans-serif" fontSize="30" fontWeight="900" fill="#FFD84D" textAnchor="middle">1B</text>
-        <text x="160" y="170" fontFamily="DM Sans,sans-serif" fontSize="11" fill="rgba(160,160,220,0.7)" textAnchor="middle">Total HYK</text>
+        <text x="160" y="152" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="30" fontWeight="900" fill="#FFD84D" textAnchor="middle">1B</text>
+        <text x="160" y="170" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="11" fill="rgba(160,160,220,0.7)" textAnchor="middle">Total HYK</text>
       </svg>
     </div>
   );
@@ -203,7 +204,7 @@ function OnePage() {
     checkSession();
   }, [location.state]);
 
-  // countdown timer — uses endDate from API stats if available, falls back to CONFIG
+  // countdown timer â€” uses endDate from API stats if available, falls back to CONFIG
   useEffect(() => {
     const endDateStr = presaleStats?.endDate || CONFIG.presaleEndDate;
     const target = new Date(endDateStr).getTime();
@@ -267,7 +268,7 @@ function OnePage() {
           throw firstErr;
         }
       }
-      // Auto-switch to BSC Mainnet — silently ignore if wallet rejects (PresalePage will prompt)
+      // Auto-switch to BSC Mainnet â€” silently ignore if wallet rejects (PresalePage will prompt)
       try { await switchNetwork(); } catch { /* handled in PresalePage */ }
       // Use returned address as fallback in case getCurrentAccount() returns null (WalletConnect path)
       const acc = (await getCurrentAccount()) || resolvedAddress;
@@ -318,7 +319,7 @@ function OnePage() {
       <div style={{ ...SS_BASE, top: "28%", left: "-5%", width: "120px", animationDelay: "3.5s" }} />
       <div style={{ ...SS_BASE, top: "55%", left: "-5%", width: "90px", animationDelay: "6s" }} />
 
-      {/* ── HEADER ── */}
+      {/* â”€â”€ HEADER â”€â”€ */}
       <header>
         <a className="logo" href="/" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
           <img className="logo-img" src="/HiyokoLogo.png" alt="HIYOKO" />
@@ -337,7 +338,7 @@ function OnePage() {
           </a>
         </nav>
 
-        {/* Language dropdown — all screen sizes */}
+        {/* Language dropdown â€” all screen sizes */}
         <div ref={langSwitcherRef} className="onepage-lang-wrap" style={{ position: "relative", flexShrink: 0 }}>
           <button
             onClick={() => setLangDropdownOpen((v) => !v)}
@@ -346,13 +347,13 @@ function OnePage() {
               padding: "7px 13px",
               background: "rgba(20,20,40,0.85)", border: "1px solid rgba(255,255,255,0.1)",
               borderRadius: "100px", cursor: "pointer", transition: "all 0.2s",
-              fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "13px",
+              fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "13px",
               color: "#F0F0FF",
             }}
           >
             <img src={SUPPORTED_LANGS.find(l => l.code === lang)?.flagUrl} alt="" style={{ width: "20px", height: "15px", borderRadius: "2px", objectFit: "cover" }} />
             {SUPPORTED_LANGS.find(l => l.code === lang)?.shortLabel}
-            <span style={{ fontSize: "9px", opacity: 0.5 }}>▼</span>
+            <span style={{ fontSize: "9px", opacity: 0.5 }}>â–¼</span>
           </button>
           {langDropdownOpen && (
             <div style={{
@@ -372,7 +373,7 @@ function OnePage() {
                     background: lang === l.code ? "rgba(255,216,77,0.1)" : "transparent",
                     border: "none", borderRadius: "8px",
                     cursor: "pointer", textAlign: "left",
-                    fontFamily: "'Outfit', sans-serif", fontSize: "13px",
+                    fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "13px",
                     fontWeight: lang === l.code ? 700 : 500,
                     color: lang === l.code ? "#FFD84D" : "#F0F0FF",
                     transition: "all 0.15s",
@@ -393,17 +394,17 @@ function OnePage() {
               display: "flex", alignItems: "center", gap: "8px", padding: "11px 24px",
               background: "linear-gradient(135deg, #FFD84D, #FF9F1C)",
               color: "#06060F", border: "none", borderRadius: "100px",
-              fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "15px",
+              fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "15px",
               cursor: "pointer", transition: "all 0.2s",
               boxShadow: "0 0 20px rgba(255,216,77,0.35)",
             }}>
-              🐣 Go to Dashboard
+              ðŸ£ Go to Dashboard
             </button>
           ) : (
             <button onClick={handleConnectWC} disabled={isConnecting} style={{
               display: "flex", alignItems: "center", gap: "8px", padding: "11px 24px",
               background: "rgba(255,216,77,0.12)", border: "1px solid rgba(255,216,77,0.45)",
-              color: "#FFD84D", borderRadius: "100px", fontFamily: "'Outfit', sans-serif",
+              color: "#FFD84D", borderRadius: "100px", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
               fontWeight: 700, fontSize: "15px", cursor: isConnecting ? "not-allowed" : "pointer",
               opacity: isConnecting ? 0.7 : 1, transition: "all 0.2s",
               boxShadow: "0 0 16px rgba(255,216,77,0.12)",
@@ -423,7 +424,7 @@ function OnePage() {
         </button>
       </header>
 
-      {/* ── MOBILE MENU ── */}
+      {/* â”€â”€ MOBILE MENU â”€â”€ */}
       {mobileMenuOpen && (
         <div className="mobile-menu open">
           <a href="#" onClick={(e) => { e.preventDefault(); scrollTo("tokenomics"); setMobileMenuOpen(false); }}>{t("navTokenomics")}</a>
@@ -446,7 +447,7 @@ function OnePage() {
                     background: lang === l.code ? "rgba(255,216,77,0.1)" : "transparent",
                     border: lang === l.code ? "1px solid rgba(255,216,77,0.3)" : "1px solid transparent",
                     borderRadius: "8px", cursor: "pointer", textAlign: "left",
-                    fontFamily: "'Outfit', sans-serif", fontSize: "13px",
+                    fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "13px",
                     fontWeight: lang === l.code ? 700 : 500,
                     color: lang === l.code ? "#FFD84D" : "#F0F0FF",
                     transition: "all 0.15s",
@@ -465,9 +466,9 @@ function OnePage() {
                 padding: "13px 24px", width: "100%",
                 background: "linear-gradient(135deg, #FFD84D, #FF9F1C)",
                 color: "#06060F", border: "none", borderRadius: "100px",
-                fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "15px", cursor: "pointer",
+                fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "15px", cursor: "pointer",
               }}>
-                🐣 Go to Dashboard
+                ðŸ£ Go to Dashboard
               </button>
             ) : (
               <button onClick={() => { handleConnectWC(); setMobileMenuOpen(false); }} disabled={isConnecting} style={{
@@ -475,7 +476,7 @@ function OnePage() {
                 padding: "13px 24px", width: "100%",
                 background: "rgba(255,216,77,0.12)", border: "1px solid rgba(255,216,77,0.45)",
                 color: "#FFD84D", borderRadius: "100px",
-                fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "15px",
+                fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "15px",
                 cursor: isConnecting ? "not-allowed" : "pointer", opacity: isConnecting ? 0.7 : 1,
               }}>
                 {WC_SVG} {isConnecting ? t("connectingBtn") : t("connectWalletBtn")}
@@ -485,7 +486,7 @@ function OnePage() {
         </div>
       )}
 
-      {/* ── HERO ── */}
+      {/* â”€â”€ HERO â”€â”€ */}
       <div className="hero">
         <div className="hero-left">
           <div className="live-badge">
@@ -526,7 +527,7 @@ function OnePage() {
                   padding: "12px 14px",
                 }}>
                   <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "5px", fontWeight: 600 }}>{label}</div>
-                  <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: "15px", fontWeight: 700, color }}>{value}</div>
+                  <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "15px", fontWeight: 700, color }}>{value}</div>
                 </div>
               ))}
             </div>
@@ -541,9 +542,9 @@ function OnePage() {
             <div className="cta-area">
               <div className="btn-row">
                 <div className="btn-flow wc hero-wc" onClick={handleConnectWC} style={{ opacity: isConnecting ? 0.7 : 1, cursor: isConnecting ? "not-allowed" : "pointer" }}>
-                  <span className="btn-flow-buy">{isConnecting ? t("connectingBtn") : t("heroBuyNow")}</span>
-                  <span className="btn-flow-arrow">→</span>
-                  <span className="btn-flow-wallet">{WC_SVG} WalletConnect</span>
+                  <span className="btn-flow-buy">{isConnecting ? t("connectingBtn") : walletConnected ? "ðŸ£ Go to Dashboard" : t("heroBuyNow")}</span>
+                  <span className="btn-flow-arrow">â†’</span>
+                  <span className="btn-flow-wallet">{walletConnected ? "Dashboard" : <>{WC_SVG} WalletConnect</>}</span>
                 </div>
                 <a className="btn-how" href="#" onClick={(e) => { e.preventDefault(); scrollTo("faq"); }}>{t("heroHowToBuy")}</a>
               </div>
@@ -567,13 +568,13 @@ function OnePage() {
         </div>
       </div>
 
-      {/* ── FEATURES ── */}
+      {/* â”€â”€ FEATURES â”€â”€ */}
       <div className="section" style={{ paddingTop: 0 }}>
         <div className="features">
           {[
-            { cls: "o", icon: "🎮", title: t("feat1title"), desc: t("feat1desc") },
-            { cls: "c", icon: "👁️", title: t("feat2title"), desc: t("feat2desc") },
-            { cls: "y", icon: "💎", title: t("feat3title"), desc: t("feat3desc") },
+            { cls: "o", icon: "ðŸŽ®", title: t("feat1title"), desc: t("feat1desc") },
+            { cls: "c", icon: "ðŸ‘ï¸", title: t("feat2title"), desc: t("feat2desc") },
+            { cls: "y", icon: "ðŸ’Ž", title: t("feat3title"), desc: t("feat3desc") },
           ].map((f) => (
             <div key={f.cls} className={`feat-card ${f.cls}`}>
               <div className="feat-icon">{f.icon}</div>
@@ -584,7 +585,7 @@ function OnePage() {
         </div>
       </div>
 
-      {/* ── HAPPY CHICK ── */}
+      {/* â”€â”€ HAPPY CHICK â”€â”€ */}
       <div className="vitalis-section">
         <div className="vitalis-card" style={{ borderColor: "rgba(255,159,28,0.2)", boxShadow: "0 0 60px rgba(255,159,28,0.06)" }}>
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 60% at 20% 50%, rgba(255,159,28,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
@@ -598,7 +599,7 @@ function OnePage() {
         </div>
       </div>
 
-      {/* ── VITALIS ── */}
+      {/* â”€â”€ VITALIS â”€â”€ */}
       <div className="vitalis-section">
         <div className="vitalis-card">
           <div className="vitalis-text">
@@ -611,7 +612,7 @@ function OnePage() {
         </div>
       </div>
 
-      {/* ── CHEEPOINT ── */}
+      {/* â”€â”€ CHEEPOINT â”€â”€ */}
       <div className="vitalis-section">
         <div className="vitalis-card" style={{ borderColor: "rgba(255,216,77,0.2)", boxShadow: "0 0 60px rgba(255,216,77,0.06)" }}>
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 60% at 80% 50%, rgba(255,216,77,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
@@ -625,7 +626,7 @@ function OnePage() {
         </div>
       </div>
 
-      {/* ── TOKENOMICS ── */}
+      {/* â”€â”€ TOKENOMICS â”€â”€ */}
       <div id="tokenomics" className="section">
         <div className="sec-tag">{t("tokenDistribution")}</div>
         <div className="sec-title">{t("tokenomicsTitle")}</div>
@@ -653,7 +654,7 @@ function OnePage() {
         </div>
       </div>
 
-      {/* ── ROADMAP ── */}
+      {/* â”€â”€ ROADMAP â”€â”€ */}
       <div id="roadmap" className="section">
         <div className="sec-tag">{t("projectTimeline")}</div>
         <div className="sec-title">{t("roadmapTitle")}</div>
@@ -676,14 +677,14 @@ function OnePage() {
                   fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em",
                   background: "linear-gradient(90deg,#FF9F1C,#FFD84D)",
                   WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-                }}>▶ NOW</div>
+                }}>â–¶ NOW</div>
               )}
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── FAQ ── */}
+      {/* â”€â”€ FAQ â”€â”€ */}
       <div id="faq" className="section">
         <div className="sec-tag">{t("questionsLabel")}</div>
         <div className="sec-title">{t("faqTitle")}</div>
@@ -700,27 +701,27 @@ function OnePage() {
         </div>
       </div>
 
-      {/* ── CTA ── */}
+      {/* â”€â”€ CTA â”€â”€ */}
       <div className="section" style={{ textAlign: "center" }}>
         <div style={{ background: "linear-gradient(135deg, rgba(255,159,28,0.1), rgba(0,229,255,0.08))", border: "1px solid rgba(255,216,77,0.2)", borderRadius: "28px", padding: "64px 48px", position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 60% at 50% 50%, rgba(255,216,77,0.06) 0%, transparent 70%)", pointerEvents: "none" }} />
-          <div style={{ fontSize: "52px", marginBottom: "18px" }}>🐣</div>
-          <h2 style={{ fontFamily: "'Outfit', sans-serif", fontSize: "clamp(26px,3.5vw,42px)", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "14px" }}>
+          <div style={{ fontSize: "52px", marginBottom: "18px" }}>ðŸ£</div>
+          <h2 style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "clamp(26px,3.5vw,42px)", fontWeight: 900, letterSpacing: "-0.02em", marginBottom: "14px" }}>
             Join the <span style={{ color: "#FFD84D" }}>HIYOKO</span> Ecosystem <span style={{ color: "#00E5FF" }}>Early.</span>
           </h2>
           <p style={{ fontSize: "15px", color: "rgba(240,240,255,0.7)", maxWidth: "520px", margin: "0 auto 36px", lineHeight: 1.75 }}>{t("ctaSubtitle")}</p>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px", flexWrap: "wrap" }}>
             <div className="btn-flow hero-wc" onClick={handleConnectWC} style={{ maxWidth: "420px", opacity: isConnecting ? 0.7 : 1, cursor: isConnecting ? "not-allowed" : "pointer" }}>
-              <span className="btn-flow-buy" style={{ padding: "15px 22px", fontSize: "15px" }}>{isConnecting ? t("connectingBtn") : t("heroBuyNow")}</span>
-              <span className="btn-flow-arrow" style={{ padding: "15px 12px", fontSize: "18px" }}>→</span>
-              <span className="btn-flow-wallet" style={{ padding: "13px 24px", fontSize: "15px", display: "flex", alignItems: "center", gap: "7px" }}>{WC_SVG} WalletConnect</span>
+              <span className="btn-flow-buy" style={{ padding: "15px 22px", fontSize: "15px" }}>{isConnecting ? t("connectingBtn") : walletConnected ? "ðŸ£ Go to Dashboard" : t("heroBuyNow")}</span>
+              <span className="btn-flow-arrow" style={{ padding: "15px 12px", fontSize: "18px" }}>â†’</span>
+              <span className="btn-flow-wallet" style={{ padding: "13px 24px", fontSize: "15px", display: "flex", alignItems: "center", gap: "7px" }}>{walletConnected ? "Dashboard" : <>{WC_SVG} WalletConnect</>}</span>
             </div>
           </div>
           <p style={{ marginTop: "20px", fontSize: "12px", color: "rgba(240,240,255,0.45)" }}>{t("ctaDisclaimer")}</p>
         </div>
       </div>
 
-      {/* ── FOOTER ── */}
+      {/* â”€â”€ FOOTER â”€â”€ */}
       <footer>
         <div className="foot-logo">HIYOKO</div>
         <div className="foot-links">

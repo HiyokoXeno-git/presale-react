@@ -1,4 +1,4 @@
-export default function MessageModal({ type, message, txHash, onClose }) {
+﻿export default function MessageModal({ type, message, txHash, onClose }) {
   if (!message) return null;
 
   const isSuccess   = type === "success";
@@ -7,7 +7,7 @@ export default function MessageModal({ type, message, txHash, onClose }) {
   const accentColor = isSuccess ? "#6AC645" : isCancelled ? "#FFA01C" : "#ff5050";
   const glowColor   = isSuccess ? "rgba(106,198,69,0.1)" : isCancelled ? "rgba(255,159,28,0.1)" : "rgba(255,80,80,0.1)";
   const borderColor = isSuccess ? "rgba(106,198,69,0.3)" : isCancelled ? "rgba(255,159,28,0.3)" : "rgba(255,80,80,0.3)";
-  const icon        = isSuccess ? "✅" : isCancelled ? "⚠️" : "❌";
+  const icon        = isSuccess ? "âœ…" : isCancelled ? "âš ï¸" : "âŒ";
   const title       = isSuccess ? "Purchase Successful" : isCancelled ? "Transaction Cancelled" : "Transaction Failed";
   const btnLabel    = isSuccess ? "Done" : isCancelled ? "OK" : "Close";
   const btnBg       = isSuccess
@@ -52,7 +52,7 @@ export default function MessageModal({ type, message, txHash, onClose }) {
 
         {/* Title */}
         <div style={{
-          fontFamily: "'Outfit', sans-serif",
+          fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
           fontWeight: 800, fontSize: "18px",
           color: accentColor,
           marginBottom: "10px",
@@ -85,7 +85,7 @@ export default function MessageModal({ type, message, txHash, onClose }) {
                 border: "1px solid rgba(6,229,255,0.2)",
               }}
             >
-              🔗 View on BSCScan
+              ðŸ”— View on BSCScan
             </a>
           </div>
         )}
@@ -98,7 +98,7 @@ export default function MessageModal({ type, message, txHash, onClose }) {
             background: btnBg,
             color: btnColor,
             border: "none", borderRadius: "100px",
-            fontFamily: "'Outfit', sans-serif",
+            fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
             fontWeight: 800, fontSize: "14px",
             cursor: "pointer",
             letterSpacing: "0.04em",
