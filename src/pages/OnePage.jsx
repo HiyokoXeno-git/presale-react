@@ -196,10 +196,12 @@ function OnePage() {
       if (!valid) {
         // Ensure AppKit/WalletConnect state is cleared so re-connect shows confirmation
         await disconnectWalletConnect().catch(() => {});
+        setWalletConnected(false);
         return;
       }
-      const acc = await getCurrentAccount().catch(() => null);
-      if (acc) setWalletConnected(true);
+      // Session valid = user previously connected wallet. _wcProvider may be null
+      // after back-navigation or page refresh (in-memory only), so don't gate on it.
+      setWalletConnected(true);
     }
     checkSession();
   }, [location.state]);
