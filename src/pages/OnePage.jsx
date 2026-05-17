@@ -242,6 +242,7 @@ function OnePage() {
 
   async function handleConnectWC() {
     if (isConnecting) return;
+    if (walletConnected) { transitionTo("/my-page"); return; }
     try {
       setIsConnecting(true);
       setConnectError("");
