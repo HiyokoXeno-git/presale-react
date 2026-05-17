@@ -147,6 +147,20 @@ export async function getUserTransactions(walletAddress) {
   }
 }
 
+export async function getChainStats() {
+  try {
+    const res = await fetch(
+      `${CONFIG.presaleApiBaseUrl}/getChainStats.php`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    const data = await res.json();
+    if (!data?.success) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 export async function getAnnouncements() {
   try {
     const res = await fetch(`${CONFIG.presaleApiBaseUrl}/getAnnouncements.php`);

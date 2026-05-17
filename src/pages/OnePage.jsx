@@ -4,9 +4,9 @@ import { usePageTransition } from "../App";
 import { CONFIG } from "../config/config";
 import { useLanguage } from "../hooks/useLanguage";
 import { SUPPORTED_LANGS } from "../i18n/translations";
-import { createSession, getPresaleStats, getRoadmap, validateSession } from "../services/api";
+import { createSession, getChainStats, getPresaleStats, getRoadmap, validateSession } from "../services/api";
 import { formatUnits } from "../services/format";
-import { connectWithWalletConnect, disconnectWalletConnect, getCurrentAccount, getPresaleStats as getPresaleStatsChain, switchNetwork } from "../services/web3";
+import { connectWithWalletConnect, disconnectWalletConnect, getCurrentAccount, switchNetwork } from "../services/web3";
 
 // â”€â”€ Donut chart data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const DONUT_SEGMENTS = [
@@ -176,7 +176,10 @@ function OnePage() {
 
   useEffect(() => {
     getPresaleStats().then((data) => { if (data) setPresaleStats(data); }).catch(() => { });
-    getPresaleStatsChain().then((data) => { if (data) setChainStats(data); }).catch(() => { });
+    const fetchChain = () => getChainStats().then((data) => { if (data) setChainStats(data); }).catch(() => { });
+    fetchChain();
+    const poll = setInterval(fetchChain, 30000);
+    return () => clearInterval(poll);
   }, []);
 
   // fetch roadmap from backend whenever language changes
