@@ -6,9 +6,9 @@ import { useLanguage } from "../hooks/useLanguage";
 import { SUPPORTED_LANGS } from "../i18n/translations";
 import { createSession, getChainStats, getPresaleStats, getRoadmap, validateSession } from "../services/api";
 import { formatUnits } from "../services/format";
-import { connectWithWalletConnect, disconnectWalletConnect, getCurrentAccount, switchNetwork } from "../services/web3";
+import { connectWithWalletConnect, disconnectWalletConnect, getCurrentAccount, getCurrentChainId, switchNetwork } from "../services/web3";
 
-// â”€â”€ Donut chart data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Donut chart data ──────────────────────────────────────
 const DONUT_SEGMENTS = [
   { pct: 0.10, color: "#00E5FF", label: "Ecosystem", amount: "100,000,000" },
   { pct: 0.05, color: "#FF9F1C", label: "Game to Earn (CheePoint)", amount: "50,000,000" },
@@ -19,7 +19,7 @@ const DONUT_SEGMENTS = [
   { pct: 0.10, color: "#AA55FF", label: "Investors", amount: "100,000,000" },
   { pct: 0.10, color: "#FF6B35", label: "Presale", amount: "~100,000,000" },
 ];
-const C = 2 * Math.PI * 88; // â‰ˆ 552.92
+const C = 2 * Math.PI * 88; // ≈ 552.92
 
 
 function DonutChart() {
@@ -59,50 +59,50 @@ function DonutChart() {
           );
         })}
 
-        {/* â”€â”€ SVG Labels with leader lines (matching HTML reference) â”€â”€ */}
-        {/* Ecosystem â€“ cyan, top-right */}
+        {/* ── SVG Labels with leader lines (matching HTML reference) ── */}
+        {/* Ecosystem – cyan, top-right */}
         <line x1="192.1" y1="61.1" x2="198.9" y2="40.2" stroke="#00E5FF" strokeWidth="1.2" opacity="0.7" />
         <line x1="198.9" y1="40.2" x2="220.9" y2="40.2" stroke="#00E5FF" strokeWidth="1.2" opacity="0.7" />
         <text x="224.9" y="37.2" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="12" fontWeight="700" fill="#00E5FF" textAnchor="start">Ecosystem</text>
         <text x="224.9" y="49.2" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">10%</text>
 
-        {/* Game to Earn â€“ orange, right */}
+        {/* Game to Earn – orange, right */}
         <line x1="233.5" y1="86.5" x2="249.1" y2="70.9" stroke="#FF9F1C" strokeWidth="1.2" opacity="0.7" />
         <line x1="249.1" y1="70.9" x2="271.1" y2="70.9" stroke="#FF9F1C" strokeWidth="1.2" opacity="0.7" />
         <text x="275.1" y="67.9" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="12" fontWeight="700" fill="#FF9F1C" textAnchor="start">Game to Earn</text>
         <text x="275.1" y="79.9" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">5%</text>
 
-        {/* Team â€“ lavender, right-middle */}
+        {/* Team – lavender, right-middle */}
         <line x1="258.9" y1="127.9" x2="279.8" y2="121.1" stroke="#8888CC" strokeWidth="1.2" opacity="0.7" />
         <line x1="279.8" y1="121.1" x2="301.8" y2="121.1" stroke="#8888CC" strokeWidth="1.2" opacity="0.7" />
         <text x="305.8" y="118.1" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="12" fontWeight="700" fill="#8888CC" textAnchor="start">Team</text>
         <text x="305.8" y="130.1" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">10%</text>
 
-        {/* Marketing â€“ blue, right-lower */}
+        {/* Marketing – blue, right-lower */}
         <line x1="258.9" y1="192.1" x2="279.8" y2="198.9" stroke="#44AAFF" strokeWidth="1.2" opacity="0.7" />
         <line x1="279.8" y1="198.9" x2="301.8" y2="198.9" stroke="#44AAFF" strokeWidth="1.2" opacity="0.7" />
         <text x="305.8" y="195.9" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="12" fontWeight="700" fill="#44AAFF" textAnchor="start">Marketing</text>
         <text x="305.8" y="207.9" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">10%</text>
 
-        {/* Foundation â€“ pink, bottom-right */}
+        {/* Foundation – pink, bottom-right */}
         <line x1="221.1" y1="244.1" x2="234.1" y2="261.9" stroke="#FF6688" strokeWidth="1.2" opacity="0.7" />
         <line x1="234.1" y1="261.9" x2="256.1" y2="261.9" stroke="#FF6688" strokeWidth="1.2" opacity="0.7" />
         <text x="260.1" y="258.9" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="12" fontWeight="700" fill="#FF6688" textAnchor="start">Foundation</text>
         <text x="260.1" y="270.9" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="start">10%</text>
 
-        {/* Market Make â€“ yellow, left-bottom */}
+        {/* Market Make – yellow, left-bottom */}
         <line x1="86.5" y1="233.5" x2="70.9" y2="249.1" stroke="#FFD84D" strokeWidth="1.2" opacity="0.7" />
         <line x1="70.9" y1="249.1" x2="48.9" y2="249.1" stroke="#FFD84D" strokeWidth="1.2" opacity="0.7" />
         <text x="44.9" y="246.1" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="12" fontWeight="700" fill="#FFD84D" textAnchor="end">Market Make</text>
         <text x="44.9" y="258.1" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="end">35%</text>
 
-        {/* Investors â€“ violet, left */}
+        {/* Investors – violet, left */}
         <line x1="75.9" y1="98.9" x2="58.1" y2="85.9" stroke="#AA55FF" strokeWidth="1.2" opacity="0.7" />
         <line x1="58.1" y1="85.9" x2="36.1" y2="85.9" stroke="#AA55FF" strokeWidth="1.2" opacity="0.7" />
         <text x="32.1" y="82.9" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="12" fontWeight="700" fill="#AA55FF" textAnchor="end">Investors</text>
         <text x="32.1" y="94.9" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="10" fill="rgba(255,255,255,0.5)" textAnchor="end">10%</text>
 
-        {/* Presale â€“ gradient yellow, top-left */}
+        {/* Presale – gradient yellow, top-left */}
         <line x1="127.9" y1="61.1" x2="121.1" y2="40.2" stroke="#FFD84D" strokeWidth="1.5" opacity="0.9" />
         <line x1="121.1" y1="40.2" x2="99.1" y2="40.2" stroke="#FFD84D" strokeWidth="1.5" opacity="0.9" />
         <text x="95.1" y="35.2" fontFamily="Pretendard Variable,Pretendard,sans-serif" fontSize="13" fontWeight="700" fill="#FFD84D" textAnchor="end">🔥 Presale</text>
@@ -209,7 +209,7 @@ function OnePage() {
     checkSession();
   }, [location.state]);
 
-  // countdown timer â€” uses endDate from API stats if available, falls back to CONFIG
+  // countdown timer — uses endDate from API stats if available, falls back to CONFIG
   useEffect(() => {
     const endDateStr = presaleStats?.endDate || CONFIG.presaleEndDate;
     const target = new Date(endDateStr).getTime();
@@ -273,8 +273,17 @@ function OnePage() {
           throw firstErr;
         }
       }
-      // Auto-switch to BSC Mainnet â€” silently ignore if wallet rejects (PresalePage will prompt)
-      try { await switchNetwork(); } catch { /* handled in PresalePage */ }
+      // Auto-switch to BSC Mainnet; if user rejects or is on wrong chain, block access
+      try { await switchNetwork(); } catch { /* ignore — verified below */ }
+      const chainId = await getCurrentChainId().catch(() => null);
+      const onMainnet = chainId && (
+        String(chainId).toLowerCase() === CONFIG.chainHex.toLowerCase() ||
+        Number(chainId) === CONFIG.chainId
+      );
+      if (!onMainnet) {
+        await disconnectWalletConnect().catch(() => {});
+        throw new Error(`Please switch to BSC Mainnet (chain ${CONFIG.chainId}) to continue.`);
+      }
       // Use returned address as fallback in case getCurrentAccount() returns null (WalletConnect path)
       const acc = (await getCurrentAccount()) || resolvedAddress;
       if (!acc) throw new Error("Could not retrieve wallet address. Please try again.");
@@ -324,7 +333,7 @@ function OnePage() {
       <div style={{ ...SS_BASE, top: "28%", left: "-5%", width: "120px", animationDelay: "3.5s" }} />
       <div style={{ ...SS_BASE, top: "55%", left: "-5%", width: "90px", animationDelay: "6s" }} />
 
-      {/* â”€â”€ HEADER â”€â”€ */}
+      {/* ── HEADER ── */}
       <header>
         <a className="logo" href="/" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
           <img className="logo-img" src="/HiyokoLogo.png" alt="HIYOKO" />
@@ -343,7 +352,7 @@ function OnePage() {
           </a>
         </nav>
 
-        {/* Language dropdown â€” all screen sizes */}
+        {/* Language dropdown — all screen sizes */}
         <div ref={langSwitcherRef} className="onepage-lang-wrap" style={{ position: "relative", flexShrink: 0 }}>
           <button
             onClick={() => setLangDropdownOpen((v) => !v)}
@@ -429,7 +438,7 @@ function OnePage() {
         </button>
       </header>
 
-      {/* â”€â”€ MOBILE MENU â”€â”€ */}
+      {/* ── MOBILE MENU ── */}
       {mobileMenuOpen && (
         <div className="mobile-menu open">
           <a href="#" onClick={(e) => { e.preventDefault(); scrollTo("tokenomics"); setMobileMenuOpen(false); }}>{t("navTokenomics")}</a>
@@ -491,7 +500,7 @@ function OnePage() {
         </div>
       )}
 
-      {/* â”€â”€ HERO â”€â”€ */}
+      {/* ── HERO ── */}
       <div className="hero">
         <div className="hero-left">
           <div className="live-badge">
@@ -573,7 +582,7 @@ function OnePage() {
         </div>
       </div>
 
-      {/* â”€â”€ FEATURES â”€â”€ */}
+      {/* ── FEATURES ── */}
       <div className="section" style={{ paddingTop: 0 }}>
         <div className="features">
           {[
@@ -590,7 +599,7 @@ function OnePage() {
         </div>
       </div>
 
-      {/* â”€â”€ HAPPY CHICK â”€â”€ */}
+      {/* ── HAPPY CHICK ── */}
       <div className="vitalis-section">
         <div className="vitalis-card" style={{ borderColor: "rgba(255,159,28,0.2)", boxShadow: "0 0 60px rgba(255,159,28,0.06)" }}>
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 60% at 20% 50%, rgba(255,159,28,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
@@ -604,7 +613,7 @@ function OnePage() {
         </div>
       </div>
 
-      {/* â”€â”€ VITALIS â”€â”€ */}
+      {/* ── VITALIS ── */}
       <div className="vitalis-section">
         <div className="vitalis-card">
           <div className="vitalis-text">
@@ -617,7 +626,7 @@ function OnePage() {
         </div>
       </div>
 
-      {/* â”€â”€ CHEEPOINT â”€â”€ */}
+      {/* ── CHEEPOINT ── */}
       <div className="vitalis-section">
         <div className="vitalis-card" style={{ borderColor: "rgba(255,216,77,0.2)", boxShadow: "0 0 60px rgba(255,216,77,0.06)" }}>
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 60% at 80% 50%, rgba(255,216,77,0.07) 0%, transparent 70%)", pointerEvents: "none" }} />
@@ -631,7 +640,7 @@ function OnePage() {
         </div>
       </div>
 
-      {/* â”€â”€ TOKENOMICS â”€â”€ */}
+      {/* ── TOKENOMICS ── */}
       <div id="tokenomics" className="section">
         <div className="sec-tag">{t("tokenDistribution")}</div>
         <div className="sec-title">{t("tokenomicsTitle")}</div>
@@ -659,7 +668,7 @@ function OnePage() {
         </div>
       </div>
 
-      {/* â”€â”€ ROADMAP â”€â”€ */}
+      {/* ── ROADMAP ── */}
       <div id="roadmap" className="section">
         <div className="sec-tag">{t("projectTimeline")}</div>
         <div className="sec-title">{t("roadmapTitle")}</div>
@@ -689,7 +698,7 @@ function OnePage() {
         </div>
       </div>
 
-      {/* â”€â”€ FAQ â”€â”€ */}
+      {/* ── FAQ ── */}
       <div id="faq" className="section">
         <div className="sec-tag">{t("questionsLabel")}</div>
         <div className="sec-title">{t("faqTitle")}</div>
@@ -706,7 +715,7 @@ function OnePage() {
         </div>
       </div>
 
-      {/* â”€â”€ CTA â”€â”€ */}
+      {/* ── CTA ── */}
       <div className="section" style={{ textAlign: "center" }}>
         <div style={{ background: "linear-gradient(135deg, rgba(255,159,28,0.1), rgba(0,229,255,0.08))", border: "1px solid rgba(255,216,77,0.2)", borderRadius: "28px", padding: "64px 48px", position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 60% at 50% 50%, rgba(255,216,77,0.06) 0%, transparent 70%)", pointerEvents: "none" }} />
@@ -726,15 +735,35 @@ function OnePage() {
         </div>
       </div>
 
-      {/* â”€â”€ FOOTER â”€â”€ */}
+      {/* ── FOOTER ── */}
       <footer>
         <div className="foot-logo">HIYOKO</div>
         <div className="foot-links">
           <a href="https://hiyokotoken.com" target="_blank" rel="noreferrer">Website</a>
-          <a href="https://x.com/HiyokoGlobal" target="_blank" rel="noreferrer">X (Twitter)</a>
-          <a href="https://t.me/hiyoko_Official" target="_blank" rel="noreferrer">Telegram</a>
-          <a href="https://www.instagram.com/hiyokop2e/" target="_blank" rel="noreferrer">Instagram</a>
-          <a href="https://www.youtube.com/@hiyokoglobal" target="_blank" rel="noreferrer">YouTube</a>
+          <a href="https://www.instagram.com/hiyoko_global/" target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:"5px"}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+            Instagram
+          </a>
+          <a href="https://x.com/HiyokoGlobal" target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:"5px"}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            X (Twitter)
+          </a>
+          <a href="https://www.tiktok.com/@xiaojigames" target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:"5px"}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.73a4.85 4.85 0 01-1.01-.04z"/></svg>
+            TikTok
+          </a>
+          <a href="https://www.youtube.com/channel/UCMTymzTL7XkoBMIiEypc_1g" target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:"5px"}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.495 6.205a3.007 3.007 0 00-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 00.527 6.205a31.247 31.247 0 00-.522 5.805 31.247 31.247 0 00.522 5.783 3.007 3.007 0 002.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 002.088-2.088 31.247 31.247 0 00.5-5.783 31.247 31.247 0 00-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>
+            YouTube
+          </a>
+          <a href="https://www.facebook.com/profile.php?id=100090532489960" target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:"5px"}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+            Facebook
+          </a>
+          <a href="https://t.me/hiyoko_Official" target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:"5px"}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-2.04 9.607c-.148.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.48 14.796l-2.95-.924c-.64-.203-.653-.64.136-.948l11.527-4.446c.537-.194 1.006.13.37.77z"/></svg>
+            Telegram
+          </a>
           <a href="https://hiyokotoken.com/wp/EN_HIYOKO_Whitepaper.pdf" target="_blank" rel="noreferrer">Whitepaper</a>
         </div>
         <p className="foot-disc">{t("footerDisclaimer")}<br />{t("footerRights")}</p>
