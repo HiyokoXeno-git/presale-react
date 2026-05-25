@@ -1,5 +1,14 @@
+@font-face {
+  font-family: "Pretendard Variable";
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: block;
+  src: url("/PretendardVariable.woff2") format("woff2-variations");
+}
+
 :root {
-  --yellow: #FFD94E;
+  --yellow: #FFD943;
+  --grey: #BCBCBC;
   --orange: #FFA01C;
   --cyan: #06E5FF;
   --green: #6AC645;
@@ -468,7 +477,7 @@ nav a:hover {
 }
 
 .prog-bar {
-  height: 13px;
+  height: 16px;
   background: rgba(255, 255, 255, 0.06);
   border-radius: 100px;
   overflow: hidden;
@@ -747,7 +756,7 @@ nav a:hover {
 
 .sec-tag {
   font-family: 'Pretendard Variable', 'Pretendard', sans-serif;
-  font-size: 13px;
+  font-size: 15px;
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--cyan);
@@ -757,7 +766,7 @@ nav a:hover {
 
 .sec-title {
   font-family: 'Pretendard Variable', 'Pretendard', sans-serif;
-  font-size: clamp(30px, 3.5vw, 48px);
+  font-size: clamp(32px, 3.5vw, 50px);
   font-weight: 700;
   letter-spacing: -0.02em;
   margin-bottom: 56px;
@@ -816,7 +825,7 @@ nav a:hover {
 
 .feat-title {
   font-family: 'Pretendard Variable', 'Pretendard', sans-serif;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 600;
   margin-bottom: 10px;
 }
@@ -861,7 +870,7 @@ nav a:hover {
 
 .donut-wrap svg {
   width: 100%;
-  max-width: 420px;
+  max-width: 520px;
   overflow: visible;
 }
 
@@ -885,7 +894,7 @@ nav a:hover {
 
 .alloc-list {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   width: 100%;
 }
@@ -894,7 +903,7 @@ nav a:hover {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 14px 18px;
+  padding: 16px 20px;
   transition: border-color 0.2s;
 }
 
@@ -931,7 +940,7 @@ nav a:hover {
 .alloc-addr {
   font-size: 10.5px;
   color: var(--muted);
-  font-family: 'Courier New', monospace;
+  font-family: 'Pretendard Variable', 'Pretendard', sans-serif;
   background: rgba(255, 255, 255, 0.04);
   padding: 4px 8px;
   border-radius: 6px;
@@ -1161,7 +1170,7 @@ nav a:hover {
 .vitalis-tag {
   display: inline-block;
   font-family: 'Pretendard Variable', 'Pretendard', sans-serif;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -1171,8 +1180,8 @@ nav a:hover {
 
 .vitalis-title {
   font-family: 'Pretendard Variable', 'Pretendard', sans-serif;
-  font-size: 32px;
-  font-weight: 700;
+  font-size: 34px;
+  font-weight: 600;
   margin-bottom: 14px;
   letter-spacing: -0.01em;
 }
@@ -1454,7 +1463,7 @@ footer {
 
 .lang-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #FFD94E;
+  color: #FFD943;
   border-color: rgba(255, 216, 77, 0.3);
 }
 
@@ -1499,11 +1508,11 @@ footer {
 
 .lang-option:hover {
   background: rgba(255, 255, 255, 0.06);
-  color: #FFD94E;
+  color: #FFD943;
 }
 
 .lang-option.active {
-  color: #FFD94E;
+  color: #FFD943;
   font-weight: 700;
 }
 

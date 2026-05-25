@@ -199,7 +199,7 @@ function PresalePage() {
     function buyMsgColor() {
         if (!buyMessage) return "#ff6060";
         if (buyMsgVariant === "progress")  return "#FFA01C";
-        if (buyMsgVariant === "pending")   return "#FFD94E";
+        if (buyMsgVariant === "pending")   return "#FFD943";
         if (buyMsgVariant === "cancelled") return "#FFA01C";
         return "#ff6060";
     }
@@ -915,7 +915,7 @@ function PresalePage() {
     // â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const btnBuyStyle = (active) => ({
         width: "100%", padding: "15px",
-        background: active ? "linear-gradient(135deg, #FFD94E, #FFA01C)" : "rgba(255,255,255,0.06)",
+        background: active ? "linear-gradient(135deg, #FFD943, #FFA01C)" : "rgba(255,255,255,0.06)",
         color: active ? "#06060F" : "#6666AA",
         border: active ? "none" : "1px solid rgba(255,255,255,0.1)",
         borderRadius: "100px",
@@ -965,9 +965,9 @@ function PresalePage() {
           }
           .ps-lang-btn:hover { border-color: rgba(255,255,255,0.2) !important; color: #F0F0FF !important; }
           .ps-lang-opt:hover { background: rgba(255,255,255,0.06) !important; }
-          .vd-step-done { border-color: rgba(106,198,69,0.3) !important; }
+          .vd-step-done { border-color: rgba(255,160,28,0.3) !important; }
           .vd-step-active { border-color: rgba(255,159,28,0.4) !important; box-shadow: 0 0 16px rgba(255,159,28,0.1) !important; }
-          .vd-step-done::before { background: #6AC645 !important; opacity:1 !important; }
+          .vd-step-done::before { background: #FFA01C !important; opacity:1 !important; }
           .vd-step-active::before { background: #FFA01C !important; opacity:1 !important; }
           @keyframes pstep { 0%,100%{box-shadow:0 0 0 transparent} 50%{box-shadow:0 0 10px rgba(255,159,28,0.5)} }
         `}</style>
@@ -988,7 +988,7 @@ function PresalePage() {
                 {/* Logo — click to go back to landing page */}
                 <a onClick={() => navigate("/", { state: { fromDashboard: true } })} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", textDecoration: "none" }}>
                     <img src="/HiyokoLogo.png" alt="HIYOKO" style={{ width: "38px", height: "38px", objectFit: "contain", borderRadius: "8px" }} />
-                    <span className="ps-logo-text" style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 900, fontSize: "22px", color: "#FFD94E", letterSpacing: "0.04em", textShadow: "0 0 20px rgba(255,216,77,0.4)" }}>HIYOKO</span>
+                    <span className="ps-logo-text" style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 900, fontSize: "22px", color: "#FFD943", letterSpacing: "0.04em", textShadow: "0 0 20px rgba(255,216,77,0.4)" }}>HIYOKO</span>
                 </a>
 
                 {/* Center decorative banner */}
@@ -1034,7 +1034,7 @@ function PresalePage() {
                                             cursor: "pointer", textAlign: "left",
                                             fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "13px",
                                             fontWeight: lang === l.code ? 700 : 500,
-                                            color: lang === l.code ? "#FFD94E" : "#F0F0FF",
+                                            color: lang === l.code ? "#FFD943" : "#F0F0FF",
                                             transition: "all 0.15s",
                                         }}
                                     >
@@ -1051,7 +1051,7 @@ function PresalePage() {
                             display: "flex", alignItems: "center", gap: "7px",
                             background: "rgba(20,20,40,0.85)", border: "1px solid rgba(255,255,255,0.07)",
                             borderRadius: "100px", padding: "7px 14px",
-                            fontFamily: "'Courier New', monospace", fontSize: "12px", color: "#6666AA",
+                            fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "12px", color: "#BCBCBC",
                             cursor: "pointer",
                         }}
                             onClick={() => { navigator.clipboard?.writeText(account); }}
@@ -1084,7 +1084,7 @@ function PresalePage() {
                 {/* Title */}
                 <div>
                     <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 900, fontSize: "38px", letterSpacing: "-0.02em", lineHeight: 1.08, marginTop: "10px" }}>
-                        {t("myDashboard1")} <span style={{ color: "#FFD94E", textShadow: "0 0 30px rgba(255,216,77,0.4)" }}>{t("myDashboard2")}</span>
+                        {t("myDashboard1")} <span style={{ color: "#FFD943", textShadow: "0 0 30px rgba(255,216,77,0.4)" }}>{t("myDashboard2")}</span>
                     </div>
                 </div>
 
@@ -1095,8 +1095,8 @@ function PresalePage() {
                         borderRadius: "16px", padding: "20px 24px",
                         display: "flex", alignItems: "center", gap: "12px",
                     }}>
-                        <div style={{ width: "16px", height: "16px", border: "2px solid #FFD94E", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
-                        <div style={{ fontSize: "14px", color: "#FFD94E", fontWeight: 600 }}>
+                        <div style={{ width: "16px", height: "16px", border: "2px solid #FFD943", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
+                        <div style={{ fontSize: "14px", color: "#FFD943", fontWeight: 600 }}>
                             Mendeteksi jaringan... Harap selesaikan koneksi di MetaMask.
                         </div>
                     </div>
@@ -1143,7 +1143,7 @@ function PresalePage() {
                                 disabled={isSwitchingNetwork}
                                 style={{
                                     padding: "11px 24px",
-                                    background: "linear-gradient(135deg, #FFD94E, #FFA01C)",
+                                    background: "linear-gradient(135deg, #FFD943, #FFA01C)",
                                     color: "#06060F", border: "none", borderRadius: "100px",
                                     fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 800, fontSize: "13px",
                                     cursor: isSwitchingNetwork ? "not-allowed" : "pointer",
@@ -1190,7 +1190,7 @@ function PresalePage() {
                                 backdropFilter: "blur(10px)", position: "relative", overflow: "hidden",
                                 transition: "all 0.25s",
                             }}>
-                                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", borderRadius: "16px 16px 0 0", background: "linear-gradient(90deg, #FFD94E, transparent)", opacity: 0.7 }} />
+                                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", borderRadius: "16px 16px 0 0", background: "linear-gradient(90deg, #FFD943, transparent)", opacity: 0.7 }} />
                                 <span style={{ fontSize: "22px", marginBottom: "12px", display: "block" }}>📅</span>
                                 <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "6px" }}>{t("dailyAllocation")}</div>
                                 <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "22px", fontWeight: 800, color: "#FFA01C", lineHeight: 1.1 }}>
@@ -1221,24 +1221,24 @@ function PresalePage() {
                         {/* â”€â”€ Claim bar (always shown) â”€â”€ */}
                         <div style={{
                             background: "rgba(14,14,28,0.9)",
-                            border: `1px solid ${claimableRaw > 0n ? "rgba(106,198,69,0.35)" : "rgba(106,198,69,0.2)"}`,
+                            border: `1px solid ${claimableRaw > 0n ? "rgba(255,217,67,0.35)" : "rgba(255,217,67,0.2)"}`,
                             borderRadius: "16px", padding: "18px 24px",
                             display: "flex", alignItems: "center", justifyContent: "space-between",
                             gap: "24px", position: "relative", overflow: "hidden",
                             backdropFilter: "blur(10px)", transition: "border-color 0.25s",
                         }}>
-                            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", borderRadius: "16px 16px 0 0", background: "linear-gradient(90deg, #6AC645, transparent)", opacity: 0.7 }} />
+                            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", borderRadius: "16px 16px 0 0", background: "linear-gradient(90deg, #FFD943, transparent)", opacity: 0.7 }} />
                             <div style={{ display: "flex", alignItems: "center", gap: "28px", flex: 1, flexWrap: "wrap" }}>
                                 <div>
                                     <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6666AA", marginBottom: "4px" }}>{t("claimableNow")}</div>
-                                    <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "20px", fontWeight: 800, color: claimableRaw > 0n ? "#6AC645" : "#6666AA", lineHeight: 1.1 }}>
+                                    <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "20px", fontWeight: 800, color: claimableRaw > 0n ? "#FFA01C" : "#6666AA", lineHeight: 1.1 }}>
                                         {claimableNow} HYK
                                     </div>
                                     <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "3px", display: "flex", alignItems: "center", gap: "4px" }}>
                                         🔒 {t("lockedUntil")} {lockUntilDate}
                                     </div>
                                     {claimMessage && (
-                                        <div style={{ fontSize: "12px", color: claimMessage.toLowerCase().includes("success") ? "#6AC645" : "#ff6060", marginTop: "6px" }}>
+                                        <div style={{ fontSize: "12px", color: claimMessage.toLowerCase().includes("success") ? "#FFD943" : "#ff6060", marginTop: "6px" }}>
                                             {claimMessage}
                                         </div>
                                     )}
@@ -1251,7 +1251,7 @@ function PresalePage() {
                                     style={{
                                         display: "flex", alignItems: "center", gap: "8px",
                                         padding: "13px 28px",
-                                        background: (isClaiming || claimableRaw === 0n) ? "rgba(255,255,255,0.1)" : "linear-gradient(135deg, #FFD94E, #FFA01C)",
+                                        background: (isClaiming || claimableRaw === 0n) ? "rgba(255,255,255,0.1)" : "linear-gradient(135deg, #FFD943, #FFA01C)",
                                         color: (isClaiming || claimableRaw === 0n) ? "#6666AA" : "#06060F",
                                         border: "none", borderRadius: "100px",
                                         fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 800, fontSize: "16px",
@@ -1280,13 +1280,13 @@ function PresalePage() {
                                 boxShadow: "0 20px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.04)",
                                 position: "relative", overflow: "hidden",
                             }}>
-                                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: "linear-gradient(90deg, #FFA01C, #FFD94E, #06E5FF)" }} />
+                                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: "linear-gradient(90deg, #FFA01C, #FFD943, #06E5FF)" }} />
 
                                 {/* Price header + progress */}
                                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "10px" }}>
                                     <div>
                                         <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.12em", color: "#6666AA", marginBottom: "3px", fontWeight: 600 }}>{t("presalePrice")}</div>
-                                        <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "28px", fontWeight: 900, color: "#FFD94E", lineHeight: 1, textShadow: "0 0 30px rgba(255,216,77,0.5)" }}>
+                                        <div style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "30px", fontWeight: 900, color: "#FFD943", lineHeight: 1, textShadow: "0 0 30px rgba(255,216,77,0.5)" }}>
                                             $0.015 <span style={{ fontSize: "13px", color: "#6666AA", fontWeight: 400 }}>USDT / HYK</span>
                                         </div>
                                         <div style={{ fontSize: "11px", color: "#6666AA", marginTop: "3px" }}>
@@ -1310,7 +1310,7 @@ function PresalePage() {
                                             <div style={{
                                                 height: "100%", borderRadius: "100px",
                                                 width: `${Math.min(soldPct, 100)}%`,
-                                                background: "linear-gradient(90deg, #FFA01C, #FFD94E)",
+                                                background: "linear-gradient(90deg, #FFA01C, #FFD943)",
                                                 boxShadow: "0 0 8px rgba(255,216,77,0.4)",
                                                 transition: "width 0.5s ease",
                                             }} />
@@ -1322,9 +1322,9 @@ function PresalePage() {
                                         {/* Presale Stats */}
                                         <div style={{ display: "flex", gap: "6px", marginTop: "12px", flexWrap: "wrap" }}>
                                             {[
-                                                { label: t("totalSoldLabel"), value: `${soldDisplay} HYK`, color: "#FFD94E" },
-                                                { label: t("hardCapLabel"), value: `${capDisplay} HYK`, color: "#FFD94E" },
-                                                { label: t("remainingLabel"), value: `${remainingDisplay} HYK`, color: "#FFD94E" },
+                                                { label: t("totalSoldLabel"), value: `${soldDisplay} HYK`, color: "#FFD943" },
+                                                { label: t("hardCapLabel"), value: `${capDisplay} HYK`, color: "#FFD943" },
+                                                { label: t("remainingLabel"), value: `${remainingDisplay} HYK`, color: "#FFD943" },
                                             ].map(({ label, value, color }) => (
                                                 <div key={label} style={{
                                                     flex: 1, minWidth: "90px",
@@ -1353,10 +1353,10 @@ function PresalePage() {
                                             style={{
                                                 flex: 1, padding: "8px 4px",
                                                 background: "transparent",
-                                                border: `1px solid ${paymentTab === key ? "#FFD94E" : "transparent"}`,
+                                                border: `1px solid ${paymentTab === key ? "#FFD943" : "transparent"}`,
                                                 borderRadius: "100px",
                                                 fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontWeight: 700, fontSize: "12px",
-                                                color: paymentTab === key ? "#FFD94E" : "#6666AA",
+                                                color: paymentTab === key ? "#FFD943" : "#6666AA",
                                                 cursor: "pointer", transition: "all 0.2s", letterSpacing: "0.04em",
                                             }}
                                         >{label}</button>
@@ -1429,7 +1429,7 @@ function PresalePage() {
                                                                 onClick={() => handleSpendChange(formatUnits(userStats.usdtBalance, userStats?.usdtDecimals ?? CONFIG.usdtDecimals))}
                                                                 style={{
                                                                     background: "rgba(255,216,77,0.18)", border: "none", cursor: "pointer",
-                                                                    color: "#FFD94E", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
+                                                                    color: "#FFD943", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
                                                                     fontWeight: 800, fontSize: "10px", padding: "5px 10px",
                                                                     borderRadius: "6px", marginRight: "6px", letterSpacing: "0.06em",
                                                                 }}
@@ -1453,13 +1453,13 @@ function PresalePage() {
                                                             onChange={(e) => handleThkChange(e.target.value)}
                                                             style={{
                                                                 flex: 1, background: "none", border: "none", outline: "none",
-                                                                color: "#FFD94E", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
+                                                                color: "#FFD943", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
                                                                 fontSize: "16px", fontWeight: 700, padding: "11px 14px",
                                                             }}
                                                         />
                                                         <div style={{
                                                             padding: "0 14px", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
-                                                            fontWeight: 700, fontSize: "12px", color: "#FFD94E",
+                                                            fontWeight: 700, fontSize: "12px", color: "#FFD943",
                                                             borderLeft: "1px solid rgba(255,216,77,0.15)", height: "100%",
                                                             display: "flex", alignItems: "center",
                                                         }}>HYK</div>
@@ -1520,7 +1520,7 @@ function PresalePage() {
                                                     }}
                                                     style={{
                                                         background: "rgba(255,216,77,0.18)", border: "none", cursor: "pointer",
-                                                        color: "#FFD94E", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
+                                                        color: "#FFD943", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
                                                         fontWeight: 800, fontSize: "10px", padding: "5px 10px",
                                                         borderRadius: "6px", marginRight: "6px", letterSpacing: "0.06em",
                                                     }}
@@ -1536,7 +1536,7 @@ function PresalePage() {
                                         {/* BNB live price */}
                                         {lastBnbPrice && (
                                             <div style={{ fontSize: "11px", color: "#6666AA", marginBottom: "6px", textAlign: "right" }}>
-                                                1 BNB ≈ <span style={{ color: "#FFD94E" }}>${lastBnbPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD</span>
+                                                1 BNB ≈ <span style={{ color: "#FFD943" }}>${lastBnbPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD</span>
                                             </div>
                                         )}
                                         {/* USDT equivalent — read-only, computed from BNB/HYK */}
@@ -1576,13 +1576,13 @@ function PresalePage() {
                                                 onChange={(e) => handleBnbThkChange(e.target.value)}
                                                 style={{
                                                     flex: 1, background: "none", border: "none", outline: "none",
-                                                    color: "#FFD94E", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
+                                                    color: "#FFD943", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
                                                     fontSize: "16px", fontWeight: 700, padding: "11px 14px",
                                                 }}
                                             />
                                             <div style={{
                                                 padding: "0 14px", fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif",
-                                                fontWeight: 700, fontSize: "12px", color: "#FFD94E",
+                                                fontWeight: 700, fontSize: "12px", color: "#FFD943",
                                                 borderLeft: "1px solid rgba(255,216,77,0.15)", height: "100%",
                                                 display: "flex", alignItems: "center",
                                             }}>HYK</div>
@@ -1632,7 +1632,7 @@ function PresalePage() {
                                                     background: txTab === tab ? "rgba(255,216,77,0.12)" : "transparent",
                                                     border: `1px solid ${txTab === tab ? "rgba(255,216,77,0.4)" : "rgba(255,255,255,0.08)"}`,
                                                     borderRadius: "100px", fontSize: "11px", fontWeight: 700,
-                                                    color: txTab === tab ? "#FFD94E" : "#6666AA",
+                                                    color: txTab === tab ? "#FFD943" : "#6666AA",
                                                     cursor: "pointer",
                                                 }}
                                             >{tab === "my" ? t("myTx") : t("all")}</button>
@@ -1673,7 +1673,7 @@ function PresalePage() {
                                                                     color: isBnb ? "#FFA01C" : "#06E5FF",
                                                                     border: `1px solid ${isBnb ? "rgba(255,159,28,0.3)" : "rgba(0,229,255,0.2)"}`,
                                                                 }}>{tx.payment_token}</span>
-                                                                <span style={{ fontFamily: "'Courier New', monospace", fontSize: "11px", color: "#6666AA" }}>{shortAddr}</span>
+                                                                <span style={{ fontFamily: "'Pretendard Variable', 'Pretendard', sans-serif", fontSize: "11px", color: "#6666AA" }}>{shortAddr}</span>
                                                             </div>
                                                             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                                                 <span style={{ fontSize: "10px", color: "#6666AA" }}>{timeStr}</span>
@@ -1691,7 +1691,7 @@ function PresalePage() {
                                                             {tx.token_amount && (
                                                                 <>
                                                                     <span style={{ color: "#6666AA", fontSize: "11px", margin: "0 6px" }}>→</span>
-                                                                    <span style={{ color: "#FFD94E", fontWeight: 700 }}>
+                                                                    <span style={{ color: "#FFD943", fontWeight: 700 }}>
                                                                         {formatNumber(parseFloat(tx.token_amount), 4)} HYK
                                                                     </span>
                                                                 </>
@@ -1725,7 +1725,7 @@ function PresalePage() {
                                     display: "flex", alignItems: "center", gap: "6px",
                                     background: "rgba(255,216,77,0.08)", border: "1px solid rgba(255,216,77,0.2)",
                                     borderRadius: "8px", padding: "4px 10px",
-                                    fontSize: "11px", fontWeight: 700, color: "#FFD94E", letterSpacing: "0.04em",
+                                    fontSize: "11px", fontWeight: 700, color: "#FFD943", letterSpacing: "0.04em",
                                 }}>
                                     🔒 {t("lockedUntil")} {lockUntilDate}
                                 </div>
@@ -1782,7 +1782,7 @@ function PresalePage() {
                                                 name: t("step4name"),
                                                 val: dailyAlloc !== "—" ? `${dailyAlloc} HYK` : "—",
                                                 sub: "per day",
-                                                valColor: "#6AC645",
+                                                valColor: "#FFA01C",
                                             },
                                             {
                                                 icon: "🎉",
@@ -1799,12 +1799,12 @@ function PresalePage() {
                                             const isActive = state === "active";
                                             const isUpcoming = state === "upcoming";
                                             // Color tokens
-                                            const doneGreen = "#6AC645";
-                                            const activeGreen = "#4ade80";
-                                            const borderColor = isDone ? "rgba(106,198,69,0.4)" : isActive ? "rgba(74,222,128,0.55)" : "rgba(255,255,255,0.07)";
-                                            const bgColor = isDone ? "rgba(106,198,69,0.06)" : isActive ? "rgba(74,222,128,0.07)" : "rgba(255,255,255,0.02)";
+                                            const doneGreen = "#FFA01C";
+                                            const activeGreen = "#FF9F1C";
+                                            const borderColor = isDone ? "rgba(255,160,28,0.4)" : isActive ? "rgba(255,159,28,0.55)" : "rgba(255,255,255,0.07)";
+                                            const bgColor = isDone ? "rgba(255,160,28,0.06)" : isActive ? "rgba(255,159,28,0.07)" : "rgba(255,255,255,0.02)";
                                             const accentColor = isDone ? doneGreen : isActive ? activeGreen : "transparent";
-                                            const iconBg = isDone ? "rgba(106,198,69,0.18)" : isActive ? "rgba(74,222,128,0.15)" : "rgba(255,255,255,0.06)";
+                                            const iconBg = isDone ? "rgba(255,160,28,0.18)" : isActive ? "rgba(255,159,28,0.15)" : "rgba(255,255,255,0.06)";
                                             return (
                                                 <div key={i}
                                                     className={isDone ? "vd-step-done" : isActive ? "vd-step-active" : ""}
@@ -1815,7 +1815,7 @@ function PresalePage() {
                                                         position: "relative", overflow: "hidden",
                                                         transition: "border-color 0.2s",
                                                         opacity: isUpcoming ? 0.45 : 1,
-                                                        boxShadow: isActive ? "0 0 16px rgba(74,222,128,0.12)" : "none",
+                                                        boxShadow: isActive ? "0 0 16px rgba(255,159,28,0.12)" : "none",
                                                     }}>
                                                     {/* top border accent */}
                                                     <div style={{
@@ -1835,7 +1835,7 @@ function PresalePage() {
                                                             <div style={{
                                                                 fontSize: "9px", fontWeight: 800, letterSpacing: "0.1em",
                                                                 textTransform: "uppercase", color: activeGreen,
-                                                                background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.3)",
+                                                                background: "rgba(255,159,28,0.12)", border: "1px solid rgba(255,159,28,0.3)",
                                                                 borderRadius: "100px", padding: "2px 8px",
                                                                 animation: "pstep 1.5s infinite",
                                                             }}>● Active</div>
@@ -1844,7 +1844,7 @@ function PresalePage() {
                                                             <div style={{
                                                                 fontSize: "9px", fontWeight: 800, letterSpacing: "0.08em",
                                                                 textTransform: "uppercase", color: doneGreen,
-                                                                background: "rgba(106,198,69,0.1)", border: "1px solid rgba(106,198,69,0.25)",
+                                                                background: "rgba(255,160,28,0.1)", border: "1px solid rgba(255,160,28,0.25)",
                                                                 borderRadius: "100px", padding: "2px 8px",
                                                             }}>✓ Done</div>
                                                         )}
