@@ -163,16 +163,16 @@ function OnePage() {
   const [openFaq, setOpenFaq] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // const [copiedAddr, setCopiedAddr] = useState(null);
-  const PRESALE_GOAL = 1500000;
   const [presaleStats, setPresaleStats] = useState(null);
-  const presaleRaised = presaleStats?.totalUsdt ?? 0;
-  const presaleProgress = Math.min((presaleRaised / PRESALE_GOAL) * 100, 100);
   const presalePurchases = presaleStats?.totalPurchases ?? 0;
 
   const [chainStats, setChainStats] = useState(null);
   const soldDisplay = chainStats?.totalSold ? parseFloat(formatUnits(BigInt(chainStats.totalSold), 18)).toLocaleString(undefined, { maximumFractionDigits: 2 }) : "--";
   const capDisplay = chainStats?.saleCap ? parseFloat(formatUnits(BigInt(chainStats.saleCap), 18)).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "--";
   const remainingDisplay = chainStats?.remainingForSale ? parseFloat(formatUnits(BigInt(chainStats.remainingForSale), 18)).toLocaleString(undefined, { maximumFractionDigits: 2 }) : "--";
+  const presaleRaised = chainStats?.totalSold ? parseFloat(formatUnits(BigInt(chainStats.totalSold), 18)) : 0;
+  const presaleGoal = chainStats?.saleCap ? parseFloat(formatUnits(BigInt(chainStats.saleCap), 18)) : 0;
+  const presaleProgress = presaleGoal > 0 ? Math.min((presaleRaised / presaleGoal) * 100, 100) : 0;
 
   useEffect(() => {
     getPresaleStats().then((data) => { if (data) setPresaleStats(data); }).catch(() => { });
@@ -530,7 +530,7 @@ function OnePage() {
             </div>
             <div className="prog-labels">
               <span>{t("heroRaised")}: <b>HYK {presaleRaised.toLocaleString()}</b></span>
-              <span>{t("heroGoal")}: HYK 1,500,000 &nbsp;<strong style={{ color: "#06E5FF" }}>{presaleProgress.toFixed(1)}%</strong></span>
+              <span>{t("heroGoal")}: HYK {capDisplay} &nbsp;<strong style={{ color: "#06E5FF" }}>{presaleProgress.toFixed(1)}%</strong></span>
             </div>
             <div className="prog-bar">
               <div className="prog-fill" style={{ width: `${progWidth}%` }} />
